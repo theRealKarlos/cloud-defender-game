@@ -27,8 +27,6 @@ Set-ExecutionPolicy Bypass -Scope Process
 
 ### Additional Tools
 - **Visual Studio Code** - Recommended code editor
-- **Postman** - API testing tool
-- **7-Zip** - File compression utility
 
 ### Project Dependencies
 - **Frontend packages** - Game engine dependencies

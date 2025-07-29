@@ -1,0 +1,26 @@
+{
+  "name": "cloud-defenders-backend",
+  "version": "1.0.0",
+  "description": "Cloud Defenders - Backend API for score management",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "build": "zip -r score_api.zip .",
+    "deploy": "aws lambda update-function-code --function-name cloud-defenders-score-api --zip-file fileb://score_api.zip"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "api",
+    "serverless"
+  ],
+  "author": "Cloud Defenders Team",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.716.0",
+    "@aws-sdk/lib-dynamodb": "^3.716.0"
+  },
+  "devDependencies": {
+    "jest": "^30.0.0"
+  }
+}

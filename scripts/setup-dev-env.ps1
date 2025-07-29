@@ -108,6 +108,11 @@ function Install-NodeModules {
         try {
             npm install
             Write-Host "Frontend dependencies installed" -ForegroundColor Green
+            
+            # Install ESLint and related packages for code quality
+            Write-Host "Installing ESLint for code linting..." -ForegroundColor Cyan
+            npm install --save-dev eslint @eslint/js eslint-plugin-jest
+            Write-Host "ESLint installed successfully" -ForegroundColor Green
         }
         catch {
             Write-Warning "Failed to install frontend dependencies"

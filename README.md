@@ -16,15 +16,10 @@ cloud-defenders-game/
 ├── backend/                 # Backend API code
 │   ├── index.js             # Lambda function for score API
 │   └── package.json         # Backend dependencies
-├── infra/                   # Terraform infrastructure
-│   ├── main.tf              # Main Terraform configuration
-│   └── modules/
-│       └── s3_game_hosting/ # S3 static hosting module
-└── .kiro/specs/            # Feature specifications
-    └── cloud-defenders-game/
-        ├── requirements.md  # Game requirements
-        ├── design.md        # Technical design
-        └── tasks.md         # Implementation tasks
+└── infra/                   # Terraform infrastructure
+    ├── main.tf              # Main Terraform configuration
+    └── modules/
+        └── s3_game_hosting/ # S3 static hosting module
 ```
 
 ## Development Environment Setup

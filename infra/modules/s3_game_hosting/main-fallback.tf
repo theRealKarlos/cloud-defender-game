@@ -55,7 +55,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "game_hosting" {
   }
 }
 
-# Secure bucket policy - allow public read access for website hosting
+# Secure bucket policy - only allow GET requests to website content
 resource "aws_s3_bucket_policy" "game_hosting" {
   bucket = aws_s3_bucket.game_hosting.id
 
@@ -68,6 +68,22 @@ resource "aws_s3_bucket_policy" "game_hosting" {
         Principal = "*"
         Action    = "s3:GetObject"
         Resource  = "${aws_s3_bucket.game_hosting.arn}/*"
+        Condition = {
+          StringEquals = {
+            "s3:ExistingObjectTag/Environment" = var.environment
+          }
+        }
+      },
+      {
+        Sid       = "DenyDirectAccess"
+        Effect    = "Deny"
+        Principal = "*"
+        Action = [
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:PutObjectAcl"
+        ]
+        Resource = "${aws_s3_bucket.game_hosting.arn}/*"
       }
     ]
   })

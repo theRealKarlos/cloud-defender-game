@@ -93,7 +93,8 @@ Write-Host "  • Infrastructure: ✅ Deployed" -ForegroundColor White
 Write-Host "  • Lambda Function: ✅ Deployed" -ForegroundColor White
 Write-Host "  • API Gateway: ✅ Deployed" -ForegroundColor White
 Write-Host "  • DynamoDB: ✅ Created" -ForegroundColor White
-Write-Host "  • S3 Website: ✅ Deployed" -ForegroundColor White
-Write-Host "  • Frontend: ✅ Uploaded" -ForegroundColor White
+Write-Host "  • S3 Private Bucket: ✅ Created" -ForegroundColor White
+Write-Host "  • CloudFront CDN: ✅ Deployed" -ForegroundColor White
+Write-Host "  • Frontend: ✅ Uploaded & Cached" -ForegroundColor White
 Write-Host ""
 Write-Host "✨ Happy Gaming! ✨" -ForegroundColor Magenta

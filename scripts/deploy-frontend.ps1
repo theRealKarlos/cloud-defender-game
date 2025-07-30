@@ -115,16 +115,50 @@ aws s3 cp "s3://$bucketName" "s3://$bucketName" --recursive --exclude "*" --incl
 # JavaScript files
 aws s3 cp "s3://$bucketName" "s3://$bucketName" --recursive --exclude "*" --include "*.js" --content-type "application/javascript" --metadata-directive REPLACE
 
-# Get website URL
+# Get website URL and CloudFront distribution ID
 Set-Location $infraDir
 $websiteUrl = terraform output -raw s3_website_url
+$distributionId = terraform output -raw cloudfront_distribution_id
+
+# Only invalidate CloudFront cache if we have a real distribution ID
+if ($distributionId -and $distributionId -ne "N/A - S3 Website Mode" -and $distributionId -notlike "E*") {
+    Write-Host ""
+    Write-Host "🔄 Invalidating CloudFront cache..." -ForegroundColor Blue
+    aws cloudfront create-invalidation --distribution-id $distributionId --paths "/*"
+
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "✅ CloudFront cache invalidation initiated" -ForegroundColor Green
+    }
+    else {
+        Write-Warning "⚠️  CloudFront cache invalidation failed, but deployment was successful"
+    }
+}
+elseif ($distributionId -eq "N/A - S3 Website Mode") {
+    Write-Host ""
+    Write-Host "ℹ️  Running in S3 Website mode - no cache invalidation needed" -ForegroundColor Yellow
+}
+else {
+    Write-Host ""
+    Write-Host "🔄 Invalidating CloudFront cache..." -ForegroundColor Blue
+    aws cloudfront create-invalidation --distribution-id $distributionId --paths "/*"
+
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "✅ CloudFront cache invalidation initiated" -ForegroundColor Green
+    }
+    else {
+        Write-Warning "⚠️  CloudFront cache invalidation failed, but deployment was successful"
+    }
+}
 
 Write-Host ""
 Write-Host "🎉 Frontend Deployment Complete!" -ForegroundColor Green
 Write-Host "🌐 Website URL: $websiteUrl" -ForegroundColor Cyan
+Write-Host "📡 CloudFront Distribution ID: $distributionId" -ForegroundColor White
 Write-Host ""
 Write-Host "🎮 Your game is now live!" -ForegroundColor Magenta
 Write-Host "🔗 Open in browser: $websiteUrl" -ForegroundColor White
+Write-Host ""
+Write-Host "ℹ️  Note: CloudFront cache may take a few minutes to update globally." -ForegroundColor Yellow
 
 # Optional: Open in browser (Windows only)
 if ($IsWindows) {

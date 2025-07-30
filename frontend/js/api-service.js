@@ -122,3 +122,4 @@ class ApiService {
 
 // Create global instance
 window.apiService = new ApiService();
+

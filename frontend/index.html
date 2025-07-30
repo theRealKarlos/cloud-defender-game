@@ -41,6 +41,29 @@
             <div class="modal-content">
                 <h2 id="modal-title">Game Over</h2>
                 <p id="modal-message">Your final score: <span id="final-score">0</span></p>
+                
+                <!-- Score Submission Form -->
+                <div id="score-submission" class="score-submission">
+                    <h3>Submit to Leaderboard</h3>
+                    <form id="score-form">
+                        <div class="form-group">
+                            <label for="player-name">Player Name:</label>
+                            <input type="text" id="player-name" name="playerName" maxlength="50" placeholder="Enter your name" required>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" id="submit-score-btn" class="game-btn primary">Submit Score</button>
+                            <button type="button" id="skip-submission-btn" class="game-btn secondary">Skip</button>
+                        </div>
+                    </form>
+                    <div id="submission-status" class="submission-status hidden"></div>
+                </div>
+                
+                <!-- Leaderboard Display -->
+                <div id="leaderboard-display" class="leaderboard-display hidden">
+                    <h3>Top Scores</h3>
+                    <div id="leaderboard-list"></div>
+                </div>
+                
                 <div class="modal-actions">
                     <button id="modal-close" class="game-btn">Close</button>
                     <button id="modal-restart" class="game-btn">Play Again</button>
@@ -48,6 +71,9 @@
             </div>
         </div>
     </div>
+    
+    <!-- API Service -->
+    <script src="js/api-service.js"></script>
     
     <!-- Core game systems -->
     <script src="js/entities.js"></script>

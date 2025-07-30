@@ -195,13 +195,17 @@ class GameEngine {
         this.stateManager.changeState(GameState.GAME_OVER);
         this.uiManager.setButtonStates(false, false);
         
+        // Update game stats with current wave
+        this.gameStats.wave = this.waveManager.getCurrentWave();
+        
         this.uiManager.showModal(
             'Game Over', 
             `Your final score: <span id="final-score">${this.gameStats.score}</span>`,
-            this.gameStats.score
+            this.gameStats.score,
+            this.gameStats
         );
         
-        console.log('Game Over - Final Score:', this.gameStats.score);
+        console.log('Game Over - Final Stats:', this.gameStats);
     }
     
     // Game Loop Methods

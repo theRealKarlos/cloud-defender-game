@@ -95,6 +95,7 @@ temp/
 # ===== TERRAFORM =====
 # Local .terraform directories
 **/.terraform/*
+**/*.lock.*
 
 # .tfstate files
 *.tfstate
@@ -198,3 +199,4 @@ secrets.json
 *.db
 *.sqlite
 *.sqlite3
+

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Defenders - Debug</title>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        canvas { border: 2px solid #333; display: block; margin: 20px 0; }
+        .debug-info { background: #f0f0f0; padding: 10px; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 5px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <h1>Cloud Defenders - Debug Mode</h1>
+    <div class="debug-info">
+        <p>Debug console - check browser console (F12) for detailed logs</p>
+        <button onclick="testBasicRendering()">Test Basic Rendering</button>
+        <button onclick="testEntitySystem()">Test Entity System</button>
+        <button onclick="testGameEngine()">Test Game Engine</button>
+    </div>
+    
+    <canvas id="debug-canvas" width="800" height="600"></canvas>
+    
+    <div id="debug-output"></div>
+
+    <!-- Load scripts in order -->
+    <script>
+        console.log("=== LOADING SCRIPTS ===");
+        
+        function logScript(name) {
+            console.log(`Loading: ${name}`);
+        }
+        
+        function testBasicRendering() {
+            console.log("=== TESTING BASIC RENDERING ===");
+            const canvas = document.getElementById('debug-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background
+            ctx.fillStyle = '#001122';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw test text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Basic Rendering Test - SUCCESS!', canvas.width/2, canvas.height/2);
+            
+            console.log("Basic rendering test completed");
+        }
+        
+        function testEntitySystem() {
+            console.log("=== TESTING ENTITY SYSTEM ===");
+            try {
+                if (typeof EntityManager !== 'undefined') {
+                    const entityManager = new EntityManager();
+                    console.log("EntityManager created successfully");
+                    
+                    if (typeof Target !== 'undefined') {
+                        const target = new Target('s3', 100, 100);
+                        entityManager.addEntity(target, 'targets');
+                        console.log("Target created and added successfully");
+                    } else {
+                        console.error("Target class not available");
+                    }
+                } else {
+                    console.error("EntityManager not available");
+                }
+            } catch (error) {
+                console.error("Entity system test failed:", error);
+            }
+        }
+        
+        function testGameEngine() {
+            console.log("=== TESTING GAME ENGINE ===");
+            try {
+                if (typeof GameEngine !== 'undefined') {
+                    const gameEngine = new GameEngine('debug-canvas');
+                    console.log("GameEngine created successfully");
+                    
+                    // Try to start the game
+                    gameEngine.startGame();
+                    console.log("Game started successfully");
+                } else {
+                    console.error("GameEngine not available");
+                }
+            } catch (error) {
+                console.error("Game engine test failed:", error);
+            }
+        }
+    </script>
+    
+    <script>logScript('entities.js');</script>
+    <script src="js/entities.js"></script>
+    
+    <script>logScript('target.js');</script>
+    <script src="js/target.js"></script>
+    
+    <script>logScript('missile.js');</script>
+    <script src="js/missile.js"></script>
+    
+    <script>logScript('input-manager.js');</script>
+    <script src="js/input-manager.js"></script>
+    
+    <script>logScript('game-state.js');</script>
+    <script src="js/game-state.js"></script>
+    
+    <script>logScript('renderer.js');</script>
+    <script src="js/renderer.js"></script>
+    
+    <script>logScript('ui-manager.js');</script>
+    <script src="js/ui-manager.js"></script>
+    
+    <script>logScript('game-loop.js');</script>
+    <script src="js/game-loop.js"></script>
+    
+    <script>logScript('event-handler.js');</script>
+    <script src="js/event-handler.js"></script>
+    
+    <script>logScript('wave-manager.js');</script>
+    <script src="js/wave-manager.js"></script>
+    
+    <script>logScript('game-conditions.js');</script>
+    <script src="js/game-conditions.js"></script>
+    
+    <script>logScript('game-engine.js');</script>
+    <script src="js/game-engine.js"></script>
+    
+    <script>
+        console.log("=== ALL SCRIPTS LOADED ===");
+        console.log("Available classes:", {
+            Entity: typeof Entity,
+            EntityManager: typeof EntityManager,
+            Target: typeof Target,
+            Missile: typeof Missile,
+            GameEngine: typeof GameEngine,
+            WaveManager: typeof WaveManager,
+            GameConditions: typeof GameConditions
+        });
+    </script>
+</body>
+</html>

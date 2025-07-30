@@ -243,13 +243,13 @@ class GameConditions {
         }
     }
     
-    onTargetHit(target, missile) {
+    onTargetDestroyed(target, missile) {
         if (!this.gameActive) return;
         
-        // Lose a life when a target is hit
+        // Lose a life when a target is destroyed
         this.currentLives = Math.max(0, this.currentLives - 1);
         
-        console.log(`Target hit! Lives remaining: ${this.currentLives}`);
+        console.log(`Target ${target.type} destroyed! Lives remaining: ${this.currentLives}`);
         
         // Trigger lives changed callback
         if (this.onLivesChangedCallback) {

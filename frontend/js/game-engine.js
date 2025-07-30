@@ -140,12 +140,12 @@ class GameEngine {
             this.stateManager.changeState(GameState.PLAYING);
             this.uiManager.setButtonStates(true, false);
             
-            // Start game systems
+            // Add targets FIRST before starting wave systems
+            this.addInitialTargets();
+            
+            // Start game systems AFTER targets are added
             this.gameConditions.startGame();
             this.waveManager.startWave();
-            
-            // Add some initial targets for the game
-            this.addInitialTargets();
             
             if (!this.gameLoop.isRunning) {
                 this.gameLoop.start();
@@ -236,6 +236,9 @@ class GameEngine {
         // Update all entities
         this.entityManager.update(deltaTime);
         
+        // Check for explosion collisions (bombs destroying missiles)
+        this.checkExplosionCollisions();
+        
         // Check for collisions
         const collisions = this.entityManager.checkCollisions();
         
@@ -270,8 +273,11 @@ class GameEngine {
                 const missile = entity1.collisionLayer === 'missiles' ? entity1 : entity2;
                 const target = entity1.collisionLayer === 'targets' ? entity1 : entity2;
                 
-                // Notify game conditions about target hit
-                this.gameConditions.onTargetHit(target, missile);
+                // Check if target was destroyed after collision processing
+                if (target.justDestroyed) {
+                    this.gameConditions.onTargetDestroyed(target, missile);
+                    target.justDestroyed = false; // Reset flag
+                }
             }
             
             // Handle missile-defence collisions
@@ -327,11 +333,88 @@ class GameEngine {
     }
     
     // Event Handlers
-    handleCanvasClick(_x, _y) {
-        // Placeholder for future defence deployment logic
+    handleCanvasClick(x, y) {
+        // Deploy explosive bomb at clicked position (Missile Command style)
         if (this.stateManager.isState(GameState.PLAYING)) {
-            // Future: Deploy defence at clicked position
+            this.deployExplosiveBomb(x, y);
         }
+    }
+    
+    deployExplosiveBomb(targetX, targetY) {
+        // Check countermeasure limit (max 4 on screen at once)
+        const activeBombs = this.entityManager.getEntitiesByLayer('countermeasures');
+        const maxCountermeasures = 4;
+        
+        if (activeBombs && activeBombs.length >= maxCountermeasures) {
+            console.log(`Cannot deploy bomb: ${activeBombs.length}/${maxCountermeasures} countermeasures already active`);
+            return; // Don't deploy if at limit
+        }
+        
+        // Deploy bomb from bottom center of screen (like Missile Command)
+        const startX = this.canvas.width / 2;
+        const startY = this.canvas.height - 20;
+        
+        // Create explosive bomb
+        const bomb = new ExplosiveBomb(startX, startY, targetX, targetY);
+        
+        // Apply countermeasure speed scaling: 1% slower per wave
+        const currentWave = this.waveManager.getCurrentWave();
+        const countermeasureSpeedMultiplier = 1.0 - (currentWave - 1) * 0.01;
+        const originalSpeed = bomb.speed;
+        bomb.speed *= countermeasureSpeedMultiplier;
+        
+        console.log(`Wave ${currentWave}: Countermeasure speed ${originalSpeed} → ${bomb.speed.toFixed(1)} (${(countermeasureSpeedMultiplier * 100).toFixed(1)}%)`);
+        
+        // Add to entity manager
+        this.entityManager.addEntity(bomb, 'countermeasures');
+        
+        const currentBombCount = (activeBombs ? activeBombs.length : 0) + 1;
+        console.log(`Deployed bomb from (${startX}, ${startY}) to (${targetX}, ${targetY}) [${currentBombCount}/${maxCountermeasures}]`);
+    }
+    
+    checkExplosionCollisions() {
+        // Get all active bombs
+        const bombs = this.entityManager.getEntitiesByLayer('countermeasures');
+        
+        bombs.forEach(bomb => {
+            if (bomb.isExploding && bomb.explosionRadius > 0) {
+                // Check for missiles in explosion radius
+                const destroyedMissiles = bomb.getMissilesInExplosionRadius(this.entityManager);
+                
+                // Destroy missiles and award points (only destroy each missile once)
+                destroyedMissiles.forEach(missile => {
+                    if (!missile.markedForDestruction) {
+                        this.onMissileDestroyed(missile, bomb);
+                        missile.destroy();
+                    }
+                });
+            }
+        });
+    }
+    
+    onMissileDestroyed(missile, bomb) {
+        // Award points for destroying missile
+        const basePoints = 100;
+        const typeMultiplier = this.getMissileTypeMultiplier(missile.type);
+        const points = Math.floor(basePoints * typeMultiplier);
+        
+        // Add points through game conditions
+        if (this.gameConditions && this.gameConditions.addScore) {
+            this.gameConditions.addScore(points);
+        }
+        
+        console.log(`Missile ${missile.type} destroyed! +${points} points`);
+    }
+    
+    getMissileTypeMultiplier(missileType) {
+        // Different missile types worth different points
+        const multipliers = {
+            'cost-spike': 1.2,      // Slightly more valuable
+            'data-breach': 1.5,     // High value security threat
+            'latency-ghost': 1.8,   // Hard to hit, high value
+            'policy-violator': 1.0  // Standard value
+        };
+        return multipliers[missileType] || 1.0;
     }
     
     handleSpaceKey() {

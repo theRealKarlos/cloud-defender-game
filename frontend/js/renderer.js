@@ -71,8 +71,14 @@ class Renderer {
         this.ctx.fillStyle = '#ffffff';
         this.ctx.font = '16px Arial';
         this.ctx.textAlign = 'left';
-        this.ctx.fillText(`Entities: ${entityManager.getEntityCount()}`, 10, this.canvas.height - 60);
-        this.ctx.fillText(`Wave ${gameStats.wave} - Score: ${gameStats.score}`, 10, this.canvas.height - 40);
+        this.ctx.fillText(`Entities: ${entityManager.getEntityCount()}`, 10, this.canvas.height - 80);
+        this.ctx.fillText(`Wave ${gameStats.wave} - Score: ${gameStats.score}`, 10, this.canvas.height - 60);
+        
+        // Show countermeasure availability
+        const activeBombs = entityManager.getEntitiesByLayer('countermeasures');
+        const bombCount = activeBombs ? activeBombs.length : 0;
+        const maxBombs = 4;
+        this.ctx.fillText(`Countermeasures: ${bombCount}/${maxBombs}`, 10, this.canvas.height - 40);
     }
     
     renderPauseOverlay() {

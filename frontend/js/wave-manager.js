@@ -3,19 +3,15 @@
  * Manages missile spawning patterns, difficulty scaling, and wave transitions
  */
 
-// Import required classes
-let Missile, Target;
-if (typeof module !== 'undefined' && module.exports) {
+// Import required classes for Node.js testing environment only
+if (typeof module !== 'undefined' && module.exports && typeof window === 'undefined') {
     // Node.js environment (testing)
-    const missileModule = require('./missile.js');
-    const targetModule = require('./target.js');
-    Missile = missileModule.Missile;
-    Target = targetModule.Target;
-} else {
-    // Browser environment - classes are available globally
-    Missile = window.Missile;
-    Target = window.Target;
+    const { Missile } = require('./missile.js');
+    const { Target } = require('./target.js');
+    global.Missile = Missile;
+    global.Target = Target;
 }
+// In browser environment, Missile and Target classes are already available globally
 
 class WaveManager {
     constructor(entityManager, canvasWidth, canvasHeight) {
@@ -228,8 +224,17 @@ class WaveManager {
         const missile = new Missile(missileType, spawnX, spawnY, targetX, targetY);
         
         // Apply difficulty scaling
-        missile.speed *= config.difficultyMultiplier;
         missile.damage = Math.floor(missile.damage * config.difficultyMultiplier);
+        
+        // Apply missile speed scaling: 5% faster per wave
+        const missileSpeedMultiplier = 1.0 + (config.waveNumber - 1) * 0.05;
+        const originalSpeed = missile.speed;
+        missile.speed *= missileSpeedMultiplier;
+        
+        console.log(`Wave ${config.waveNumber}: Missile speed ${originalSpeed} → ${missile.speed.toFixed(1)} (${(missileSpeedMultiplier * 100).toFixed(1)}%)`);
+        
+        // Reinitialize movement with new speed
+        missile.initializeMovement();
         
         // Add to entity manager
         this.entityManager.addEntity(missile, 'missiles');

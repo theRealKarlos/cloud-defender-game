@@ -3,15 +3,13 @@
  * Represents AWS infrastructure components that need to be defended
  */
 
-// Import Entity base class
-let Entity;
-if (typeof module !== 'undefined' && module.exports) {
+// Import Entity base class for Node.js testing environment only
+if (typeof module !== 'undefined' && module.exports && typeof window === 'undefined') {
     // Node.js environment (testing)
-    Entity = require('./entities.js').Entity;
-} else {
-    // Browser environment - Entity is available globally
-    Entity = window.Entity;
+    const { Entity } = require('./entities.js');
+    global.Entity = Entity;
 }
+// In browser environment, Entity is already available globally from entities.js
 
 // Target class extending Entity
 class Target extends Entity {
@@ -27,8 +25,8 @@ class Target extends Entity {
         
         // Visual properties
         this.colour = Target.getColourByType(type);
-        this.healthBarHeight = 4;
-        this.healthBarOffset = -8;
+        this.healthBarHeight = 8; // Make health bar taller
+        this.healthBarOffset = -12; // Move it further up
         
         // Damage effects
         this.damageFlashTimer = 0;
@@ -242,6 +240,8 @@ class Target extends Entity {
         const healthPercent = this.getHealthPercentage();
         const healthWidth = barWidth * healthPercent;
         
+
+        
         if (healthPercent > 0.5) {
             ctx.fillStyle = '#44FF44'; // Green
         } else if (healthPercent > 0.25) {
@@ -261,7 +261,7 @@ class Target extends Entity {
     renderServiceIcon(ctx) {
         ctx.save();
         
-        // Position text in center of target
+        // Position text in centre of target
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.font = 'bold 12px Arial';
@@ -321,6 +321,11 @@ class Target extends Entity {
             
             // Destroy the missile that hit us
             other.destroy();
+            
+            // Store destruction info for game engine to process
+            if (wasDestroyed) {
+                this.justDestroyed = true;
+            }
             
             return wasDestroyed;
         }

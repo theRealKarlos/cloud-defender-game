@@ -44,6 +44,7 @@ class Entity {
     update(deltaTime) {
         if (!this.active) return;
         
+        
         // Update position based on velocity
         this.x += this.velocityX * deltaTime;
         this.y += this.velocityY * deltaTime;
@@ -177,10 +178,26 @@ class SpatialGrid {
         
         // Calculate which cells the entity occupies
         const bounds = entity.getBounds();
+        
+        // Add bounds checking to prevent invalid coordinates
+        const maxCoord = 10000; // Reasonable maximum coordinate
+        if (Math.abs(bounds.left) > maxCoord || Math.abs(bounds.right) > maxCoord || 
+            Math.abs(bounds.top) > maxCoord || Math.abs(bounds.bottom) > maxCoord) {
+            console.warn('Entity has invalid coordinates, skipping spatial grid update');
+            return;
+        }
+        
         const startX = Math.floor(bounds.left / this.cellSize);
         const endX = Math.floor(bounds.right / this.cellSize);
         const startY = Math.floor(bounds.top / this.cellSize);
         const endY = Math.floor(bounds.bottom / this.cellSize);
+        
+        // Additional safety check
+        if (endX - startX > 100 || endY - startY > 100 || 
+            !isFinite(startX) || !isFinite(endX) || !isFinite(startY) || !isFinite(endY)) {
+            console.warn('Entity has invalid grid coordinates, skipping spatial grid update', {startX, endX, startY, endY});
+            return;
+        }
         
         const cells = [];
         
@@ -335,7 +352,7 @@ class EntityManager {
     
     render(ctx) {
         // Render entities by layer for proper z-ordering
-        const layerOrder = ['background', 'targets', 'missiles', 'defences', 'effects', 'ui'];
+        const layerOrder = ['background', 'targets', 'missiles', 'countermeasures', 'defences', 'effects', 'ui'];
         
         for (const layer of layerOrder) {
             const layerEntities = this.entitiesByLayer.get(layer);

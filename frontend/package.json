@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "description": "Cloud Defenders - Missile Mayhem on AWS - Frontend Game",
   "main": "index.html",
+  "type": "commonjs",
   "scripts": {
     "dev": "http-server . -p 3000 -c-1",
     "build": "echo 'Build process for production'",
     "test": "jest",
-    "lint": "eslint js/**/*.js",
-    "lint:fix": "eslint js/**/*.js --fix"
+    "lint": "eslint js/**/*.js tests/**/*.js",
+    "lint:fix": "eslint js/**/*.js tests/**/*.js --fix"
   },
   "keywords": [
     "game",
@@ -24,5 +25,11 @@
     "eslint-plugin-jest": "^29.0.1",
     "http-server": "^14.1.1",
     "jest": "^30.0.0"
+  },
+  "jest": {
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "testEnvironment": "node"
   }
 }

@@ -33,7 +33,20 @@ export default [
                 // Node.js globals (for test files)
                 module: 'readonly',
                 require: 'readonly',
-                global: 'readonly'
+                global: 'readonly',
+                
+                // Game engine classes (loaded via script tags)
+                Entity: 'readonly',
+                EntityManager: 'readonly',
+                SpatialGrid: 'readonly',
+                InputManager: 'readonly',
+                GameState: 'readonly',
+                GameStateManager: 'readonly',
+                Renderer: 'readonly',
+                UIManager: 'readonly',
+                GameLoop: 'readonly',
+                EventHandler: 'readonly',
+                GameEngine: 'readonly'
             }
         },
         rules: {
@@ -44,7 +57,7 @@ export default [
             }],
             'no-console': 'off', // Allow console for game debugging
             'no-debugger': 'warn',
-            'no-alert': 'warn',
+            'no-alert': 'off', // Allow alerts for error handling
             
             // Style consistency
             'indent': ['error', 4],
@@ -60,7 +73,7 @@ export default [
             
             // Game-specific rules
             'no-magic-numbers': ['warn', { 
-                'ignore': [0, 1, -1, 2, 60, 1000],
+                'ignore': [0, 1, -1, 2, 5, 9, 10, 16, 20, 30, 32, 35, 36, 40, 48, 50, 60, 64, 100, 120, 150, 200, 1000],
                 'ignoreArrayIndexes': true 
             }],
             
@@ -71,10 +84,27 @@ export default [
     },
     {
         // Specific rules for test files
-        files: ['**/*.test.js'],
+        files: ['tests/**/*.test.js'],
+        languageOptions: {
+            globals: {
+                // Jest globals
+                describe: 'readonly',
+                test: 'readonly',
+                expect: 'readonly',
+                beforeEach: 'readonly',
+                afterEach: 'readonly',
+                jest: 'readonly',
+                
+                // Node.js globals (for test files)
+                module: 'readonly',
+                require: 'readonly',
+                global: 'readonly'
+            }
+        },
         rules: {
             'no-magic-numbers': 'off', // Allow magic numbers in tests
-            'max-lines-per-function': 'off' // Allow longer test functions
+            'max-lines-per-function': 'off', // Allow longer test functions
+            'no-unused-vars': 'off' // Allow unused vars in test setup
         }
     }
 ];

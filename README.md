@@ -6,20 +6,34 @@ A tower defence-style web game where players defend cloud infrastructure compone
 
 ```
 cloud-defenders-game/
-├── frontend/                 # Frontend game code
-│   ├── index.html           # Main HTML5 Canvas game page
-│   ├── js/
-│   │   └── game.js          # Game engine and logic
+├── frontend/                    # Frontend game code
+│   ├── index.html              # Main HTML5 Canvas game page
+│   ├── js/                     # Modular game engine
+│   │   ├── entities.js         # Entity system (core game objects)
+│   │   ├── input-manager.js    # Keyboard and mouse input
+│   │   ├── game-state.js       # Game state management
+│   │   ├── renderer.js         # Canvas rendering system
+│   │   ├── ui-manager.js       # DOM UI management
+│   │   ├── game-loop.js        # Frame timing and game loop
+│   │   ├── event-handler.js    # Event listener management
+│   │   ├── game-engine.js      # Main game orchestrator
+│   │   └── game.js             # Application entry point
+│   ├── tests/                  # Test suite
+│   │   ├── entity.test.js      # Entity system tests
+│   │   └── README.md           # Testing documentation
 │   ├── styles/
-│   │   └── game.css         # Game styling
-│   └── package.json         # Frontend dependencies
-├── backend/                 # Backend API code
-│   ├── index.js             # Lambda function for score API
-│   └── package.json         # Backend dependencies
-└── infra/                   # Terraform infrastructure
-    ├── main.tf              # Main Terraform configuration
-    └── modules/
-        └── s3_game_hosting/ # S3 static hosting module
+│   │   └── game.css            # Game styling
+│   ├── eslint.config.js        # ESLint configuration
+│   └── package.json            # Frontend dependencies
+├── backend/                    # Backend API code
+│   ├── index.js                # Lambda function for score API
+│   └── package.json            # Backend dependencies
+├── infra/                      # Terraform infrastructure
+│   ├── main.tf                 # Main Terraform configuration
+│   └── modules/
+│       └── s3_game_hosting/    # S3 static hosting module
+└── scripts/                    # Development scripts
+    └── setup-dev-env.ps1       # Automated environment setup
 ```
 
 ## Development Environment Setup

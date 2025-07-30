@@ -142,11 +142,11 @@ class Entity {
     }
     
     // Virtual methods for subclasses to override
-    onUpdate(deltaTime) {
+    onUpdate(_deltaTime) {
         // Override in subclasses
     }
     
-    onRender(ctx) {
+    onRender(_ctx) {
         // Override in subclasses for additional rendering
     }
     
@@ -154,7 +154,7 @@ class Entity {
         // Override in subclasses for cleanup
     }
     
-    onCollision(other) {
+    onCollision(_other) {
         // Override in subclasses to handle collisions
     }
 }

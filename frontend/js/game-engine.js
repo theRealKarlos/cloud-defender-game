@@ -19,6 +19,10 @@ class GameEngine {
         this.gameLoop = new GameLoop();
         this.entityManager = new EntityManager();
         
+        // Initialize wave management and game conditions
+        this.waveManager = new WaveManager(this.entityManager, this.canvas.width, this.canvas.height);
+        this.gameConditions = new GameConditions(this.entityManager, this.waveManager, this.uiManager);
+        
         // Game statistics
         this.gameStats = {
             score: 0,
@@ -31,6 +35,8 @@ class GameEngine {
         this.setupEventHandlers();
         this.setupUICallbacks();
         this.setupStateCallbacks();
+        this.setupWaveCallbacks();
+        this.setupGameConditionCallbacks();
         
         // Initialize UI
         this.uiManager.updateGameStats(this.gameStats.score, this.gameStats.wave, this.gameStats.lives);
@@ -86,11 +92,60 @@ class GameEngine {
         });
     }
     
+    setupWaveCallbacks() {
+        this.waveManager.setOnWaveStartCallback((waveNumber, config) => {
+            console.log(`Wave ${waveNumber} started with ${config.missileCount} missiles`);
+            this.gameStats.wave = waveNumber;
+            this.uiManager.updateGameStats(this.gameStats.score, this.gameStats.wave, this.gameStats.lives);
+        });
+        
+        this.waveManager.setOnWaveCompleteCallback((waveNumber) => {
+            console.log(`Wave ${waveNumber} completed!`);
+            this.gameConditions.onWaveCompleted(waveNumber);
+        });
+        
+        this.waveManager.setOnAllWavesCompleteCallback(() => {
+            console.log('All waves completed!');
+            // Victory will be handled by GameConditions
+        });
+    }
+    
+    setupGameConditionCallbacks() {
+        this.gameConditions.setOnVictoryCallback((victoryType, finalScore) => {
+            this.stateManager.changeState(GameState.GAME_OVER);
+            this.gameStats.score = finalScore;
+            console.log(`Victory achieved: ${victoryType}`);
+        });
+        
+        this.gameConditions.setOnDefeatCallback((defeatReason, finalScore) => {
+            this.stateManager.changeState(GameState.GAME_OVER);
+            this.gameStats.score = finalScore;
+            console.log(`Defeat: ${defeatReason}`);
+        });
+        
+        this.gameConditions.setOnScoreChangedCallback((newScore) => {
+            this.gameStats.score = newScore;
+            this.uiManager.updateGameStats(this.gameStats.score, this.gameStats.wave, this.gameStats.lives);
+        });
+        
+        this.gameConditions.setOnLivesChangedCallback((newLives) => {
+            this.gameStats.lives = newLives;
+            this.uiManager.updateGameStats(this.gameStats.score, this.gameStats.wave, this.gameStats.lives);
+        });
+    }
+    
     // Game Control Methods
     startGame() {
         if (this.stateManager.isState(GameState.MENU) || this.stateManager.isState(GameState.PAUSED)) {
             this.stateManager.changeState(GameState.PLAYING);
             this.uiManager.setButtonStates(true, false);
+            
+            // Start game systems
+            this.gameConditions.startGame();
+            this.waveManager.startWave();
+            
+            // Add some initial targets for the game
+            this.addInitialTargets();
             
             if (!this.gameLoop.isRunning) {
                 this.gameLoop.start();
@@ -112,6 +167,10 @@ class GameEngine {
         this.gameLoop.stop();
         this.stateManager.changeState(GameState.MENU);
         
+        // Reset game systems
+        this.waveManager.reset();
+        this.gameConditions.reset();
+        
         // Reset game statistics
         this.gameStats.score = 0;
         this.gameStats.wave = 1;
@@ -123,6 +182,7 @@ class GameEngine {
         // Update UI
         this.uiManager.setButtonStates(false, false);
         this.uiManager.updateGameStats(this.gameStats.score, this.gameStats.wave, this.gameStats.lives);
+        this.uiManager.hideModal();
         
         // Render welcome screen
         this.renderer.clear();
@@ -167,48 +227,64 @@ class GameEngine {
     }
     
     updateGameplay(deltaTime) {
+        // Update wave management
+        this.waveManager.update(deltaTime);
+        
+        // Update game conditions (victory/defeat checking)
+        this.gameConditions.update(deltaTime);
+        
         // Update all entities
         this.entityManager.update(deltaTime);
         
         // Check for collisions
         const collisions = this.entityManager.checkCollisions();
         
-        // Process collisions (placeholder for future implementation)
-        if (collisions.length > 0) {
-            console.log(`Detected ${collisions.length} collision(s)`);
-        }
-        
-        // Example: Simple score increment for demonstration
-        if (this.gameLoop.getFrameCount() % 60 === 0) { // Every second at 60 FPS
-            this.gameStats.score += 10;
-            this.uiManager.updateGameStats(this.gameStats.score, this.gameStats.wave, this.gameStats.lives);
-        }
-        
-        // Add some test entities for demonstration (only once)
-        if (this.gameLoop.getFrameCount() === 120) { // After 2 seconds
-            this.addTestEntities();
-        }
+        // Process collisions
+        this.processCollisions(collisions);
     }
     
-    addTestEntities() {
-        // Create some test entities to demonstrate the system
-        const testTarget = new Entity(100, 100, 64, 64);
-        testTarget.colour = '#4a90e2';
-        testTarget.velocityX = 50; // Move right slowly
+    addInitialTargets() {
+        // Add AWS service targets for the player to defend
+        const targetPositions = [
+            { type: 's3', x: 150, y: 400 },
+            { type: 'lambda', x: 300, y: 350 },
+            { type: 'rds', x: 450, y: 400 },
+            { type: 'ec2', x: 600, y: 350 },
+            { type: 'dynamodb', x: 375, y: 450 }
+        ];
         
-        const testMissile = new Entity(50, 120, 32, 16);
-        testMissile.colour = '#ff4444';
-        testMissile.velocityX = 100; // Move right faster
+        targetPositions.forEach(pos => {
+            const target = new Target(pos.type, pos.x, pos.y);
+            this.entityManager.addEntity(target, 'targets');
+        });
         
-        const testDefence = new Entity(200, 150, 48, 48);
-        testDefence.colour = '#44ff44';
-        testDefence.velocityY = -30; // Move up slowly
-        
-        this.entityManager.addEntity(testTarget, 'targets');
-        this.entityManager.addEntity(testMissile, 'missiles');
-        this.entityManager.addEntity(testDefence, 'defences');
-        
-        console.log('Added test entities for demonstration');
+        console.log('Added initial AWS service targets');
+    }
+    
+    processCollisions(collisions) {
+        collisions.forEach(([entity1, entity2]) => {
+            // Handle missile-target collisions
+            if ((entity1.collisionLayer === 'missiles' && entity2.collisionLayer === 'targets') ||
+                (entity1.collisionLayer === 'targets' && entity2.collisionLayer === 'missiles')) {
+                
+                const missile = entity1.collisionLayer === 'missiles' ? entity1 : entity2;
+                const target = entity1.collisionLayer === 'targets' ? entity1 : entity2;
+                
+                // Notify game conditions about target hit
+                this.gameConditions.onTargetHit(target, missile);
+            }
+            
+            // Handle missile-defence collisions
+            if ((entity1.collisionLayer === 'missiles' && entity2.collisionLayer === 'defences') ||
+                (entity1.collisionLayer === 'defences' && entity2.collisionLayer === 'missiles')) {
+                
+                const missile = entity1.collisionLayer === 'missiles' ? entity1 : entity2;
+                const defence = entity1.collisionLayer === 'defences' ? entity1 : entity2;
+                
+                // Notify game conditions about missile interception
+                this.gameConditions.onMissileIntercepted(missile);
+            }
+        });
     }
     
     updateMenu(_deltaTime) {

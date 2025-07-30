@@ -69,6 +69,7 @@ body {
 #game-ui {
     flex: 1;
     min-width: 200px;
+    margin-left: 75px; /* Move panels to the right by about 25% of their typical width */
 }
 
 .control-panel {

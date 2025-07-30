@@ -14,9 +14,22 @@ const mockCanvas = {
         fillRect: jest.fn(),
         strokeRect: jest.fn(),
         clearRect: jest.fn(),
+        fillText: jest.fn(),
+        strokeText: jest.fn(),
+        beginPath: jest.fn(),
+        moveTo: jest.fn(),
+        lineTo: jest.fn(),
+        closePath: jest.fn(),
+        arc: jest.fn(),
+        fill: jest.fn(),
+        stroke: jest.fn(),
         fillStyle: '',
         strokeStyle: '',
-        lineWidth: 1
+        lineWidth: 1,
+        textAlign: '',
+        textBaseline: '',
+        font: '',
+        globalAlpha: 1
     })
 };
 

@@ -7,9 +7,11 @@
 if (typeof module !== 'undefined' && module.exports && typeof window === 'undefined') {
     // Node.js environment (testing)
     const { Entity } = require('./entities.js');
+    const { AWSIcons } = require('./aws-icons.js');
     global.Entity = Entity;
+    global.AWSIcons = AWSIcons;
 }
-// In browser environment, Entity is already available globally from entities.js
+// In browser environment, Entity and AWSIcons are already available globally
 
 // Target class extending Entity
 class Target extends Entity {
@@ -72,9 +74,14 @@ class Target extends Entity {
     }
     
     static getColourByType(type) {
-        // AWS service colour scheme
+        // Use AWS Icons colour scheme for consistency
+        if (typeof AWSIcons !== 'undefined') {
+            return AWSIcons.getServiceColour(type);
+        }
+        
+        // Fallback colour scheme if AWSIcons not available
         const colourMap = {
-            's3': '#569A31',        // S3 green
+            's3': '#FF9900',        // S3 orange
             'lambda': '#FF9900',    // Lambda orange
             'rds': '#3F48CC',       // RDS blue
             'ec2': '#FF9900',       // EC2 orange
@@ -197,33 +204,38 @@ class Target extends Entity {
     }
     
     renderDefault(ctx) {
-        // Override default rendering with AWS service styling
-        let renderColour = this.colour;
+        // Create a subtle background for the AWS icon
+        let backgroundColour = this.colour;
         
-        // Modify colour based on health status
+        // Modify background based on health status
         if (this.isCritical()) {
-            renderColour = '#FF4444'; // Red for critical health
+            backgroundColour = '#FF4444'; // Red for critical health
         } else if (this.isDamaged()) {
-            renderColour = '#FFAA44'; // Orange for damaged
+            backgroundColour = '#FFAA44'; // Orange for damaged
         }
         
         // Apply damage flash effect
         if (this.isFlashing) {
-            renderColour = '#FFFFFF'; // White flash
+            backgroundColour = '#FFFFFF'; // White flash
         }
         
-        ctx.fillStyle = renderColour;
+        // Draw subtle background (more transparent to let icon show through)
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = backgroundColour;
         ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+        ctx.globalAlpha = 1.0;
         
         // Draw border
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2;
         ctx.strokeRect(-this.width / 2, -this.height / 2, this.width, this.height);
         
-        // Add inner highlight for 3D effect
+        // Add inner highlight for 3D effect (more subtle)
+        ctx.globalAlpha = 0.5;
         ctx.strokeStyle = '#FFFFFF';
         ctx.lineWidth = 1;
         ctx.strokeRect(-this.width / 2 + 2, -this.height / 2 + 2, this.width - 4, this.height - 4);
+        ctx.globalAlpha = 1.0;
     }
     
     renderHealthBar(ctx) {
@@ -261,20 +273,28 @@ class Target extends Entity {
     renderServiceIcon(ctx) {
         ctx.save();
         
-        // Position text in centre of target
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = 'bold 12px Arial';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2;
+        // Use AWS Icons if available, otherwise fall back to text
+        if (typeof AWSIcons !== 'undefined') {
+            const iconSize = Math.min(this.width, this.height) * 0.8;
+            const centerX = this.x + this.width / 2;
+            const centerY = this.y + this.height / 2;
+            
+            AWSIcons.renderIcon(ctx, this.type, centerX, centerY, iconSize);
+        } else {
+            // Fallback to text rendering
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = 'bold 12px Arial';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            
+            // Draw text with outline
+            ctx.strokeText(this.serviceIcon, this.x + this.width / 2, this.y + this.height / 2);
+            ctx.fillText(this.serviceIcon, this.x + this.width / 2, this.y + this.height / 2);
+        }
         
-        // Draw text with outline
-        ctx.strokeText(this.serviceIcon, this.x + this.width / 2, this.y + this.height / 2);
-        ctx.fillText(this.serviceIcon, this.x + this.width / 2, this.y + this.height / 2);
-        
-        ctx.restore();
-    }
+        ctx.restore();    }
     
     renderDamageFlash(ctx) {
         // Additional white overlay for damage flash

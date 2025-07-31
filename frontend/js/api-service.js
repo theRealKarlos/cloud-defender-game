@@ -5,8 +5,8 @@
 
 class ApiService {
     constructor() {
-        // Configure API base URL - update this to match your deployed backend
-        this.API_BASE_URL = 'https://2suh645i58.execute-api.us-east-1.amazonaws.com/dev'; // Placeholder, update for deployment
+        // Configure API base URL - will use custom domain after deployment
+        this.API_BASE_URL = 'https://cloud-defenders-api.lucky4some.com';
         this.timeout = 10000; // 10 second timeout
     }
 
@@ -122,4 +122,5 @@ class ApiService {
 
 // Create global instance
 window.apiService = new ApiService();
+
 

@@ -62,27 +62,51 @@ class EventHandler {
     handleKeyDown(event) {
         this.inputManager.setKeyState(event.code, true);
         
-        // Handle special key combinations
+        // Check if user is typing in an input field
+        const isTypingInInput = this.isUserTypingInInput();
+        
+        // Handle special key combinations (but not when typing in inputs)
         switch (event.code) {
         case 'Space':
-            event.preventDefault();
-            if (this.callbacks.onSpaceKey) {
-                this.callbacks.onSpaceKey();
+            if (!isTypingInInput) {
+                event.preventDefault();
+                if (this.callbacks.onSpaceKey) {
+                    this.callbacks.onSpaceKey();
+                }
             }
             break;
         case 'KeyR':
-            event.preventDefault();
-            if (this.callbacks.onRestartKey) {
-                this.callbacks.onRestartKey();
+            if (!isTypingInInput) {
+                event.preventDefault();
+                if (this.callbacks.onRestartKey) {
+                    this.callbacks.onRestartKey();
+                }
             }
             break;
         case 'Escape':
+            // Escape should work even in inputs (to close modals)
             event.preventDefault();
             if (this.callbacks.onEscapeKey) {
                 this.callbacks.onEscapeKey();
             }
             break;
         }
+    }
+    
+    isUserTypingInInput() {
+        const activeElement = document.activeElement;
+        
+        // Check if the active element is an input field, textarea, or contenteditable
+        if (!activeElement) return false;
+        
+        const tagName = activeElement.tagName.toLowerCase();
+        const isInputField = tagName === 'input' || tagName === 'textarea';
+        const isContentEditable = activeElement.contentEditable === 'true';
+        
+        // Also check if it's specifically the player name input
+        const isPlayerNameInput = activeElement.id === 'player-name';
+        
+        return isInputField || isContentEditable || isPlayerNameInput;
     }
     
     handleKeyUp(event) {

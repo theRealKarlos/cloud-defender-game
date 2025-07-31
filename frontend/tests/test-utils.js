@@ -21,6 +21,8 @@ const mockCanvas = {
         lineTo: jest.fn(),
         closePath: jest.fn(),
         arc: jest.fn(),
+        ellipse: jest.fn(),
+        bezierCurveTo: jest.fn(),
         fill: jest.fn(),
         stroke: jest.fn(),
         fillStyle: '',
@@ -29,7 +31,9 @@ const mockCanvas = {
         textAlign: '',
         textBaseline: '',
         font: '',
-        globalAlpha: 1
+        globalAlpha: 1,
+        lineCap: '',
+        lineJoin: ''
     })
 };
 

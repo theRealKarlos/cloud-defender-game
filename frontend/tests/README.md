@@ -30,6 +30,7 @@ npm run test:coverage
 Tests are organised by component for better maintainability:
 
 ### **Current Test Files:**
+
 - **Entity Tests** - Core game object functionality (`entity.test.js`)
 - **EntityManager Tests** - Game object management (`entity-manager.test.js`)
 - **SpatialGrid Tests** - Collision detection optimisation (`spatial-grid.test.js`)
@@ -37,6 +38,7 @@ Tests are organised by component for better maintainability:
 - **Test Utilities** - Shared mocks and helpers (`test-utils.js`)
 
 ### **Future Test Files:**
+
 - **Input System Tests** - Keyboard and mouse input handling
 - **Rendering Tests** - Canvas rendering operations
 - **Game State Tests** - State management and transitions
@@ -58,25 +60,25 @@ When adding new tests:
 ```javascript
 /**
  * Tests for [System Name]
- * 
+ *
  * Brief description of what this test suite validates
  */
 
-describe('[System Name]', () => {
-    let systemInstance;
+describe("[System Name]", () => {
+  let systemInstance;
 
-    beforeEach(() => {
-        systemInstance = new SystemClass();
-    });
+  beforeEach(() => {
+    systemInstance = new SystemClass();
+  });
 
-    /**
-     * Brief description of what this test validates
-     */
-    test('should [expected behaviour]', () => {
-        // Arrange
-        // Act
-        // Assert
-    });
+  /**
+   * Brief description of what this test validates
+   */
+  test("should [expected behaviour]", () => {
+    // Arrange
+    // Act
+    // Assert
+  });
 });
 ```
 

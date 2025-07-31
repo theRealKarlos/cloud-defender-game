@@ -34,7 +34,7 @@ describe('Target Class', () => {
             expect(target.maxHealth).toBe(100); // S3 bucket health
             expect(target.currentHealth).toBe(100);
             expect(target.collisionLayer).toBe('targets');
-            expect(target.colour).toBe('#569A31'); // S3 green
+            expect(target.colour).toBe('#FF9900'); // S3 orange (AWS official colour)
             expect(target.serviceIcon).toBe('S3');
             expect(target.displayName).toBe('S3 Bucket');
             expect(target.isDestroyed).toBe(false);

@@ -122,14 +122,25 @@ class UIManager {
         
         // Generate leaderboard HTML
         if (leaderboardData.leaderboard && leaderboardData.leaderboard.length > 0) {
-            const html = leaderboardData.leaderboard.map(entry => `
-                <div class="leaderboard-entry">
-                    <span class="rank">#${entry.rank}</span>
-                    <span class="player-name">${this.escapeHtml(entry.playerName)}</span>
-                    <span class="score">${entry.score.toLocaleString()}</span>
-                    <span class="wave">Wave ${entry.wave}</span>
-                </div>
-            `).join('');
+            let html = '';
+            
+            // Add message if it exists (for mock leaderboard)
+            if (leaderboardData.message) {
+                html += `<div class="leaderboard-message">${leaderboardData.message}</div>`;
+            }
+            
+            html += leaderboardData.leaderboard.map(entry => {
+                const isCurrentUser = entry.isCurrentUser ? ' current-user' : '';
+                return `
+                    <div class="leaderboard-entry${isCurrentUser}">
+                        <span class="rank">#${entry.rank}</span>
+                        <span class="player-name">${this.escapeHtml(entry.playerName)}</span>
+                        <span class="score">${entry.score.toLocaleString()}</span>
+                        <span class="wave">Wave ${entry.wave}</span>
+                        ${entry.isCurrentUser ? '<span class="you-indicator">← YOU</span>' : ''}
+                    </div>
+                `;
+            }).join('');
             
             leaderboardList.innerHTML = html;
         } else {
@@ -230,14 +241,40 @@ class UIManager {
 
         } catch (error) {
             console.error('Score submission failed:', error);
-            this.showSubmissionStatus(`Failed to submit score: ${error.message}`, 'error');
-            this.setFormEnabled(true);
+            
+            // Check if this is a network/server error (backend not deployed yet)
+            if (error.message.includes('Unable to connect') || 
+                error.message.includes('Failed to fetch') ||
+                error.message.includes('timed out')) {
+                
+                this.showSubmissionStatus(
+                    `Backend not available yet. Your score: ${this.currentGameStats.score} (Wave ${this.currentGameStats.wave})`, 
+                    'info'
+                );
+                
+                // Show a mock leaderboard after a delay
+                setTimeout(() => {
+                    this.showMockLeaderboard(scoreData);
+                }, 2000);
+            } else {
+                this.showSubmissionStatus(`Failed to submit score: ${error.message}`, 'error');
+                this.setFormEnabled(true);
+            }
         }
     }
 
     async skipScoreSubmission() {
         this.showSubmissionStatus('Loading leaderboard...', 'loading');
-        await this.loadLeaderboard();
+        
+        // Try to load real leaderboard, fall back to mock if backend unavailable
+        try {
+            await this.loadLeaderboard();
+        } catch (error) {
+            // If that fails too, just show mock leaderboard
+            setTimeout(() => {
+                this.showMockLeaderboard();
+            }, 1000);
+        }
     }
 
     async loadLeaderboard() {
@@ -246,8 +283,62 @@ class UIManager {
             this.showLeaderboard(leaderboardData);
         } catch (error) {
             console.error('Failed to load leaderboard:', error);
-            this.showSubmissionStatus(`Failed to load leaderboard: ${error.message}`, 'error');
+            
+            // If backend is not available, show mock leaderboard
+            if (error.message.includes('Unable to connect') || 
+                error.message.includes('Failed to fetch') ||
+                error.message.includes('timed out')) {
+                
+                this.showMockLeaderboard();
+            } else {
+                this.showSubmissionStatus(`Failed to load leaderboard: ${error.message}`, 'error');
+            }
         }
+    }
+
+    showMockLeaderboard(newScore = null) {
+        // Create a mock leaderboard with some sample scores
+        const mockScores = [
+            { rank: 1, playerName: 'CloudMaster', score: 15420, wave: 12 },
+            { rank: 2, playerName: 'AWSNinja', score: 12350, wave: 10 },
+            { rank: 3, playerName: 'DefenderPro', score: 9870, wave: 8 },
+            { rank: 4, playerName: 'ServerGuard', score: 8200, wave: 7 },
+            { rank: 5, playerName: 'CodeWarrior', score: 6540, wave: 6 }
+        ];
+
+        // If user just submitted a score, add it to the mock leaderboard
+        if (newScore) {
+            const userEntry = {
+                rank: 0, // Will be calculated
+                playerName: newScore.playerName,
+                score: newScore.score,
+                wave: newScore.wave,
+                isCurrentUser: true
+            };
+
+            // Find where the user's score should be inserted
+            let insertIndex = mockScores.findIndex(entry => newScore.score > entry.score);
+            if (insertIndex === -1) {
+                insertIndex = mockScores.length;
+            }
+
+            mockScores.splice(insertIndex, 0, userEntry);
+
+            // Update ranks
+            mockScores.forEach((entry, index) => {
+                entry.rank = index + 1;
+            });
+
+            // Keep only top 10
+            mockScores.splice(10);
+        }
+
+        const mockLeaderboardData = {
+            leaderboard: mockScores,
+            message: 'Demo leaderboard (backend not deployed yet)'
+        };
+
+        this.showLeaderboard(mockLeaderboardData);
     }
 
     showSubmissionStatus(message, type) {

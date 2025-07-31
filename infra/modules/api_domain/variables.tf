@@ -9,7 +9,7 @@ variable "environment" {
 }
 
 variable "domain_name" {
-  description = "Custom domain name for the website"
+  description = "Custom domain name for the API"
   type        = string
   default     = null
 }
@@ -24,4 +24,14 @@ variable "hosted_zone_id" {
   description = "Route53 hosted zone ID for the domain"
   type        = string
   default     = null
+}
+
+variable "api_gateway_id" {
+  description = "API Gateway REST API ID"
+  type        = string
+}
+
+variable "api_gateway_stage_name" {
+  description = "API Gateway stage name"
+  type        = string
 }

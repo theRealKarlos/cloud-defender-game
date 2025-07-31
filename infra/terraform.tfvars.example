@@ -1,0 +1,22 @@
+# Cloud Defenders Game - Terraform Variables Example
+# Copy this file to terraform.tfvars and update with your actual values
+
+# AWS Configuration
+aws_region = "eu-west-2"
+
+# Project Configuration
+project_name = "cloud-defenders"
+environment  = "dev"
+
+# Domain Configuration
+domain_name = "your-domain.com"
+
+# Route53 Hosted Zone ID
+# This is not sensitive data but should be configured per environment
+# You can find this in the AWS Console under Route53 > Hosted zones
+hosted_zone_id = "Z1234567890ABC"
+
+# Example values for different environments:
+# Development: hosted_zone_id = "Z1234567890ABC"
+# Staging:     hosted_zone_id = "Z0987654321XYZ"  
+# Production:  hosted_zone_id = "Z1111222233344"

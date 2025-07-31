@@ -8,23 +8,22 @@ output "bucket_domain_name" {
   value       = aws_s3_bucket.game_hosting.bucket_domain_name
 }
 
-output "website_endpoint" {
-  description = "Website endpoint of the S3 bucket"
-  value       = aws_s3_bucket_website_configuration.game_site.website_endpoint
-}
-
-output "website_url" {
-  description = "Complete website URL"
-  value       = "http://${aws_s3_bucket_website_configuration.game_site.website_endpoint}"
-}
-
-# Dummy outputs for compatibility (will be empty in S3 mode)
 output "cloudfront_distribution_id" {
-  description = "CloudFront distribution ID (not available in S3 mode)"
-  value       = "N/A - S3 Website Mode"
+  description = "CloudFront distribution ID"
+  value       = aws_cloudfront_distribution.game_hosting.id
 }
 
 output "cloudfront_domain_name" {
-  description = "CloudFront distribution domain name (not available in S3 mode)"
-  value       = "N/A - S3 Website Mode"
+  description = "CloudFront distribution domain name"
+  value       = aws_cloudfront_distribution.game_hosting.domain_name
+}
+
+output "website_url" {
+  description = "Complete website URL (CloudFront HTTPS)"
+  value       = "https://${aws_cloudfront_distribution.game_hosting.domain_name}"
+}
+
+output "cloudfront_arn" {
+  description = "CloudFront distribution ARN"
+  value       = aws_cloudfront_distribution.game_hosting.arn
 }

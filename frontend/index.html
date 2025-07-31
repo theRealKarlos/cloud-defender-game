@@ -28,6 +28,9 @@
                     <button id="start-btn" class="game-btn">Start Game</button>
                     <button id="pause-btn" class="game-btn" disabled>Pause</button>
                     <button id="restart-btn" class="game-btn">Restart</button>
+                    <div class="keyboard-hints">
+                        <small>Shortcuts: <kbd>Space</kbd> Pause • <kbd>R</kbd> Restart • <kbd>Esc</kbd> Close</small>
+                    </div>
                 </div>
                 
                 <div class="power-ups">
@@ -49,6 +52,7 @@
                         <div class="form-group">
                             <label for="player-name">Player Name:</label>
                             <input type="text" id="player-name" name="playerName" maxlength="50" placeholder="Enter your name" required>
+                            <small class="input-hint">Keyboard shortcuts (R, Space) are disabled while typing</small>
                         </div>
                         <div class="form-actions">
                             <button type="submit" id="submit-score-btn" class="game-btn primary">Submit Score</button>
@@ -74,6 +78,9 @@
     
     <!-- API Service -->
     <script src="js/api-service.js"></script>
+    
+    <!-- AWS Icons -->
+    <script src="js/aws-icons.js"></script>
     
     <!-- Core game systems -->
     <script src="js/entities.js"></script>

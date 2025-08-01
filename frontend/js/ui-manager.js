@@ -230,7 +230,10 @@ class UIManager {
                 gameMode: 'normal'
             };
 
-            const result = await window.apiService.submitScore(scoreData);
+            const result = await window.apiService.submitScore(
+                scoreData, 
+                this.currentGameStats.validationData
+            );
             
             this.showSubmissionStatus('Score submitted successfully!', 'success');
             

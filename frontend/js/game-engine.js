@@ -23,6 +23,9 @@ class GameEngine {
         this.waveManager = new WaveManager(this.entityManager, this.canvas.width, this.canvas.height);
         this.gameConditions = new GameConditions(this.entityManager, this.waveManager, this.uiManager);
         
+        // Initialize security system
+        this.gameSecurity = new GameSecurity();
+        
         // Game statistics
         this.gameStats = {
             score: 0,
@@ -102,6 +105,7 @@ class GameEngine {
         this.waveManager.setOnWaveCompleteCallback((waveNumber) => {
             console.log(`Wave ${waveNumber} completed!`);
             this.gameConditions.onWaveCompleted(waveNumber);
+            this.gameSecurity.onWaveComplete(waveNumber, this.gameStats.score);
         });
         
         this.waveManager.setOnAllWavesCompleteCallback(() => {
@@ -146,6 +150,7 @@ class GameEngine {
             // Start game systems AFTER targets are added
             this.gameConditions.startGame();
             this.waveManager.startWave();
+            this.gameSecurity.startGame();
             
             if (!this.gameLoop.isRunning) {
                 this.gameLoop.start();
@@ -198,6 +203,12 @@ class GameEngine {
         // Update game stats with current wave
         this.gameStats.wave = this.waveManager.getCurrentWave();
         
+        // Generate security validation data
+        const validationResult = this.gameSecurity.onGameOver(this.gameStats.score, this.gameStats.wave);
+        
+        // Store validation data for score submission
+        this.gameStats.validationData = validationResult;
+        
         this.uiManager.showModal(
             'Game Over', 
             `Your final score: <span id="final-score">${this.gameStats.score}</span>`,
@@ -206,6 +217,7 @@ class GameEngine {
         );
         
         console.log('Game Over - Final Stats:', this.gameStats);
+        console.log('Security Validation:', validationResult);
     }
     
     // Game Loop Methods
@@ -350,7 +362,7 @@ class GameEngine {
         const maxCountermeasures = 4;
         
         if (activeBombs && activeBombs.length >= maxCountermeasures) {
-            console.log(`Cannot deploy bomb: ${activeBombs.length}/${maxCountermeasures} countermeasures already active`);
+
             return; // Don't deploy if at limit
         }
         
@@ -367,13 +379,10 @@ class GameEngine {
         const originalSpeed = bomb.speed;
         bomb.speed *= countermeasureSpeedMultiplier;
         
-        console.log(`Wave ${currentWave}: Countermeasure speed ${originalSpeed} → ${bomb.speed.toFixed(1)} (${(countermeasureSpeedMultiplier * 100).toFixed(1)}%)`);
-        
         // Add to entity manager
         this.entityManager.addEntity(bomb, 'countermeasures');
         
-        const currentBombCount = (activeBombs ? activeBombs.length : 0) + 1;
-        console.log(`Deployed bomb from (${startX}, ${startY}) to (${targetX}, ${targetY}) [${currentBombCount}/${maxCountermeasures}]`);
+
     }
     
     checkExplosionCollisions() {

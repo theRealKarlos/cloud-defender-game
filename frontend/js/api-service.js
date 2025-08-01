@@ -11,11 +11,31 @@ class ApiService {
     }
 
     /**
-     * Submit a score to the leaderboard
+     * Submit a score to the leaderboard with security validation
      */
-    async submitScore(scoreData) {
+    async submitScore(scoreData, validationData = null) {
         try {
-            console.log('Submitting score:', scoreData);
+            // Prepare secure payload
+            const securePayload = {
+                ...scoreData,
+                timestamp: Date.now(),
+                clientVersion: '1.0.0',
+                
+                // Include validation data if provided
+                ...(validationData && {
+                    validation: {
+                        sessionData: validationData.sessionData,
+                        confidence: validationData.confidence,
+                        flags: validationData.flags,
+                        isValid: validationData.isValid
+                    }
+                })
+            };
+            
+            console.log('Submitting score with security validation:', {
+                ...securePayload,
+                validation: validationData ? 'included' : 'none'
+            });
             
             // Create AbortController for timeout
             const controller = new AbortController();
@@ -24,9 +44,11 @@ class ApiService {
             const response = await fetch(`${this.API_BASE_URL}/scores`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-Client-Version': '1.0.0',
+                    'X-Timestamp': Date.now().toString()
                 },
-                body: JSON.stringify(scoreData),
+                body: JSON.stringify(securePayload),
                 signal: controller.signal
             });
             

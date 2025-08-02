@@ -1,57 +1,7 @@
 # Cloud Defenders Game Infrastructure
 # Main Terraform configuration file
 
-terraform {
-  required_version = "~> 1.12"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 6.5"
-    }
-  }
-}
-
-provider "aws" {
-  region = var.aws_region
-}
-
-# Provider for US East 1 (required for CloudFront certificates)
-provider "aws" {
-  alias  = "us_east_1"
-  region = "us-east-1"
-}
-
-# Variables
-variable "aws_region" {
-  description = "AWS region for deployment"
-  type        = string
-  default     = "eu-west-2"
-}
-
-variable "project_name" {
-  description = "Name of the project"
-  type        = string
-  default     = "cloud-defenders"
-}
-
-variable "environment" {
-  description = "Environment (dev, staging, prod)"
-  type        = string
-  default     = "dev"
-}
-
-variable "domain_name" {
-  description = "Base domain name"
-  type        = string
-  default     = "lucky4some.com"
-}
-
-variable "hosted_zone_id" {
-  description = "Route53 hosted zone ID for the domain (not sensitive but environment-specific)"
-  type        = string
-  # No default - must be provided via terraform.tfvars
-  # Find this in AWS Console: Route53 > Hosted zones > [your domain] > Hosted zone ID
-}
+# Variables are defined in variables.tf
 
 # Data source for existing hosted zone
 data "aws_route53_zone" "main" {
@@ -68,11 +18,9 @@ resource "aws_acm_certificate" "cloudfront_cert" {
     create_before_destroy = true
   }
 
-  tags = {
-    Name        = "${var.project_name}-cloudfront-cert"
-    Project     = var.project_name
-    Environment = var.environment
-  }
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-cloudfront-cert"
+  })
 }
 
 # ACM Certificate for API Gateway (in the main region)
@@ -84,11 +32,9 @@ resource "aws_acm_certificate" "api_cert" {
     create_before_destroy = true
   }
 
-  tags = {
-    Name        = "${var.project_name}-api-cert"
-    Project     = var.project_name
-    Environment = var.environment
-  }
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-api-cert"
+  })
 }
 
 # DNS validation for CloudFront certificate
@@ -148,6 +94,7 @@ module "s3_game_hosting" {
   domain_name     = "${var.project_name}.${var.domain_name}"
   certificate_arn = aws_acm_certificate_validation.cloudfront_cert.certificate_arn
   hosted_zone_id  = var.hosted_zone_id
+  common_tags     = local.common_tags
 }
 
 # DynamoDB Module
@@ -156,16 +103,18 @@ module "dynamodb" {
 
   project_name = var.project_name
   environment  = var.environment
+  common_tags  = local.common_tags
 }
 
 # Lambda Function Module
 module "lambda_function" {
   source = "./modules/lambda_function"
 
-  project_name         = var.project_name
-  environment          = var.environment
-  dynamodb_table_name  = module.dynamodb.table_name
-  dynamodb_table_arn   = module.dynamodb.table_arn
+  project_name        = var.project_name
+  environment         = var.environment
+  dynamodb_table_name = module.dynamodb.table_name
+  dynamodb_table_arn  = module.dynamodb.table_arn
+  common_tags         = local.common_tags
 }
 
 # API Gateway Module
@@ -176,73 +125,19 @@ module "api_gateway" {
   environment          = var.environment
   lambda_function_name = module.lambda_function.function_name
   lambda_invoke_arn    = module.lambda_function.invoke_arn
+  common_tags          = local.common_tags
 }
 
 # API Domain Module
 module "api_domain" {
   source = "./modules/api_domain"
 
-  project_name            = var.project_name
-  environment             = var.environment
-  domain_name             = "${var.project_name}-api.${var.domain_name}"
-  certificate_arn         = aws_acm_certificate_validation.api_cert.certificate_arn
-  hosted_zone_id          = var.hosted_zone_id
-  api_gateway_id          = module.api_gateway.api_id
-  api_gateway_stage_name  = module.api_gateway.stage_name
-}
-
-# Outputs
-output "s3_bucket_name" {
-  description = "S3 bucket name for game hosting"
-  value       = module.s3_game_hosting.bucket_name
-}
-
-output "website_url" {
-  description = "Custom domain website URL"
-  value       = "https://${var.project_name}.${var.domain_name}"
-}
-
-output "api_url" {
-  description = "Custom domain API URL"
-  value       = "https://${var.project_name}-api.${var.domain_name}"
-}
-
-output "s3_website_url" {
-  description = "Website URL via CloudFront CDN"
-  value       = module.s3_game_hosting.website_url
-}
-
-output "cloudfront_distribution_id" {
-  description = "CloudFront distribution ID"
-  value       = module.s3_game_hosting.cloudfront_distribution_id
-}
-
-output "cloudfront_domain_name" {
-  description = "CloudFront distribution domain name"
-  value       = module.s3_game_hosting.cloudfront_domain_name
-}
-
-output "api_gateway_url" {
-  description = "API Gateway URL"
-  value       = module.api_gateway.api_url
-}
-
-output "lambda_function_name" {
-  description = "Lambda function name"
-  value       = module.lambda_function.function_name
-}
-
-output "dynamodb_table_name" {
-  description = "DynamoDB table name"
-  value       = module.dynamodb.table_name
-}
-
-output "cloudfront_certificate_arn" {
-  description = "CloudFront SSL certificate ARN"
-  value       = aws_acm_certificate_validation.cloudfront_cert.certificate_arn
-}
-
-output "api_certificate_arn" {
-  description = "API Gateway SSL certificate ARN"
-  value       = aws_acm_certificate_validation.api_cert.certificate_arn
+  project_name           = var.project_name
+  environment            = var.environment
+  domain_name            = "${var.project_name}-api.${var.domain_name}"
+  certificate_arn        = aws_acm_certificate_validation.api_cert.certificate_arn
+  hosted_zone_id         = var.hosted_zone_id
+  api_gateway_id         = module.api_gateway.api_id
+  api_gateway_stage_name = module.api_gateway.stage_name
+  common_tags            = local.common_tags
 }

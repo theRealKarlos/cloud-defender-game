@@ -35,9 +35,7 @@ resource "aws_dynamodb_table" "scores" {
     type = "N"
   }
 
-  tags = {
-    Name        = "Cloud Defenders Scores"
-    Environment = var.environment
-    Project     = var.project_name
-  }
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-${var.environment}-scores"
+  })
 }

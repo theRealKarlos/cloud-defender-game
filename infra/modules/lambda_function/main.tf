@@ -18,11 +18,9 @@ resource "aws_iam_role" "lambda_role" {
     ]
   })
 
-  tags = {
-    Name        = "Cloud Defenders Lambda Role"
-    Environment = var.environment
-    Project     = var.project_name
-  }
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-${var.environment}-lambda-role"
+  })
 }
 
 # IAM policy for Lambda to access DynamoDB
@@ -91,11 +89,9 @@ resource "aws_lambda_function" "score_api" {
     }
   }
 
-  tags = {
-    Name        = "Cloud Defenders Score API"
-    Environment = var.environment
-    Project     = var.project_name
-  }
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-${var.environment}-score-api"
+  })
 
   depends_on = [
     aws_iam_role_policy_attachment.lambda_basic_execution,
@@ -108,9 +104,7 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
   name              = "/aws/lambda/${aws_lambda_function.score_api.function_name}"
   retention_in_days = 7
 
-  tags = {
-    Name        = "Cloud Defenders Lambda Logs"
-    Environment = var.environment
-    Project     = var.project_name
-  }
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-${var.environment}-lambda-logs"
+  })
 }

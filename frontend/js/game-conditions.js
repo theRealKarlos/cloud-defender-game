@@ -293,6 +293,24 @@ class GameConditions {
         }
     }
     
+    onTargetHit(target, missile) {
+        if (!this.gameActive) return;
+        
+        // Lose a life when a target is hit by a missile
+        this.currentLives = Math.max(0, this.currentLives - 1);
+        
+        // Trigger callback
+        if (this.onLivesChangedCallback) {
+            this.onLivesChangedCallback(this.currentLives);
+        }
+        
+        // Check if game should end due to no lives remaining
+        if (this.currentLives <= 0) {
+            this.defeatConditions.livesExhausted = true;
+            this.triggerDefeat('lives_exhausted');
+        }
+    }
+    
     // Getters for game state
     isGameWon() {
         return this.gameWon;

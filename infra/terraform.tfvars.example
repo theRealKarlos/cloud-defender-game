@@ -3,6 +3,7 @@
 
 # AWS Configuration
 aws_region = "eu-west-2"
+aws_profile = "aws-profile" # Recommended use is AWS SSO (IAM Identity Centre) https://docs.aws.amazon.com/res/latest/ug/sso-idc.html#:~:text=and%20Engineering%20Studio.-,Step%201%3A%20Set%20up%20an%20identity%20center,Enabling%20IAM%20Identity%20Center
 
 # Project Configuration
 project_name = "cloud-defenders"

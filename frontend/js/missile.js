@@ -64,14 +64,14 @@ class Missile extends Entity {
   }
 
   static getSpeedByType(type) {
-    // Reasonable slow speeds for strategic gameplay (pixels per second)
+    // Missile speeds (pixels per second)
     const speedMap = {
-      "cost-spike": 50, // Fast - sudden cost increases
-      "data-breach": 40, // Medium - persistent threat
-      "latency-ghost": 70, // Very fast - performance issues
-      "policy-violator": 30, // Slow but persistent - compliance issues
+      "cost-spike": 120, // Fast - sudden cost increases
+      "data-breach": 80, // Medium - persistent threat
+      "latency-ghost": 200, // Very fast - performance issues
+      "policy-violator": 60, // Slow but persistent - compliance issues
     };
-    return speedMap[type] || 50;
+    return speedMap[type] || 100;
   }
 
   static getDamageByType(type) {
@@ -203,15 +203,12 @@ class Missile extends Entity {
         break;
     }
 
-    // DISABLED: Apply acceleration (was causing exponential speed increases)
-    // const currentSpeed = Math.sqrt(
-    //   this.velocityX * this.velocityX + this.velocityY * this.velocityY
-    // );
-    // const newSpeed = currentSpeed * behaviour.acceleration;
-    // const speedRatio = newSpeed / currentSpeed;
-
-    // this.velocityX *= speedRatio;
-    // this.velocityY *= speedRatio;
+    // Apply acceleration (fixed to prevent exponential growth)
+    if (behaviour.acceleration !== 1.0) {
+      const accelerationFactor = 1.0 + (behaviour.acceleration - 1.0) * deltaTime;
+      this.velocityX *= accelerationFactor;
+      this.velocityY *= accelerationFactor;
+    }
 
     // Add wobble effect
     if (behaviour.wobble > 0) {

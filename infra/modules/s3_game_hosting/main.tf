@@ -5,11 +5,9 @@
 resource "aws_s3_bucket" "game_hosting" {
   bucket = "${var.project_name}-${var.environment}-game-hosting"
 
-  tags = {
-    Name        = "Cloud Defenders Game Hosting"
-    Environment = var.environment
-    Project     = var.project_name
-  }
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-${var.environment}-game-hosting"
+  })
 }
 
 # Block all public access to S3 bucket
@@ -108,11 +106,9 @@ resource "aws_cloudfront_distribution" "game_hosting" {
     minimum_protocol_version       = var.domain_name != null ? "TLSv1.2_2021" : null
   }
 
-  tags = {
-    Name        = "Cloud Defenders Game CDN"
-    Environment = var.environment
-    Project     = var.project_name
-  }
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-${var.environment}-cloudfront"
+  })
 }
 
 # S3 bucket policy to allow CloudFront OAC access

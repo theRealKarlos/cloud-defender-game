@@ -26,18 +26,7 @@ variable "aws_profile" {
   type        = string
 }
 
-variable "domain_name" {
-  description = "Base domain name"
-  type        = string
-  default     = "lucky4some.com"
-}
-
-variable "hosted_zone_id" {
-  description = "Route53 hosted zone ID for the domain (not sensitive but environment-specific)"
-  type        = string
-  # No default - must be provided via terraform.tfvars
-  # Find this in AWS Console: Route53 > Hosted zones > [your domain] > Hosted zone ID
-}
+# Custom domain variables removed - using AWS-generated URLs only
 
 # Common tags - defined once, used everywhere
 locals {

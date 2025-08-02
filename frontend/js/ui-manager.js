@@ -70,6 +70,7 @@ class UIManager {
         if (finalScoreElement) finalScoreElement.textContent = score;
 
         // Store game stats for score submission
+        console.log('Storing gameStats in showModal:', gameStats);
         this.currentGameStats = gameStats;
         
         // Show score submission form if this is a game over
@@ -163,6 +164,7 @@ class UIManager {
     }
 
     setupEventListeners(callbacks) {
+        console.log('UIManager setupEventListeners called', callbacks);
         // Game control buttons
         if (this.startBtn) {
             this.startBtn.addEventListener('click', callbacks.onStart);
@@ -190,10 +192,14 @@ class UIManager {
         const skipSubmissionBtn = document.getElementById('skip-submission-btn');
 
         if (scoreForm) {
+            console.log('Score form found, adding event listener');
             scoreForm.addEventListener('submit', async (e) => {
+                console.log('Score form submitted!', e);
                 e.preventDefault();
                 await this.handleScoreSubmission(e);
             });
+        } else {
+            console.warn('Score form not found!');
         }
 
         if (skipSubmissionBtn) {
@@ -204,16 +210,20 @@ class UIManager {
     }
 
     async handleScoreSubmission(event) {
+        console.log('handleScoreSubmission called', event);
         const form = event.target;
         const formData = new FormData(form);
         const playerName = formData.get('playerName').trim();
+        console.log('Player name:', playerName);
         
         if (!playerName) {
             this.showSubmissionStatus('Please enter your name.', 'error');
             return;
         }
 
+        console.log('Checking currentGameStats:', this.currentGameStats);
         if (!this.currentGameStats) {
+            console.error('currentGameStats is null/undefined!');
             this.showSubmissionStatus('Game data not available.', 'error');
             return;
         }
@@ -229,6 +239,13 @@ class UIManager {
                 wave: this.currentGameStats.wave,
                 gameMode: 'normal'
             };
+
+            // Debug logging for game score submission
+            console.log('Game score submission attempt:', {
+                scoreData,
+                validationData: this.currentGameStats.validationData,
+                currentGameStats: this.currentGameStats
+            });
 
             const result = await window.apiService.submitScore(
                 scoreData, 

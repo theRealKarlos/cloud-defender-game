@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>API Service Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      button {
+        margin: 10px;
+        padding: 10px;
+      }
+      #results {
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #ccc;
+      }
+      .success {
+        color: green;
+      }
+      .error {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Cloud Defenders API Service Test</h1>
+
+    <button onclick="testLeaderboard()">Test Leaderboard</button>
+    <button onclick="testScoreSubmission()">Test Score Submission</button>
+    <button onclick="testConnection()">Test Connection</button>
+
+    <div id="results">Click a button to test the API...</div>
+
+    <!-- Load the actual game scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/api-service.js"></script>
+
+    <script>
+      function log(message, type = "info") {
+        const results = document.getElementById("results");
+        const className =
+          type === "error" ? "error" : type === "success" ? "success" : "";
+        results.innerHTML += `<div class="${className}">${message}</div>`;
+      }
+
+      function clearResults() {
+        document.getElementById("results").innerHTML = "";
+      }
+
+      async function testLeaderboard() {
+        clearResults();
+        log("Testing leaderboard...");
+
+        try {
+          const data = await window.apiService.getLeaderboard();
+          log("✅ Leaderboard test passed!", "success");
+          log("Response: " + JSON.stringify(data, null, 2));
+        } catch (error) {
+          log("❌ Leaderboard test failed: " + error.message, "error");
+          console.error("Leaderboard error:", error);
+        }
+      }
+
+      async function testScoreSubmission() {
+        clearResults();
+        log("Testing score submission...");
+
+        try {
+          const scoreData = {
+            playerName: "TestPlayer",
+            score: 1500,
+            wave: 6,
+            gameMode: "normal",
+          };
+
+          log(
+            "Submitting to URL: " +
+              window.apiService.API_BASE_URL +
+              "/api/scores"
+          );
+          log("Payload: " + JSON.stringify(scoreData, null, 2));
+
+          const data = await window.apiService.submitScore(scoreData);
+          log("✅ Score submission test passed!", "success");
+          log("Response: " + JSON.stringify(data, null, 2));
+        } catch (error) {
+          log("❌ Score submission test failed: " + error.message, "error");
+          log(
+            "Full error: " +
+              JSON.stringify(error, Object.getOwnPropertyNames(error))
+          );
+          console.error("Score submission error:", error);
+        }
+      }
+
+      async function testConnection() {
+        clearResults();
+        log("Testing API connection...");
+
+        try {
+          const isConnected = await window.apiService.testConnection();
+          if (isConnected) {
+            log("✅ API connection test passed!", "success");
+          } else {
+            log("❌ API connection test failed", "error");
+          }
+        } catch (error) {
+          log("❌ Connection test failed: " + error.message, "error");
+          console.error("Connection error:", error);
+        }
+      }
+
+      // Show current configuration
+      window.addEventListener("load", () => {
+        log("API Base URL: " + window.apiService.API_BASE_URL);
+        log("Score URL: " + window.apiService.API_BASE_URL + "/api/scores");
+        log(
+          "Leaderboard URL: " +
+            window.apiService.API_BASE_URL +
+            "/api/leaderboard"
+        );
+      });
+    </script>
+  </body>
+</html>

@@ -15,21 +15,4 @@ variable "common_tags" {
   default     = {}
 }
 
-# Module-specific variables
-variable "domain_name" {
-  description = "Custom domain name for the website"
-  type        = string
-  default     = null
-}
-
-variable "certificate_arn" {
-  description = "ACM certificate ARN for the custom domain"
-  type        = string
-  default     = null
-}
-
-variable "hosted_zone_id" {
-  description = "Route53 hosted zone ID for the domain"
-  type        = string
-  default     = null
-}
+# No module-specific variables - using AWS-generated URLs only

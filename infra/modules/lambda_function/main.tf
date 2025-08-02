@@ -76,7 +76,7 @@ resource "aws_lambda_function" "score_api" {
   function_name = "${var.project_name}-${var.environment}-score-api"
   role          = aws_iam_role.lambda_role.arn
   handler       = "index.handler"
-  runtime       = "nodejs20.x"
+  runtime       = "nodejs22.x"
   timeout       = 30
   memory_size   = 256
 
@@ -99,7 +99,7 @@ resource "aws_lambda_function" "score_api" {
   ]
 }
 
-# CloudWatch Log Group for Lambda
+# CloudWatch Log Group for Lambda (AWS creates this automatically, but we manage it for retention)
 resource "aws_cloudwatch_log_group" "lambda_logs" {
   name              = "/aws/lambda/${aws_lambda_function.score_api.function_name}"
   retention_in_days = 7
@@ -107,4 +107,9 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
   tags = merge(var.common_tags, {
     Name = "${var.project_name}-${var.environment}-lambda-logs"
   })
+
+  # Handle case where log group might already exist
+  lifecycle {
+    prevent_destroy = true
+  }
 }

@@ -5,13 +5,13 @@ output "s3_bucket_name" {
 }
 
 output "website_url" {
-  description = "Custom domain website URL"
-  value       = "https://${var.project_name}.${var.domain_name}"
+  description = "CloudFront website URL"
+  value       = module.s3_game_hosting.website_url
 }
 
 output "api_url" {
-  description = "Custom domain API URL"
-  value       = "https://${var.project_name}-api.${var.domain_name}"
+  description = "API Gateway URL"
+  value       = module.api_gateway.api_url
 }
 
 output "s3_website_url" {
@@ -34,6 +34,11 @@ output "api_gateway_url" {
   value       = module.api_gateway.api_url
 }
 
+output "api_id" {
+  description = "API Gateway ID"
+  value       = module.api_gateway.api_id
+}
+
 output "lambda_function_name" {
   description = "Lambda function name"
   value       = module.lambda_function.function_name
@@ -44,12 +49,4 @@ output "dynamodb_table_name" {
   value       = module.dynamodb.table_name
 }
 
-output "cloudfront_certificate_arn" {
-  description = "CloudFront SSL certificate ARN"
-  value       = aws_acm_certificate_validation.cloudfront_cert.certificate_arn
-}
-
-output "api_certificate_arn" {
-  description = "API Gateway SSL certificate ARN"
-  value       = aws_acm_certificate_validation.api_cert.certificate_arn
-}
+# Certificate outputs removed - using AWS-managed certificates

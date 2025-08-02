@@ -197,6 +197,7 @@ class GameEngine {
     }
     
     gameOver() {
+        console.log('gameOver() method called');
         this.stateManager.changeState(GameState.GAME_OVER);
         this.uiManager.setButtonStates(false, false);
         

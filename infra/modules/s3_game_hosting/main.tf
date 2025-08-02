@@ -96,14 +96,11 @@ resource "aws_cloudfront_distribution" "game_hosting" {
     }
   }
 
-  # Custom domain configuration
-  aliases = var.domain_name != null ? [var.domain_name] : []
+  # Using CloudFront default certificate (no custom domain)
+  aliases = []
 
   viewer_certificate {
-    cloudfront_default_certificate = var.domain_name == null
-    acm_certificate_arn            = var.certificate_arn
-    ssl_support_method             = var.domain_name != null ? "sni-only" : null
-    minimum_protocol_version       = var.domain_name != null ? "TLSv1.2_2021" : null
+    cloudfront_default_certificate = true
   }
 
   tags = merge(var.common_tags, {
@@ -138,16 +135,4 @@ resource "aws_s3_bucket_policy" "game_hosting" {
   depends_on = [aws_s3_bucket_public_access_block.game_hosting]
 }
 
-# Route53 record for custom domain (if provided)
-resource "aws_route53_record" "website" {
-  count   = var.domain_name != null ? 1 : 0
-  zone_id = var.hosted_zone_id
-  name    = var.domain_name
-  type    = "A"
-
-  alias {
-    name                   = aws_cloudfront_distribution.game_hosting.domain_name
-    zone_id                = aws_cloudfront_distribution.game_hosting.hosted_zone_id
-    evaluate_target_health = false
-  }
-}
+# Route53 record removed - using CloudFront default domain

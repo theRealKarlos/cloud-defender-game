@@ -20,15 +20,35 @@ exports.handler = async (event) => {
     console.log('Received event:', JSON.stringify(event, null, 2));
     
     try {
-        const { httpMethod, path, body, queryStringParameters } = event;
+        // Handle both API Gateway v1 (REST API) and v2 (HTTP API) formats
+        const httpMethod = event.httpMethod || event.requestContext?.http?.method;
+        let path = event.path || event.rawPath || event.requestContext?.http?.path;
+        const body = event.body;
+        const queryStringParameters = event.queryStringParameters;
         
-        // CORS headers
+        // For API Gateway v2, remove the stage prefix from the path
+        // e.g., '/dev/api/scores' becomes '/api/scores'
+        if (path && path.startsWith('/dev/')) {
+            path = path.substring(4); // Remove '/dev' prefix
+        }
+        
+        // CORS headers - Enhanced for local development
         const headers = {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+            'Access-Control-Allow-Headers': 'Content-Type, X-Client-Version, X-Timestamp, Authorization',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, PUT, DELETE',
+            'Access-Control-Max-Age': '86400',
+            'Access-Control-Allow-Credentials': 'false'
         };
+        
+        // Debug logging
+        console.log('Parsed request:', {
+            httpMethod,
+            path,
+            hasBody: !!body,
+            queryParams: queryStringParameters
+        });
         
         // Handle preflight requests
         if (httpMethod === 'OPTIONS') {
@@ -40,16 +60,24 @@ exports.handler = async (event) => {
         }
         
         // Route requests
-        switch (`${httpMethod} ${path}`) {
+        const routeKey = `${httpMethod} ${path}`;
+        console.log('Routing request:', routeKey);
+        
+        switch (routeKey) {
             case 'POST /api/scores':
                 return await submitScore(JSON.parse(body || '{}'), headers);
             case 'GET /api/leaderboard':
                 return await getLeaderboard(queryStringParameters || {}, headers);
             default:
+                console.log('No route matched. Available routes: POST /api/scores, GET /api/leaderboard');
                 return {
                     statusCode: 404,
                     headers,
-                    body: JSON.stringify({ error: 'Not Found' })
+                    body: JSON.stringify({ 
+                        error: 'Not Found',
+                        message: `Route not found: ${routeKey}`,
+                        availableRoutes: ['POST /api/scores', 'GET /api/leaderboard']
+                    })
                 };
         }
     } catch (error) {

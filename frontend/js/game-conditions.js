@@ -205,7 +205,15 @@ class GameConditions {
                 </div>
             `;
             
-            this.uiManager.showModal('Game Over', fullMessage, finalScore);
+            // Create game stats object for score submission
+            const gameStats = {
+                score: finalScore,
+                wave: this.waveManager.getCurrentWave(),
+                lives: this.currentLives,
+                validationData: null // Will be set by game security if needed
+            };
+            
+            this.uiManager.showModal('Game Over', fullMessage, finalScore, gameStats);
         }
     }
     

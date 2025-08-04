@@ -4,7 +4,7 @@
  */
 
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, PutCommand, ScanCommand } = require('@aws-sdk/lib-dynamodb');
+const { DynamoDBDocumentClient, PutCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
 
 // Initialize DynamoDB client with v3 SDK
 const client = new DynamoDBClient({});
@@ -32,56 +32,41 @@ async function saveScore(scoreRecord) {
  * @param {Object} options - Query options
  * @param {string} options.gameMode - Game mode filter
  * @param {string} options.timeframe - Timeframe filter (all, today, week, month)
+ * @param {number} options.limit - Maximum number of results to return
  * @returns {Promise<Array>} Array of score records
  */
 async function getScores(options = {}) {
-    const { gameMode = 'normal', timeframe = 'all' } = options;
+    const { gameMode = 'normal', timeframe = 'all', limit = 100 } = options;
     
-    const { filterExpression, expressionAttributeValues } = buildFilterExpression(gameMode, timeframe);
-    
-    // Scan DynamoDB table
-    const scanCommand = new ScanCommand({
+    // Use GSI for efficient leaderboard queries
+    const queryParams = {
         TableName: DYNAMODB_TABLE,
-        FilterExpression: filterExpression,
-        ExpressionAttributeValues: Object.keys(expressionAttributeValues).length > 0 ? expressionAttributeValues : undefined
-    });
+        IndexName: 'ScoreIndex',
+        KeyConditionExpression: 'gameMode = :gameMode',
+        ExpressionAttributeValues: {
+            ':gameMode': gameMode
+        },
+        ScanIndexForward: false, // Sort in descending order (highest score first)
+        Limit: limit
+    };
     
-    const result = await dynamodb.send(scanCommand);
-    return result.Items || [];
-}
-
-/**
- * Build DynamoDB filter expression based on game mode and timeframe
- * @param {string} gameMode - Game mode filter
- * @param {string} timeframe - Timeframe filter
- * @returns {Object} Filter expression and attribute values
- */
-function buildFilterExpression(gameMode, timeframe) {
-    let filterExpression = undefined;
-    const expressionAttributeValues = {};
-    
-    // Add game mode filter
-    if (gameMode !== 'all') {
-        filterExpression = 'gameMode = :gameMode';
-        expressionAttributeValues[':gameMode'] = gameMode;
-    }
-    
-    // Add timeframe filter
+    // Add timeframe filter if specified
     if (timeframe !== 'all') {
         const startDate = calculateStartDate(timeframe);
         if (startDate) {
-            const timeFilter = 'dateCreated >= :startDate';
-            if (filterExpression) {
-                filterExpression += ' AND ' + timeFilter;
-            } else {
-                filterExpression = timeFilter;
-            }
-            expressionAttributeValues[':startDate'] = startDate;
+            queryParams.FilterExpression = 'dateCreated >= :startDate';
+            queryParams.ExpressionAttributeValues[':startDate'] = startDate;
         }
     }
     
-    return { filterExpression, expressionAttributeValues };
+    // Query DynamoDB using GSI
+    const queryCommand = new QueryCommand(queryParams);
+    const result = await dynamodb.send(queryCommand);
+    
+    return result.Items || [];
 }
+
+
 
 /**
  * Calculate start date based on timeframe
@@ -140,6 +125,5 @@ module.exports = {
     saveScore,
     getScores,
     generateScoreId,
-    createScoreRecord,
-    buildFilterExpression
+    createScoreRecord
 }; 

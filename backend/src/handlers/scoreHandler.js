@@ -67,35 +67,27 @@ async function getLeaderboard(queryParams) {
         const gameMode = queryParams.gameMode || 'normal';
         const timeframe = queryParams.timeframe || 'all'; // all, today, week, month
         
-        // Get scores from database
-        const scores = await dbService.getScores({ gameMode, timeframe });
+        // Get scores from database using GSI (already sorted by score descending)
+        const scores = await dbService.getScores({ gameMode, timeframe, limit });
         
-        // Sort by score (descending) and then by wave (descending)
-        const sortedScores = scores
-            .sort((a, b) => {
-                if (b.score !== a.score) {
-                    return b.score - a.score; // Higher score first
-                }
-                return b.wave - a.wave; // Higher wave first if scores are equal
-            })
-            .slice(0, limit) // Apply limit
-            .map((item, index) => ({
-                rank: index + 1,
-                scoreId: item.scoreId,
-                playerName: item.playerName,
-                score: item.score,
-                wave: item.wave,
-                gameMode: item.gameMode,
-                timestamp: item.timestamp,
-                dateCreated: item.dateCreated
-            }));
+        // Map scores to leaderboard format (already sorted by GSI)
+        const leaderboardScores = scores.map((item, index) => ({
+            rank: index + 1,
+            scoreId: item.scoreId,
+            playerName: item.playerName,
+            score: item.score,
+            wave: item.wave,
+            gameMode: item.gameMode,
+            timestamp: item.timestamp,
+            dateCreated: item.dateCreated
+        }));
         
-        console.log(`Leaderboard query returned ${sortedScores.length} scores`);
+        console.log(`Leaderboard query returned ${leaderboardScores.length} scores`);
         
         return apiResponses.success({
-            leaderboard: sortedScores,
+            leaderboard: leaderboardScores,
             metadata: {
-                totalResults: sortedScores.length,
+                totalResults: leaderboardScores.length,
                 limit: limit,
                 gameMode: gameMode,
                 timeframe: timeframe,

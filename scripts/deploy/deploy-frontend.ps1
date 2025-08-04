@@ -41,7 +41,7 @@ catch {
 }
 
 # Get S3 bucket name from Terraform output
-$infraDir = Join-Path $PSScriptRoot ".." "infra"
+$infraDir = Join-Path $PSScriptRoot ".." ".." "infra"
 if (-not (Test-Path $infraDir)) {
     Write-Error "Infrastructure directory not found. Deploy infrastructure first."
     exit 1
@@ -49,9 +49,12 @@ if (-not (Test-Path $infraDir)) {
 
 Set-Location $infraDir
 
+# Set AWS profile for Terraform
+$env:AWS_PROFILE = $Profile
+
 Write-Host "Getting S3 bucket information..." -ForegroundColor Blue
 try {
-    $bucketName = terraform output -raw s3_bucket_name -var="aws_profile=$Profile" 2>$null
+    $bucketName = terraform output -raw s3_bucket_name 2>$null
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrEmpty($bucketName)) {
         throw "Failed to get bucket name"
     }
@@ -63,7 +66,7 @@ catch {
 }
 
 # Navigate to frontend directory
-$frontendDir = Join-Path $PSScriptRoot ".." "frontend"
+$frontendDir = Join-Path $PSScriptRoot ".." ".." "frontend"
 if (-not (Test-Path $frontendDir)) {
     Write-Error "Frontend directory not found: $frontendDir"
     exit 1
@@ -77,7 +80,7 @@ Write-Host "📂 Files to upload:" -ForegroundColor Blue
 $files = Get-ChildItem -Recurse -File | Where-Object { 
     $_.Name -notmatch '\.(git|DS_Store)' -and 
     $_.FullName -notmatch 'node_modules' -and 
-    $_.FullName -notmatch 'tests' -and
+    $_.FullName -notmatch '__tests__' -and
     $_.Name -notmatch 'package.*\.json' -and
     $_.Name -ne 'eslint.config.js' -and
     $_.Name -ne 'debug.html'
@@ -93,6 +96,8 @@ if (-not $Force) {
     }
 }
 
+
+
 # Upload files to S3
 Write-Host "📤 Uploading files to S3..." -ForegroundColor Blue
 $s3SyncArgs = @(
@@ -103,7 +108,7 @@ $s3SyncArgs = @(
     "--exclude", "node_modules/*",
     "--exclude", "package*.json",
     "--exclude", "eslint.config.js",
-    "--exclude", "tests/*",
+    "--exclude", "__tests__/*",
     "--exclude", "debug.html",
     "--profile", $Profile
 )
@@ -132,11 +137,11 @@ aws @jsArgs
 
 # Get website URL and CloudFront distribution ID
 Set-Location $infraDir
-$websiteUrl = terraform output -raw s3_website_url -var="aws_profile=$Profile"
-$distributionId = terraform output -raw cloudfront_distribution_id -var="aws_profile=$Profile"
+$websiteUrl = terraform output -raw s3_website_url
+$distributionId = terraform output -raw cloudfront_distribution_id
 
-# Only invalidate CloudFront cache if we have a real distribution ID
-if ($distributionId -and $distributionId -ne "N/A - S3 Website Mode" -and $distributionId -notlike "E*") {
+# Invalidate CloudFront cache if we have a valid distribution ID
+if ($distributionId -and $distributionId -ne "N/A - S3 Website Mode") {
     Write-Host ""
     Write-Host "Invalidating CloudFront cache..." -ForegroundColor Blue
     $invalidationArgs = @("cloudfront", "create-invalidation", "--distribution-id", $distributionId, "--paths", "/*", "--profile", $Profile)
@@ -148,23 +153,10 @@ if ($distributionId -and $distributionId -ne "N/A - S3 Website Mode" -and $distr
     else {
         Write-Warning "CloudFront cache invalidation failed, but deployment was successful"
     }
-}
-elseif ($distributionId -eq "N/A - S3 Website Mode") {
-    Write-Host ""
-    Write-Host "Running in S3 Website mode - no cache invalidation needed" -ForegroundColor Yellow
 }
 else {
     Write-Host ""
-    Write-Host "Invalidating CloudFront cache..." -ForegroundColor Blue
-    $invalidationArgs = @("cloudfront", "create-invalidation", "--distribution-id", $distributionId, "--paths", "/*", "--profile", $Profile)
-    aws @invalidationArgs
-
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "CloudFront cache invalidation initiated" -ForegroundColor Green
-    }
-    else {
-        Write-Warning "CloudFront cache invalidation failed, but deployment was successful"
-    }
+    Write-Host "Running in S3 Website mode - no cache invalidation needed" -ForegroundColor Yellow
 }
 
 Write-Host ""

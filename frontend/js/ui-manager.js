@@ -97,6 +97,18 @@ class UIManager {
                 status.classList.add('hidden');
                 status.innerHTML = '';
             }
+            
+            // Ensure form is enabled
+            this.setFormEnabled(true);
+            
+            // Focus the input field after a short delay to ensure the modal is visible
+            setTimeout(() => {
+                const input = document.getElementById('player-name');
+                if (input) {
+                    input.focus();
+                    console.log('Input field focused for score submission');
+                }
+            }, 100);
         }
         
         if (leaderboardDisplay) {
@@ -237,6 +249,9 @@ class UIManager {
             );
             
             this.showSubmissionStatus('Score submitted successfully!', 'success');
+            
+            // Re-enable form after successful submission
+            this.setFormEnabled(true);
             
             // Load and show leaderboard after successful submission
             setTimeout(async () => {

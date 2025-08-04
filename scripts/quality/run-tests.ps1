@@ -11,8 +11,7 @@ param(
     [switch]$ApiOnly,
     [switch]$LambdaOnly,
     [switch]$LogsOnly,
-    [switch]$DiagnoseOnly,
-    [switch]$Verbose
+    [switch]$DiagnoseOnly
 )
 
 Write-Host "Running Cloud Defenders Tests..." -ForegroundColor Green

@@ -3,10 +3,27 @@
 # ============================================================================
 # This script deploys all infrastructure except CloudFront distribution
 
+param(
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$Profile,
+    [Parameter(Mandatory = $false)]
+    [string]$Environment = "dev",
+    [Parameter(Mandatory = $false)]
+    [string]$Region = "eu-west-2",
+    [Parameter(Mandatory = $false)]
+    [string]$ProjectName = "cloud-defenders"
+)
+
 Write-Host "Deploying Cloud Defenders infrastructure (excluding CloudFront)..." -ForegroundColor Green
 
+# Set AWS profile environment variable
+$env:AWS_PROFILE = $Profile
+Write-Host "Using AWS Profile: $Profile" -ForegroundColor Yellow
+
 # Change to infrastructure directory
-Set-Location -Path "infra"
+$infraDir = Join-Path $PSScriptRoot ".." ".." "infra"
+Set-Location -Path $infraDir
 
 # Check if Terraform is initialized
 if (-not (Test-Path ".terraform")) {
@@ -26,7 +43,14 @@ $targets = @(
 )
 
 # Build the terraform command
-$terraformArgs = @("apply", "-auto-approve")
+$terraformArgs = @(
+    "apply", 
+    "-auto-approve",
+    "-var=aws_profile=$Profile",
+    "-var=environment=$Environment",
+    "-var=aws_region=$Region",
+    "-var=project_name=$ProjectName"
+)
 foreach ($target in $targets) {
     $terraformArgs += "-target=$target"
 }
@@ -52,11 +76,12 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "- SSL certificates for API"
     Write-Host ""
     Write-Host "To deploy CloudFront later, run:" -ForegroundColor Yellow
-    Write-Host "terraform apply -target=module.s3_game_hosting -target=aws_acm_certificate.cloudfront_cert -target=aws_acm_certificate_validation.cloudfront_cert -target=aws_route53_record.cloudfront_cert_validation"
-} else {
+    Write-Host "terraform apply -target=module.s3_game_hosting -var=""aws_profile=$Profile"""
+}
+else {
     Write-Host "✗ Deployment failed" -ForegroundColor Red
     exit 1
 }
 
 # Return to original directory
-Set-Location -Path ".."
+Set-Location -Path (Join-Path $PSScriptRoot ".." "..")

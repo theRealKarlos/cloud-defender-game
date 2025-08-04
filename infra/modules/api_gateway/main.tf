@@ -10,7 +10,7 @@ resource "aws_apigatewayv2_api" "score_api" {
   # Built-in CORS configuration
   cors_configuration {
     allow_credentials = false
-    allow_headers     = ["content-type", "x-amz-date", "authorization", "x-api-key", "x-amz-security-token", "x-amz-user-agent"]
+    allow_headers     = ["content-type", "x-amz-date", "authorization", "x-api-key", "x-amz-security-token", "x-amz-user-agent", "x-client-version", "x-timestamp"]
     allow_methods     = ["*"]
     allow_origins     = ["*"]
     expose_headers    = ["date", "keep-alive"]

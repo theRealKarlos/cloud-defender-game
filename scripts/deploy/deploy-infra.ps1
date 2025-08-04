@@ -28,6 +28,10 @@ Write-Host "Environment: $Environment" -ForegroundColor Yellow
 Write-Host "Region: $Region" -ForegroundColor Yellow
 Write-Host "Project: $ProjectName" -ForegroundColor Yellow
 
+# Set AWS profile environment variable
+$env:AWS_PROFILE = $Profile
+Write-Host "Using AWS Profile: $Profile" -ForegroundColor Yellow
+
 # Check if Terraform is installed
 if (-not (Get-Command terraform -ErrorAction SilentlyContinue)) {
     Write-Error "Terraform is not installed or not in PATH"
@@ -54,7 +58,7 @@ catch {
 }
 
 # Navigate to infrastructure directory
-$infraDir = Join-Path $PSScriptRoot ".." "infra"
+$infraDir = Join-Path $PSScriptRoot ".." ".." "infra"
 if (-not (Test-Path $infraDir)) {
     Write-Error "Infrastructure directory not found: $infraDir"
     exit 1
@@ -65,7 +69,7 @@ Write-Host "Working directory: $infraDir" -ForegroundColor Blue
 
 # Check for Lambda deployment package
 Write-Host "📦 Checking for Lambda deployment package..." -ForegroundColor Blue
-$lambdaZipPath = Join-Path $PSScriptRoot ".." "dist" "score_api.zip"
+$lambdaZipPath = Join-Path $PSScriptRoot ".." ".." "dist" "score_api.zip"
 if (-not (Test-Path $lambdaZipPath)) {
     Write-Error "Lambda deployment package not found: $lambdaZipPath"
     Write-Host "Please run 'scripts/build/build-backend.ps1' first to build the Lambda package." -ForegroundColor Yellow
@@ -133,22 +137,22 @@ Write-Host "  • S3 Website URL: $s3Url" -ForegroundColor White
 Write-Host "  • Lambda Function: $lambdaName" -ForegroundColor White
 Write-Host "  • DynamoDB Table: $dynamoTable" -ForegroundColor White
 
-# Update frontend API configuration
-if (-not $SkipBackend) {
-    Write-Host ""
-    Write-Host "Updating frontend API configuration..." -ForegroundColor Blue
-    $apiServicePath = Join-Path $PSScriptRoot ".." "frontend" "js" "api-service.js"
-    
-    if (Test-Path $apiServicePath) {
-        $content = Get-Content $apiServicePath -Raw
-        $updatedContent = $content -replace "this\.API_BASE_URL = 'http://localhost:3000/api';", "this.API_BASE_URL = '$apiUrl';"
-        Set-Content $apiServicePath $updatedContent
-        Write-Host "Frontend API URL updated to: $apiUrl" -ForegroundColor Green
+    # Update frontend API configuration
+    if (-not $SkipBackend) {
+        Write-Host ""
+        Write-Host "Updating frontend API configuration..." -ForegroundColor Blue
+        $updateScript = Join-Path $PSScriptRoot ".." "utils" "update-api-config.ps1"
+        if (Test-Path $updateScript) {
+            & $updateScript -Profile $Profile
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "Frontend API configuration updated successfully" -ForegroundColor Green
+            } else {
+                Write-Warning "Failed to update frontend API configuration"
+            }
+        } else {
+            Write-Warning "update-api-config.ps1 script not found."
+        }
     }
-    else {
-        Write-Warning "Frontend API service file not found: $apiServicePath"
-    }
-}
 
 Write-Host ""
 Write-Host "Next Steps:" -ForegroundColor Cyan

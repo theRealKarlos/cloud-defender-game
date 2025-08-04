@@ -2,6 +2,10 @@
 # Cloud Defenders Infrastructure Deployment Script
 
 param(
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$Profile,
+    
     [Parameter(Mandatory = $false)]
     [ValidateSet("dev", "staging", "prod")]
     [string]$Environment = "dev",
@@ -38,7 +42,7 @@ if (-not (Get-Command aws -ErrorAction SilentlyContinue)) {
 
 # Check AWS credentials
 try {
-    $awsAccount = aws sts get-caller-identity --query Account --output text 2>$null
+    $awsAccount = aws sts get-caller-identity --query Account --output text --profile $Profile 2>$null
     if ($LASTEXITCODE -ne 0) {
         throw "AWS credentials not configured"
     }
@@ -59,26 +63,15 @@ if (-not (Test-Path $infraDir)) {
 Set-Location $infraDir
 Write-Host "Working directory: $infraDir" -ForegroundColor Blue
 
-# Build Lambda deployment package
-Write-Host "📦 Building Lambda deployment package..." -ForegroundColor Blue
-$backendDir = Join-Path $PSScriptRoot ".." "backend"
-if (Test-Path $backendDir) {
-    Set-Location $backendDir
-    
-    # Install dependencies
-    Write-Host "Installing Node.js dependencies..." -ForegroundColor Yellow
-    npm install --production
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed to install Node.js dependencies"
-        exit 1
-    }
-    
-    Set-Location $infraDir
-    Write-Host "Lambda package prepared" -ForegroundColor Green
+# Check for Lambda deployment package
+Write-Host "📦 Checking for Lambda deployment package..." -ForegroundColor Blue
+$lambdaZipPath = Join-Path $PSScriptRoot ".." "dist" "score_api.zip"
+if (-not (Test-Path $lambdaZipPath)) {
+    Write-Error "Lambda deployment package not found: $lambdaZipPath"
+    Write-Host "Please run 'scripts/build/build-backend.ps1' first to build the Lambda package." -ForegroundColor Yellow
+    exit 1
 }
-else {
-    Write-Warning "Backend directory not found: $backendDir"
-}
+Write-Host "Lambda deployment package found: $lambdaZipPath" -ForegroundColor Green
 
 # Initialize Terraform
 Write-Host "Initializing Terraform..." -ForegroundColor Blue
@@ -94,7 +87,8 @@ if ($DestroyFirst) {
     terraform destroy -auto-approve `
         -var="environment=$Environment" `
         -var="aws_region=$Region" `
-        -var="project_name=$ProjectName"
+        -var="project_name=$ProjectName" `
+        -var="aws_profile=$Profile"
     
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "Terraform destroy had issues, continuing..."
@@ -107,6 +101,7 @@ terraform plan `
     -var="environment=$Environment" `
     -var="aws_region=$Region" `
     -var="project_name=$ProjectName" `
+    -var="aws_profile=$Profile" `
     -out="tfplan"
 
 if ($LASTEXITCODE -ne 0) {

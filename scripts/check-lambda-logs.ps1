@@ -3,7 +3,7 @@
 # ============================================================================
 # Checks recent Lambda function logs to debug API issues
 
-Write-Host "🔍 Checking Lambda function logs..." -ForegroundColor Green
+Write-Host "Checking Lambda function logs..." -ForegroundColor Green
 
 Set-Location -Path "infra"
 
@@ -42,9 +42,9 @@ try {
     # Make a test request
     try {
         $response = Invoke-RestMethod -Uri "$apiUrl/api/leaderboard" -Method GET -TimeoutSec 5
-        Write-Host "✅ Request succeeded: $($response | ConvertTo-Json -Compress)" -ForegroundColor Green
+        Write-Host "Request succeeded: $($response | ConvertTo-Json -Compress)" -ForegroundColor Green
     } catch {
-        Write-Host "❌ Request failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Request failed: $($_.Exception.Message)" -ForegroundColor Red
     }
     
     Write-Host ""
@@ -56,11 +56,11 @@ try {
     aws logs filter-log-events --log-group-name "/aws/lambda/$lambdaName" --start-time ([DateTimeOffset]::Parse($recentStartTime).ToUnixTimeMilliseconds()) --output table
     
     Write-Host ""
-    Write-Host "💡 If no logs appear, the Lambda function might not be receiving requests." -ForegroundColor Yellow
-    Write-Host "💡 Check API Gateway integration and permissions." -ForegroundColor Yellow
+    Write-Host "If no logs appear, the Lambda function might not be receiving requests." -ForegroundColor Yellow
+    Write-Host "Check API Gateway integration and permissions." -ForegroundColor Yellow
     
 } catch {
-    Write-Host "❌ Error checking logs: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Error checking logs: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 } finally {
     Set-Location -Path ".."

@@ -3,7 +3,7 @@
 # ============================================================================
 # Redeploys the API Gateway module to fix routing issues
 
-Write-Host "🔄 Redeploying API Gateway..." -ForegroundColor Green
+Write-Host "Redeploying API Gateway..." -ForegroundColor Green
 
 Set-Location -Path "infra"
 
@@ -20,7 +20,7 @@ try {
     terraform apply -target=module.api_gateway -auto-approve
     
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✅ API Gateway deployed successfully!" -ForegroundColor Green
+        Write-Host "API Gateway deployed successfully!" -ForegroundColor Green
         
         # Get the new API URL
         $apiUrl = terraform output -raw api_url
@@ -32,12 +32,12 @@ try {
         .\scripts\test-api.ps1
         
     } else {
-        Write-Host "❌ API Gateway deployment failed" -ForegroundColor Red
+        Write-Host "API Gateway deployment failed" -ForegroundColor Red
         exit 1
     }
     
 } catch {
-    Write-Host "❌ Error redeploying API Gateway: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Error redeploying API Gateway: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 } finally {
     Set-Location -Path ".."

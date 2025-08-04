@@ -5,6 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
+    "lint": "eslint *.js --fix",
+    "lint:check": "eslint *.js",
+    "security": "npm audit",
+    "security:fix": "npm audit fix",
     "build": "zip -r score_api.zip .",
     "deploy": "aws lambda update-function-code --function-name cloud-defenders-score-api --zip-file fileb://score_api.zip"
   },
@@ -21,6 +25,8 @@
     "@aws-sdk/lib-dynamodb": "^3.716.0"
   },
   "devDependencies": {
-    "jest": "^30.0.0"
+    "jest": "^30.0.0",
+    "@eslint/js": "^9.32.0",
+    "eslint": "^9.32.0"
   }
 }

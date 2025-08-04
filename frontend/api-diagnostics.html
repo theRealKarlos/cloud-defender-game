@@ -151,13 +151,13 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔍 Cloud Defenders API Diagnostics</h1>
+            <h1>Cloud Defenders API Diagnostics</h1>
             <p>Comprehensive testing and debugging interface for API integration issues</p>
         </div>
 
         <!-- Configuration Section -->
         <div class="section">
-            <h2>📋 Configuration Analysis</h2>
+            <h2>Configuration Analysis</h2>
             <button onclick="analyzeConfiguration()">Analyze Configuration</button>
             <button onclick="validateUrls()">Validate URLs</button>
             <div id="config-results"></div>
@@ -165,7 +165,7 @@
 
         <!-- Connectivity Tests -->
         <div class="section">
-            <h2>🌐 Connectivity Tests</h2>
+            <h2>Connectivity Tests</h2>
             <div class="test-grid">
                 <div class="test-card">
                     <h3>Basic Connectivity</h3>
@@ -187,7 +187,7 @@
 
         <!-- API Testing -->
         <div class="section">
-            <h2>🎯 API Endpoint Testing</h2>
+            <h2>API Endpoint Testing</h2>
             <div class="test-grid">
                 <div class="test-card">
                     <h3>Leaderboard (GET)</h3>
@@ -217,7 +217,7 @@
 
         <!-- Debug Information -->
         <div class="section">
-            <h2>🔧 Debug Information</h2>
+            <h2>Debug Information</h2>
             <button onclick="generateDebugReport()">Generate Debug Report</button>
             <div id="debug-info"></div>
         </div>
@@ -321,9 +321,9 @@
 
             // Check API_CONFIG
             if (window.API_CONFIG) {
-                diagnostics.showResult('config-results', '✅ API_CONFIG loaded successfully', 'success', window.API_CONFIG);
+                diagnostics.showResult('config-results', 'API_CONFIG loaded successfully', 'success', window.API_CONFIG);
             } else {
-                diagnostics.showResult('config-results', '❌ API_CONFIG not found', 'error');
+                diagnostics.showResult('config-results', 'API_CONFIG not found', 'error');
                 return;
             }
 
@@ -349,13 +349,13 @@
                 
                 diagnostics.log('API Service configuration', 'success', serviceInfo);
             } else {
-                diagnostics.showResult('config-results', '❌ API Service not found', 'error');
+                diagnostics.showResult('config-results', 'API Service not found', 'error');
             }
         }
 
         function validateUrls() {
             if (!window.apiService) {
-                diagnostics.showResult('config-results', '❌ API Service not available for URL validation', 'error');
+                diagnostics.showResult('config-results', 'API Service not available for URL validation', 'error');
                 return;
             }
 
@@ -379,16 +379,16 @@
             });
 
             if (allValid) {
-                diagnostics.showResult('config-results', '✅ All URLs have valid format', 'success', urls);
+                diagnostics.showResult('config-results', 'All URLs have valid format', 'success', urls);
             } else {
-                diagnostics.showResult('config-results', '❌ Some URLs have invalid format', 'error', urls);
+                diagnostics.showResult('config-results', 'Some URLs have invalid format', 'error', urls);
             }
         }
 
         // Connectivity Tests
         async function testBasicConnectivity() {
             if (!window.apiService) {
-                diagnostics.showResult('connectivity-results', '❌ API Service not available', 'error');
+                diagnostics.showResult('connectivity-results', 'API Service not available', 'error');
                 return;
             }
 
@@ -398,18 +398,18 @@
             try {
                 const result = await diagnostics.makeRequest(`${baseUrl}/api/leaderboard`);
                 if (result.success) {
-                    diagnostics.showResult('connectivity-results', '✅ Basic connectivity successful', 'success', result);
+                    diagnostics.showResult('connectivity-results', 'Basic connectivity successful', 'success', result);
                 } else {
-                    diagnostics.showResult('connectivity-results', '❌ Connectivity failed', 'error', result);
+                    diagnostics.showResult('connectivity-results', 'Connectivity failed', 'error', result);
                 }
             } catch (error) {
-                diagnostics.showResult('connectivity-results', `❌ Connectivity error: ${error.message}`, 'error', error);
+                diagnostics.showResult('connectivity-results', `Connectivity error: ${error.message}`, 'error', error);
             }
         }
 
         async function testCorsCompliance() {
             if (!window.apiService) {
-                diagnostics.showResult('cors-results', '❌ API Service not available', 'error');
+                diagnostics.showResult('cors-results', 'API Service not available', 'error');
                 return;
             }
 
@@ -422,9 +422,9 @@
                 });
 
                 if (result.success || result.response?.status === 200) {
-                    diagnostics.showResult('cors-results', '✅ CORS preflight successful', 'success', result);
+                    diagnostics.showResult('cors-results', 'CORS preflight successful', 'success', result);
                 } else {
-                    diagnostics.showResult('cors-results', '⚠️ CORS preflight issues detected', 'warning', result);
+                    diagnostics.showResult('cors-results', 'CORS preflight issues detected', 'warning', result);
                 }
             } catch (error) {
                 diagnostics.showResult('cors-results', `❌ CORS test failed: ${error.message}`, 'error', error);

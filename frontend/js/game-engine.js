@@ -197,7 +197,6 @@ class GameEngine {
     }
     
     gameOver() {
-        console.log('gameOver() method called');
         this.stateManager.changeState(GameState.GAME_OVER);
         this.uiManager.setButtonStates(false, false);
         
@@ -302,7 +301,7 @@ class GameEngine {
                 (entity1.collisionLayer === 'defences' && entity2.collisionLayer === 'missiles')) {
                 
                 const missile = entity1.collisionLayer === 'missiles' ? entity1 : entity2;
-                const defence = entity1.collisionLayer === 'defences' ? entity1 : entity2;
+                const _defence = entity1.collisionLayer === 'defences' ? entity1 : entity2;
                 
                 // Notify game conditions about missile interception
                 this.gameConditions.onMissileIntercepted(missile);
@@ -377,7 +376,7 @@ class GameEngine {
         // Apply countermeasure speed scaling: 1% slower per wave
         const currentWave = this.waveManager.getCurrentWave();
         const countermeasureSpeedMultiplier = 1.0 - (currentWave - 1) * 0.01;
-        const originalSpeed = bomb.speed;
+        const _originalSpeed = bomb.speed;
         bomb.speed *= countermeasureSpeedMultiplier;
         
         // Add to entity manager
@@ -406,7 +405,7 @@ class GameEngine {
         });
     }
     
-    onMissileDestroyed(missile, bomb) {
+    onMissileDestroyed(missile, _bomb) {
         // Award points for destroying missile
         const basePoints = 100;
         const typeMultiplier = this.getMissileTypeMultiplier(missile.type);

@@ -18,7 +18,7 @@ class ScoreValidator {
             action: 'ACCEPT' // ACCEPT, REVIEW, REJECT
         };
         
-        const { playerName, score, wave, gameMode, validation: clientValidation } = scoreSubmission;
+        const { playerName, score, wave, gameMode: _gameMode, validation: clientValidation } = scoreSubmission;
         
         // Basic input validation
         if (!this.validateBasicInputs(playerName, score, wave)) {
@@ -159,7 +159,7 @@ class ScoreValidator {
         }
     }
     
-    checkRateLimit(submission) {
+    checkRateLimit(_submission) {
         // This would check DynamoDB for recent submissions from same IP/fingerprint
         // Implementation depends on your rate limiting strategy
         return false; // Placeholder

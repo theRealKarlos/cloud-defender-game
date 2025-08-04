@@ -17,7 +17,7 @@ param(
 )
 
 Write-Host ""
-Write-Host "🎮 Cloud Defenders - Complete Deployment" -ForegroundColor Magenta
+Write-Host "Cloud Defenders - Complete Deployment" -ForegroundColor Magenta
 Write-Host "=========================================" -ForegroundColor Magenta
 Write-Host ""
 
@@ -28,21 +28,30 @@ Write-Host "Step 1: Deploying Infrastructure..." -ForegroundColor Cyan
 & "$PSScriptRoot/deploy-infra.ps1" -Environment $Environment -Region $Region -ProjectName $ProjectName -DestroyFirst:$DestroyFirst
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "❌ Infrastructure deployment failed"
+    Write-Error "Infrastructure deployment failed"
     exit 1
 }
 
 Write-Host ""
-Write-Host "⏱️  Waiting 30 seconds for AWS resources to stabilize..." -ForegroundColor Yellow
+Write-Host "Waiting 30 seconds for AWS resources to stabilize..." -ForegroundColor Yellow
 Start-Sleep -Seconds 30
 
-# Step 2: Deploy Frontend
+# Step 2: Update API Configuration
 Write-Host ""
-Write-Host "Step 2: Deploying Frontend..." -ForegroundColor Cyan
+Write-Host "Step 2: Updating API Configuration..." -ForegroundColor Cyan
+& "$PSScriptRoot/update-api-config.ps1"
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning "API configuration update failed, but continuing with deployment"
+}
+
+# Step 3: Deploy Frontend
+Write-Host ""
+Write-Host "Step 3: Deploying Frontend..." -ForegroundColor Cyan
 & "$PSScriptRoot/deploy-frontend.ps1" -Environment $Environment -ProjectName $ProjectName -Force
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "❌ Frontend deployment failed"
+    Write-Error "Frontend deployment failed"
     exit 1
 }
 
@@ -58,43 +67,44 @@ $endTime = Get-Date
 $duration = $endTime - $startTime
 
 Write-Host ""
-Write-Host "🎉 DEPLOYMENT COMPLETE! 🎉" -ForegroundColor Green
+Write-Host "DEPLOYMENT COMPLETE!" -ForegroundColor Green
 Write-Host "=========================" -ForegroundColor Green
 Write-Host ""
-Write-Host "⏱️  Total Time: $($duration.ToString('mm\:ss'))" -ForegroundColor Yellow
+Write-Host "Total Time: $($duration.ToString('mm\:ss'))" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "🌐 Game URL: $websiteUrl" -ForegroundColor Cyan
-Write-Host "🔗 API URL: $apiUrl" -ForegroundColor Cyan
-Write-Host "⚡ Lambda: $lambdaName" -ForegroundColor Cyan
+Write-Host "Game URL: $websiteUrl" -ForegroundColor Cyan
+Write-Host "API URL: $apiUrl" -ForegroundColor Cyan
+Write-Host "Lambda: $lambdaName" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "🎮 Ready to Play!" -ForegroundColor Magenta
+Write-Host "Ready to Play!" -ForegroundColor Magenta
 Write-Host ""
-Write-Host "🧪 Test the API:" -ForegroundColor Blue
+Write-Host "Test the API:" -ForegroundColor Blue
 Write-Host "  curl $apiUrl/api/leaderboard" -ForegroundColor Gray
 Write-Host ""
-Write-Host "📊 Monitor Lambda logs:" -ForegroundColor Blue
+Write-Host "Monitor Lambda logs:" -ForegroundColor Blue
 Write-Host "  aws logs tail /aws/lambda/$lambdaName --follow" -ForegroundColor Gray
 Write-Host ""
 
 # Test API connectivity
-Write-Host "🔍 Testing API connectivity..." -ForegroundColor Blue
+Write-Host "Testing API connectivity..." -ForegroundColor Blue
 try {
     $response = Invoke-RestMethod -Uri "$apiUrl/api/leaderboard" -Method GET -TimeoutSec 10
-    Write-Host "✅ API is responding!" -ForegroundColor Green
+    Write-Host "API is responding!" -ForegroundColor Green
 }
 catch {
-    Write-Warning "⚠️  API test failed: $($_.Exception.Message)"
+    Write-Warning "API test failed: $($_.Exception.Message)"
     Write-Host "   This might be normal if the API is still warming up." -ForegroundColor Yellow
 }
 
 Write-Host ""
-Write-Host "🚀 Deployment Summary:" -ForegroundColor Magenta
-Write-Host "  • Infrastructure: ✅ Deployed" -ForegroundColor White
-Write-Host "  • Lambda Function: ✅ Deployed" -ForegroundColor White
-Write-Host "  • API Gateway: ✅ Deployed" -ForegroundColor White
-Write-Host "  • DynamoDB: ✅ Created" -ForegroundColor White
-Write-Host "  • S3 Private Bucket: ✅ Created" -ForegroundColor White
-Write-Host "  • CloudFront CDN: ✅ Deployed" -ForegroundColor White
-Write-Host "  • Frontend: ✅ Uploaded & Cached" -ForegroundColor White
+Write-Host "Deployment Summary:" -ForegroundColor Magenta
+Write-Host "  • Infrastructure: Deployed" -ForegroundColor White
+Write-Host "  • Lambda Function: Deployed" -ForegroundColor White
+Write-Host "  • API Gateway: Deployed" -ForegroundColor White
+Write-Host "  • DynamoDB: Created" -ForegroundColor White
+Write-Host "  • S3 Private Bucket: Created" -ForegroundColor White
+Write-Host "  • CloudFront CDN: Deployed" -ForegroundColor White
+Write-Host "  • API Configuration: Updated" -ForegroundColor White
+Write-Host "  • Frontend: Uploaded & Cached" -ForegroundColor White
 Write-Host ""
-Write-Host "✨ Happy Gaming! ✨" -ForegroundColor Magenta
+Write-Host "Happy Gaming!" -ForegroundColor Magenta

@@ -3,7 +3,7 @@
 # ============================================================================
 # Redeploys the Lambda function with updated code
 
-Write-Host "🔄 Redeploying Lambda function..." -ForegroundColor Green
+Write-Host "Redeploying Lambda function..." -ForegroundColor Green
 
 Set-Location -Path "infra"
 
@@ -20,7 +20,7 @@ try {
     & terraform apply "-target=module.lambda_function" "-auto-approve"
     
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✅ Lambda function deployed successfully!" -ForegroundColor Green
+        Write-Host "Lambda function deployed successfully!" -ForegroundColor Green
         
         Write-Host ""
         Write-Host "Testing the API..." -ForegroundColor Yellow
@@ -28,12 +28,12 @@ try {
         .\scripts\test-api.ps1
         
     } else {
-        Write-Host "❌ Lambda function deployment failed" -ForegroundColor Red
+        Write-Host "Lambda function deployment failed" -ForegroundColor Red
         exit 1
     }
     
 } catch {
-    Write-Host "❌ Error redeploying Lambda function: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Error redeploying Lambda function: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 } finally {
     Set-Location -Path ".."

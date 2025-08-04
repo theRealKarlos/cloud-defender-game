@@ -9,7 +9,12 @@
     "build": "echo 'Build process for production'",
     "test": "jest",
     "lint": "eslint js/**/*.js tests/**/*.js",
-    "lint:fix": "eslint js/**/*.js tests/**/*.js --fix"
+    "lint:fix": "eslint js/**/*.js tests/**/*.js --fix",
+    "lint:check": "eslint js/**/*.js tests/**/*.js",
+    "security": "npm audit",
+    "security:fix": "npm audit fix",
+    "format": "npm run lint:fix",
+    "check": "npm run lint:check && npm run security && npm test"
   },
   "keywords": [
     "game",

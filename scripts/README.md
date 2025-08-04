@@ -2,7 +2,7 @@
 
 This folder contains scripts to help set up the development environment and deploy the Cloud Defenders game project to AWS.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Windows (Recommended)
 
@@ -19,7 +19,7 @@ Set-ExecutionPolicy Bypass -Scope Process
 .\scripts\setup-dev-env.ps1
 ```
 
-## 📋 What Gets Installed
+## What Gets Installed
 
 ### Core Development Tools
 
@@ -38,7 +38,7 @@ Set-ExecutionPolicy Bypass -Scope Process
 - **Frontend packages** - Game engine dependencies
 - **Backend packages** - Lambda function dependencies
 
-## 🛠️ Script Options
+## Script Options
 
 ### Parameters
 
@@ -56,7 +56,7 @@ Set-ExecutionPolicy Bypass -Scope Process
 .\setup-dev-env.ps1 -SkipChocolatey -Verbose
 ```
 
-## 🔧 Manual Installation
+## Manual Installation
 
 If the automated script fails, install these tools manually:
 
@@ -85,7 +85,7 @@ If the automated script fails, install these tools manually:
 - Use default installation options
 - Verify: `git --version`
 
-## 🎯 Post-Installation Steps
+## Post-Installation Steps
 
 After running the setup script:
 
@@ -133,7 +133,7 @@ cd frontend && npm run dev
 cd infra && terraform init
 ```
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -168,13 +168,49 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 3. Ensure internet connection is stable
 4. Try manual installation for failed components
 
-## 📁 Script Files
+## Script Files
 
+### Setup Scripts
 - `setup-dev-env.ps1` - Main PowerShell setup script
 - `setup-dev-env.bat` - Batch wrapper for easier execution
-- `README.md` - This documentation file
 
-## 🚀 Deployment Scripts
+### Core Deployment Scripts
+- `deploy-all.ps1` - Complete deployment (infrastructure + frontend)
+- `deploy-infra.ps1` - Deploy infrastructure only
+- `deploy-frontend.ps1` - Deploy frontend only
+- `destroy-infra.ps1` - Destroy all infrastructure
+
+### Redeployment Scripts
+- `redeploy-api.ps1` - Redeploy API Gateway module
+- `redeploy-lambda.ps1` - Redeploy Lambda function
+- `switch-hosting-mode.ps1` - Switch between hosting modes
+
+### Testing Scripts
+- `test-api.ps1` - Test API Gateway endpoints
+- `test-lambda-direct.ps1` - Test Lambda function directly
+- `check-api-integration.ps1` - Check API integration
+- `check-lambda-logs.ps1` - Check Lambda function logs
+- `diagnose-api.ps1` - Diagnose API issues
+
+### Configuration Scripts
+- `update-api-config.ps1` - Update API config (PowerShell)
+- `update-api-config.js` - Update API config (Node.js)
+
+### Code Quality & Security Scripts
+- `lint-and-security.ps1` - Run linting and security checks
+- `lint-and-security.bat` - Windows batch wrapper for linting
+- `fix-lint-issues.ps1` - Auto-fix linting issues with ESLint
+- `pre-deploy-checks.ps1` - Comprehensive pre-deployment validation
+
+### Utility Scripts
+- `fix-existing-resources.ps1` - Fix existing resource conflicts
+- `deploy-without-cloudfront-simple.ps1` - Deploy without CloudFront
+
+### Documentation
+- `README.md` - This documentation file
+- `deploy-commands.md` - Quick reference for deployment commands
+
+## Deployment Scripts
 
 ### Complete Deployment (Recommended)
 
@@ -221,7 +257,7 @@ Remove all AWS resources:
 .\scripts\destroy-infra.ps1 -Force
 ```
 
-## 🌐 Deployment Architecture
+## Deployment Architecture
 
 The deployment creates:
 
@@ -231,7 +267,7 @@ The deployment creates:
 - **DynamoDB Table** - NoSQL database for storing player scores
 - **IAM Roles & Policies** - Secure access permissions
 
-## 🔄 Updating Dependencies
+## Updating Dependencies
 
 To update project dependencies after initial setup:
 
@@ -246,7 +282,7 @@ cd backend && npm update
 cd infra && terraform init -upgrade
 ```
 
-## 📋 Deployment Prerequisites
+## Deployment Prerequisites
 
 Before deploying:
 
@@ -266,7 +302,7 @@ Your AWS user/role needs permissions for:
 - IAM (role and policy creation)
 - CloudWatch (log group creation)
 
-## 🎯 Post-Deployment
+## Post-Deployment
 
 After successful deployment:
 
@@ -275,7 +311,7 @@ After successful deployment:
 3. **Monitoring** - Check CloudWatch logs for Lambda function
 4. **Testing** - Submit scores and view leaderboard functionality
 
-## 🐛 Deployment Troubleshooting
+## Deployment Troubleshooting
 
 **AWS Credentials Error**
 
@@ -307,3 +343,56 @@ npm install --production
 - Bucket names must be globally unique
 - Change the project name or add a suffix
 - Or destroy existing resources first
+## Code Quality & Security
+
+The project includes comprehensive linting and security checking:
+
+### ESLint Configuration
+- **Frontend**: Configured with game-specific rules and browser globals
+- **Backend**: Configured with Node.js/Lambda-specific rules and security checks
+
+### Available Commands
+```powershell
+# Run all checks
+.\scripts\lint-and-security.ps1
+
+# Auto-fix linting issues
+.\scripts\lint-and-security.ps1 -Fix
+
+# Auto-fix linting issues
+.\scripts\fix-lint-issues.ps1
+
+# Run only linting (no security audit)
+.\scripts\lint-and-security.ps1 -LintOnly
+
+# Run only security audit
+.\scripts\lint-and-security.ps1 -SecurityOnly
+
+# Comprehensive pre-deployment checks
+.\scripts\pre-deploy-checks.ps1
+```
+
+### Individual Project Commands
+```bash
+# Frontend
+cd frontend
+npm run lint          # Check and fix linting issues
+npm run lint:check     # Check linting only (no fixes)
+npm run security       # Run security audit
+npm run check          # Run all checks (lint + security + tests)
+
+# Backend
+cd backend
+npm run lint           # Check and fix linting issues
+npm run lint:check     # Check linting only (no fixes)
+npm run security       # Run security audit
+```
+
+### Pre-Deployment Workflow
+```powershell
+# 1. Run comprehensive checks
+.\scripts\pre-deploy-checks.ps1
+
+# 2. If checks pass, deploy
+.\scripts\deploy-all.ps1
+```

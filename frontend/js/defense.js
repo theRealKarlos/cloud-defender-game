@@ -137,12 +137,12 @@ class Defense extends Entity {
     
     static getDefenseIcon(type) {
         const iconMap = {
-            'firewall': '🛡',
-            'antivirus': '🔍',
-            'waf': '🌐',
-            'ddos-protection': '⚡',
-            'encryption': '🔐',
-            'monitoring': '👁',
+            'firewall': 'SHIELD',
+            'antivirus': 'SCAN',
+            'waf': 'WEB',
+            'ddos-protection': 'BOLT',
+            'encryption': 'LOCK',
+            'monitoring': 'EYE',
             'backup': '💾',
             'shield-node': '◉'
         };
@@ -225,7 +225,7 @@ class Defense extends Entity {
     
     findTargetsInRange(entities) {
         const targets = [];
-        const defenseCenter = {
+        const _defenseCenter = {
             x: this.x + this.width / 2,
             y: this.y + this.height / 2
         };
@@ -270,36 +270,36 @@ class Defense extends Entity {
         if (targets.length === 0) return null;
         
         switch (this.targetingMode) {
-            case 'nearest':
-                return targets.reduce((closest, current) => 
-                    current.distance < closest.distance ? current : closest
-                ).entity;
+        case 'nearest':
+            return targets.reduce((closest, current) => 
+                current.distance < closest.distance ? current : closest
+            ).entity;
                 
-            case 'strongest':
-                return targets.reduce((strongest, current) => 
-                    current.threat > strongest.threat ? current : strongest
-                ).entity;
+        case 'strongest':
+            return targets.reduce((strongest, current) => 
+                current.threat > strongest.threat ? current : strongest
+            ).entity;
                 
-            case 'fastest':
-                return targets.reduce((fastest, current) => {
-                    const currentSpeed = Math.sqrt(current.entity.velocityX ** 2 + current.entity.velocityY ** 2);
-                    const fastestSpeed = Math.sqrt(fastest.entity.velocityX ** 2 + fastest.entity.velocityY ** 2);
-                    return currentSpeed > fastestSpeed ? current : fastest;
-                }).entity;
+        case 'fastest':
+            return targets.reduce((fastest, current) => {
+                const currentSpeed = Math.sqrt(current.entity.velocityX ** 2 + current.entity.velocityY ** 2);
+                const fastestSpeed = Math.sqrt(fastest.entity.velocityX ** 2 + fastest.entity.velocityY ** 2);
+                return currentSpeed > fastestSpeed ? current : fastest;
+            }).entity;
                 
-            case 'multiple':
-                // Return array of up to 3 targets for multi-targeting
-                return targets
-                    .sort((a, b) => a.distance - b.distance)
-                    .slice(0, 3)
-                    .map(t => t.entity);
+        case 'multiple':
+            // Return array of up to 3 targets for multi-targeting
+            return targets
+                .sort((a, b) => a.distance - b.distance)
+                .slice(0, 3)
+                .map(t => t.entity);
                     
-            case 'all':
-                // Return all targets for monitoring/revealing
-                return targets.map(t => t.entity);
+        case 'all':
+            // Return all targets for monitoring/revealing
+            return targets.map(t => t.entity);
                 
-            default:
-                return targets[0].entity;
+        default:
+            return targets[0].entity;
         }
     }
     
@@ -395,7 +395,7 @@ class Defense extends Entity {
         if (this.isShieldNode && this.shieldEnergy < this.maxShieldEnergy) {
             // Regenerate shield energy over time
             this.shieldEnergy = Math.min(this.maxShieldEnergy, 
-                                       this.shieldEnergy + 10 * deltaTime);
+                this.shieldEnergy + 10 * deltaTime);
         }
     }
     
@@ -459,7 +459,7 @@ class Defense extends Entity {
             // Draw shield node as circle
             ctx.beginPath();
             ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 
-                   this.width / 2, 0, Math.PI * 2);
+                this.width / 2, 0, Math.PI * 2);
             ctx.fill();
         } else {
             // Draw regular defense as rectangle
@@ -472,7 +472,7 @@ class Defense extends Entity {
         if (this.isShieldNode) {
             ctx.beginPath();
             ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 
-                   this.width / 2, 0, Math.PI * 2);
+                this.width / 2, 0, Math.PI * 2);
             ctx.stroke();
         } else {
             ctx.strokeRect(-this.width / 2, -this.height / 2, this.width, this.height);
@@ -488,7 +488,7 @@ class Defense extends Entity {
         
         ctx.beginPath();
         ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 
-               this.range, 0, Math.PI * 2);
+            this.range, 0, Math.PI * 2);
         ctx.stroke();
         
         ctx.restore();
@@ -700,7 +700,7 @@ class DefenseProjectile extends Entity {
         this.rotation = Math.atan2(this.velocityY, this.velocityX);
     }
     
-    onUpdate(deltaTime) {
+    onUpdate(_deltaTime) {
         // Check if reached target area
         const dx = this.targetX - this.x;
         const dy = this.targetY - this.y;

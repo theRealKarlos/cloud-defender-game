@@ -4,7 +4,7 @@
  */
 
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, PutCommand, QueryCommand, ScanCommand } = require('@aws-sdk/lib-dynamodb');
+const { DynamoDBDocumentClient, PutCommand, ScanCommand } = require('@aws-sdk/lib-dynamodb');
 
 // Initialize DynamoDB client with v3 SDK
 const client = new DynamoDBClient({});
@@ -64,21 +64,21 @@ exports.handler = async (event) => {
         console.log('Routing request:', routeKey);
         
         switch (routeKey) {
-            case 'POST /api/scores':
-                return await submitScore(JSON.parse(body || '{}'), headers);
-            case 'GET /api/leaderboard':
-                return await getLeaderboard(queryStringParameters || {}, headers);
-            default:
-                console.log('No route matched. Available routes: POST /api/scores, GET /api/leaderboard');
-                return {
-                    statusCode: 404,
-                    headers,
-                    body: JSON.stringify({ 
-                        error: 'Not Found',
-                        message: `Route not found: ${routeKey}`,
-                        availableRoutes: ['POST /api/scores', 'GET /api/leaderboard']
-                    })
-                };
+        case 'POST /api/scores':
+            return await submitScore(JSON.parse(body || '{}'), headers);
+        case 'GET /api/leaderboard':
+            return await getLeaderboard(queryStringParameters || {}, headers);
+        default:
+            console.log('No route matched. Available routes: POST /api/scores, GET /api/leaderboard');
+            return {
+                statusCode: 404,
+                headers,
+                body: JSON.stringify({ 
+                    error: 'Not Found',
+                    message: `Route not found: ${routeKey}`,
+                    availableRoutes: ['POST /api/scores', 'GET /api/leaderboard']
+                })
+            };
         }
     } catch (error) {
         console.error('Error processing request:', error);
@@ -204,7 +204,7 @@ async function getLeaderboard(queryParams, headers) {
         const timeframe = queryParams.timeframe || 'all'; // all, today, week, month
         
         let filterExpression = undefined;
-        let expressionAttributeValues = {};
+        const expressionAttributeValues = {};
         
         // Add game mode filter
         if (gameMode !== 'all') {
@@ -218,19 +218,21 @@ async function getLeaderboard(queryParams, headers) {
             let startDate;
             
             switch (timeframe) {
-                case 'today':
-                    startDate = now.toISOString().split('T')[0];
-                    break;
-                case 'week':
-                    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    startDate = weekAgo.toISOString().split('T')[0];
-                    break;
-                case 'month':
-                    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                    startDate = monthAgo.toISOString().split('T')[0];
-                    break;
-                default:
-                    startDate = null;
+            case 'today':
+                startDate = now.toISOString().split('T')[0];
+                break;
+            case 'week': {
+                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                startDate = weekAgo.toISOString().split('T')[0];
+                break;
+            }
+            case 'month': {
+                const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                startDate = monthAgo.toISOString().split('T')[0];
+                break;
+            }
+            default:
+                startDate = null;
             }
             
             if (startDate) {

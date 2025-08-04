@@ -3,7 +3,7 @@
 # ============================================================================
 # Verifies API Gateway is properly integrated with Lambda
 
-Write-Host "🔍 Checking API Gateway integration..." -ForegroundColor Green
+Write-Host "Checking API Gateway integration..." -ForegroundColor Green
 
 Set-Location -Path "infra"
 
@@ -13,7 +13,7 @@ try {
     $lambdaName = terraform output -raw lambda_function_name 2>$null
     
     if (-not $apiId) {
-        Write-Host "❌ Could not get API ID from Terraform" -ForegroundColor Red
+        Write-Host "Could not get API ID from Terraform" -ForegroundColor Red
         exit 1
     }
     
@@ -49,13 +49,13 @@ try {
                     Write-Host "  Integration URI: $($integration.IntegrationUri)" -ForegroundColor Gray
                     Write-Host "  Integration Type: $($integration.IntegrationType)" -ForegroundColor Gray
                 } catch {
-                    Write-Host "  ❌ Could not get integration details" -ForegroundColor Red
+                    Write-Host "  Could not get integration details" -ForegroundColor Red
                 }
             }
             Write-Host ""
         }
     } else {
-        Write-Host "❌ No routes found!" -ForegroundColor Red
+        Write-Host "No routes found!" -ForegroundColor Red
     }
     
     Write-Host "=== API STAGES ===" -ForegroundColor Yellow
@@ -70,7 +70,7 @@ try {
             Write-Host "  Created: $($stage.CreatedDate)" -ForegroundColor Gray
         }
     } else {
-        Write-Host "❌ No stages found!" -ForegroundColor Red
+        Write-Host "No stages found!" -ForegroundColor Red
     }
     
     Write-Host ""
@@ -80,15 +80,15 @@ try {
     if ($lambdaName) {
         try {
             $policy = aws lambda get-policy --function-name $lambdaName | ConvertFrom-Json
-            Write-Host "✅ Lambda has resource policy" -ForegroundColor Green
+            Write-Host "Lambda has resource policy" -ForegroundColor Green
             Write-Host ($policy.Policy | ConvertFrom-Json | ConvertTo-Json -Depth 5) -ForegroundColor Gray
         } catch {
-            Write-Host "❌ Lambda has no resource policy - API Gateway cannot invoke it!" -ForegroundColor Red
+            Write-Host "Lambda has no resource policy - API Gateway cannot invoke it!" -ForegroundColor Red
         }
     }
     
 } catch {
-    Write-Host "❌ Error checking integration: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Error checking integration: $($_.Exception.Message)" -ForegroundColor Red
 } finally {
     Set-Location -Path ".."
 }

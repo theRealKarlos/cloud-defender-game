@@ -3,6 +3,14 @@ const js = require('@eslint/js');
 module.exports = [
     js.configs.recommended,
     {
+        ignores: [
+            'node_modules/**',
+            'dist/**',
+            'build/**',
+            'vendor/**'
+        ]
+    },
+    {
         languageOptions: {
             ecmaVersion: 2022,
             sourceType: 'module',
@@ -12,6 +20,18 @@ module.exports = [
                 document: 'readonly',
                 console: 'readonly',
                 alert: 'readonly',
+                
+                // Browser APIs
+                fetch: 'readonly',
+                AbortController: 'readonly',
+                setTimeout: 'readonly',
+                clearTimeout: 'readonly',
+                setInterval: 'readonly',
+                clearInterval: 'readonly',
+                URLSearchParams: 'readonly',
+                FormData: 'readonly',
+                navigator: 'readonly',
+                screen: 'readonly',
                 
                 // Canvas API
                 CanvasRenderingContext2D: 'readonly',
@@ -46,7 +66,14 @@ module.exports = [
                 UIManager: 'readonly',
                 GameLoop: 'readonly',
                 EventHandler: 'readonly',
-                GameEngine: 'readonly'
+                GameEngine: 'readonly',
+                WaveManager: 'readonly',
+                GameConditions: 'readonly',
+                GameSecurity: 'readonly',
+                Target: 'readonly',
+                Missile: 'readonly',
+                ExplosiveBomb: 'readonly',
+                AWSIcons: 'readonly'
             }
         },
         rules: {
@@ -71,10 +98,19 @@ module.exports = [
             'prefer-const': 'error',
             'no-duplicate-imports': 'error',
             
-            // Game-specific rules
+            // Game-specific rules - more lenient for game coordinates and timing
             'no-magic-numbers': ['warn', { 
-                'ignore': [0, 1, -1, 2, 5, 9, 10, 16, 20, 30, 32, 35, 36, 40, 48, 50, 60, 64, 100, 120, 150, 200, 1000],
-                'ignoreArrayIndexes': true 
+                'ignore': [
+                    // Common numbers
+                    -1, 0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 20, 24, 25, 30, 32, 35, 36, 40, 48, 50, 60, 64, 80, 100, 120, 150, 200, 300, 500, 600, 800, 1000, 1500, 2000, 10000, 1000000,
+                    // Negative coordinates (common in games)
+                    -2, -4, -6, -8, -10, -12,
+                    // Decimal values (common in games)
+                    0.01, 0.05, 0.08, 0.1, 0.2, 0.25, 0.3, 0.5, 0.6, 0.7, 0.8, 1.2, 1.5
+                ],
+                'ignoreArrayIndexes': true,
+                'ignoreDefaultValues': true,
+                'detectObjects': false
             }],
             
             // Performance considerations
@@ -105,6 +141,13 @@ module.exports = [
             'no-magic-numbers': 'off', // Allow magic numbers in tests
             'max-lines-per-function': 'off', // Allow longer test functions
             'no-unused-vars': 'off' // Allow unused vars in test setup
+        }
+    },
+    {
+        // Specific rules for game graphics/coordinate files
+        files: ['js/aws-icons.js', 'js/renderer.js', 'js/target.js', 'js/missile.js'],
+        rules: {
+            'no-magic-numbers': 'off' // Allow magic numbers for coordinates and graphics
         }
     }
 ];

@@ -7,7 +7,6 @@
 
 // Initialise the game when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Game initialization starting...');
     try {
         // Check for Canvas support
         const canvas = document.getElementById('game-canvas');
@@ -16,10 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        console.log('Canvas found, initializing game engine...');
         // Initialize the game engine
         window.gameEngine = new GameEngine('game-canvas');
-        console.log('Game engine initialized:', window.gameEngine);
         
         // Start the render loop (but not the game logic)
         window.gameEngine.gameLoop.start();

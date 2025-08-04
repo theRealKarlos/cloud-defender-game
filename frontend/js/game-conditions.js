@@ -124,14 +124,14 @@ class GameConditions {
         let victoryMessage = '';
         
         switch (victoryType) {
-            case 'perfect':
-                scoreBonus = this.currentScore * 0.5; // 50% bonus for perfect victory
-                victoryMessage = 'Perfect Victory! All infrastructure defended successfully!';
-                break;
-            case 'pyrrhic':
-                scoreBonus = this.currentScore * 0.1; // 10% bonus for pyrrhic victory
-                victoryMessage = 'Victory achieved, but at great cost. Infrastructure was compromised.';
-                break;
+        case 'perfect':
+            scoreBonus = this.currentScore * 0.5; // 50% bonus for perfect victory
+            victoryMessage = 'Perfect Victory! All infrastructure defended successfully!';
+            break;
+        case 'pyrrhic':
+            scoreBonus = this.currentScore * 0.1; // 10% bonus for pyrrhic victory
+            victoryMessage = 'Victory achieved, but at great cost. Infrastructure was compromised.';
+            break;
         }
         
         this.currentScore += Math.floor(scoreBonus);
@@ -156,12 +156,12 @@ class GameConditions {
         let defeatMessage = '';
         
         switch (defeatReason) {
-            case 'targets_destroyed':
-                defeatMessage = 'Game Over! All AWS infrastructure has been compromised.';
-                break;
-            case 'lives_exhausted':
-                defeatMessage = 'Game Over! No more chances remaining.';
-                break;
+        case 'targets_destroyed':
+            defeatMessage = 'Game Over! All AWS infrastructure has been compromised.';
+            break;
+        case 'lives_exhausted':
+            defeatMessage = 'Game Over! No more chances remaining.';
+            break;
         }
         
         // Display game over screen
@@ -251,7 +251,7 @@ class GameConditions {
         }
     }
     
-    onTargetDestroyed(target, missile) {
+    onTargetDestroyed(target, _missile) {
         if (!this.gameActive) return;
         
         // Lose a life when a target is destroyed
@@ -286,7 +286,7 @@ class GameConditions {
         }
     }
     
-    onPowerUpCollected(powerUpType) {
+    onPowerUpCollected(_powerUpType) {
         if (!this.gameActive) return;
         
         // Award points for collecting power-ups
@@ -301,7 +301,7 @@ class GameConditions {
         }
     }
     
-    onTargetHit(target, missile) {
+    onTargetHit(_target, _missile) {
         if (!this.gameActive) return;
         
         // Lose a life when a target is hit by a missile

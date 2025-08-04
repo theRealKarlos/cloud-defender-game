@@ -153,15 +153,15 @@ class WaveManager {
         }
     }
     
-    update(deltaTime) {
+    update(_deltaTime) {
         if (this.allWavesCompleted) {
             return;
         }
         
         if (this.isInTransition) {
-            this.updateWaveTransition(deltaTime);
+            this.updateWaveTransition(_deltaTime);
         } else if (this.waveActive) {
-            this.updateActiveWave(deltaTime);
+            this.updateActiveWave(_deltaTime);
         }
     }
     
@@ -243,18 +243,18 @@ class WaveManager {
         console.log(`Spawned ${missileType} missile (${this.missilesSpawnedInWave}/${this.missilesInCurrentWave})`);
     }
     
-    applySpecialEvents(config, deltaTime) {
+    applySpecialEvents(config, _deltaTime) {
         config.specialEvents.forEach(event => {
             switch (event) {
-                case 'boss_wave':
-                    this.applyBossWaveEvent();
-                    break;
-                case 'speed_burst':
-                    this.applySpeedBurstEvent();
-                    break;
-                case 'multi_spawn':
-                    this.applyMultiSpawnEvent(config);
-                    break;
+            case 'boss_wave':
+                this.applyBossWaveEvent();
+                break;
+            case 'speed_burst':
+                this.applySpeedBurstEvent();
+                break;
+            case 'multi_spawn':
+                this.applyMultiSpawnEvent(config);
+                break;
             }
         });
     }

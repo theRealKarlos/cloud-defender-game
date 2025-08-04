@@ -3,7 +3,7 @@
 # ============================================================================
 # Tests the Lambda function directly to verify it's working
 
-Write-Host "🧪 Testing Lambda function directly..." -ForegroundColor Green
+Write-Host "Testing Lambda function directly..." -ForegroundColor Green
 
 Set-Location -Path "infra"
 
@@ -46,7 +46,7 @@ try {
         $result = aws lambda invoke --function-name $lambdaName --payload file://$tempFile response.json
         
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "✅ Lambda invocation successful!" -ForegroundColor Green
+            Write-Host "Lambda invocation successful!" -ForegroundColor Green
             
             # Read the response
             if (Test-Path "response.json") {
@@ -58,7 +58,7 @@ try {
                 Remove-Item "response.json" -ErrorAction SilentlyContinue
             }
         } else {
-            Write-Host "❌ Lambda invocation failed" -ForegroundColor Red
+            Write-Host "Lambda invocation failed" -ForegroundColor Red
         }
     } finally {
         # Clean up temp file
@@ -66,10 +66,10 @@ try {
     }
     
     Write-Host ""
-    Write-Host "🎯 Direct Lambda test complete!" -ForegroundColor Green
+    Write-Host "Direct Lambda test complete!" -ForegroundColor Green
     
 } catch {
-    Write-Host "❌ Error testing Lambda: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Error testing Lambda: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 } finally {
     Set-Location -Path ".."

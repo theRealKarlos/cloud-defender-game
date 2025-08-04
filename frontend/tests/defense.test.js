@@ -36,7 +36,7 @@ describe('Defense Class', () => {
             expect(defense.damage).toBe(30); // Firewall damage
             expect(defense.cooldownTime).toBe(1.0); // Firewall cooldown
             expect(defense.colour).toBe('#FF6B35'); // Firewall colour
-            expect(defense.defenseIcon).toBe('🛡');
+            expect(defense.defenseIcon).toBe('SHIELD');
             expect(defense.displayName).toBe('Firewall');
             expect(defense.targetingMode).toBe('nearest');
             expect(defense.isActive).toBe(true);

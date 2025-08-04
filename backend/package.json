@@ -4,7 +4,7 @@
   "description": "Cloud Defenders - Backend API for score management",
   "main": "index.js",
   "scripts": {
-    "test": "jest --passWithNoTests",
+    "test": "jest",
     "lint": "eslint *.js src/**/*.js --fix",
     "lint:check": "eslint *.js src/**/*.js",
     "security": "npm audit",

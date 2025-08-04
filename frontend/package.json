@@ -8,9 +8,9 @@
     "dev": "http-server . -p 3000 -c-1",
     "build": "echo 'Build process for production'",
     "test": "jest",
-    "lint": "eslint js/**/*.js tests/**/*.js",
-    "lint:fix": "eslint js/**/*.js tests/**/*.js --fix",
-    "lint:check": "eslint js/**/*.js tests/**/*.js",
+    "lint": "eslint js/**/*.js __tests__/**/*.js",
+    "lint:fix": "eslint js/**/*.js __tests__/**/*.js --fix",
+    "lint:check": "eslint js/**/*.js __tests__/**/*.js",
     "security": "npm audit",
     "security:fix": "npm audit fix",
     "format": "npm run lint:fix",
@@ -33,7 +33,7 @@
   },
   "jest": {
     "testMatch": [
-      "**/tests/**/*.test.js"
+      "**/__tests__/**/*.test.js"
     ],
     "testEnvironment": "node"
   }

@@ -13,7 +13,7 @@ $hasErrors = $false
 
 # Step 1: Code Quality & Security
 Write-Host "Step 1: Code Quality & Security Checks..." -ForegroundColor Cyan
-& "$PSScriptRoot/lint-and-security.ps1"
+& "$PSScriptRoot/run-lint.ps1"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Code quality checks failed" -ForegroundColor Red
@@ -27,12 +27,13 @@ Write-Host "Step 2: Running Tests..." -ForegroundColor Cyan
 # Frontend tests
 Write-Host "Running frontend tests..." -ForegroundColor Yellow
 Set-Location "frontend"
-npm test -- --passWithNoTests
+npm test -- --passWithNoTests --silent
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Frontend tests failed" -ForegroundColor Red
     $hasErrors = $true
-} else {
+}
+else {
     Write-Host "Frontend tests passed" -ForegroundColor Green
 }
 
@@ -41,12 +42,13 @@ Set-Location ".."
 # Backend tests
 Write-Host "Running backend tests..." -ForegroundColor Yellow
 Set-Location "backend"
-npm test -- --passWithNoTests
+npm test -- --passWithNoTests --silent
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Backend tests failed" -ForegroundColor Red
     $hasErrors = $true
-} else {
+}
+else {
     Write-Host "Backend tests passed" -ForegroundColor Green
 }
 
@@ -67,7 +69,8 @@ $requiredFiles = @(
 foreach ($file in $requiredFiles) {
     if (Test-Path $file) {
         Write-Host "$file exists" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "$file missing" -ForegroundColor Red
         $hasErrors = $true
     }
@@ -85,7 +88,8 @@ terraform validate
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Terraform validation failed" -ForegroundColor Red
     $hasErrors = $true
-} else {
+}
+else {
     Write-Host "Terraform validation passed" -ForegroundColor Green
 }
 
@@ -111,7 +115,8 @@ if ($hasErrors) {
     Write-Host "  • Check test output for specific test failures" -ForegroundColor White
     Write-Host "  • Verify all required files are present" -ForegroundColor White
     exit 1
-} else {
+}
+else {
     Write-Host ""
     Write-Host "ALL PRE-DEPLOYMENT CHECKS PASSED!" -ForegroundColor Green
     Write-Host "Ready for deployment!" -ForegroundColor Magenta

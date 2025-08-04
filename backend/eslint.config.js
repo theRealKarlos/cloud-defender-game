@@ -64,6 +64,15 @@ module.exports = [
         }
     },
     {
+        // Rules for src directory files
+        files: ['src/**/*.js'],
+        rules: {
+            // Additional rules for application code
+            'max-lines-per-function': ['warn', 50], // Encourage smaller functions
+            'complexity': ['warn', 10] // Warn about complex functions
+        }
+    },
+    {
         // Specific rules for test files
         files: ['**/*.test.js'],
         rules: {

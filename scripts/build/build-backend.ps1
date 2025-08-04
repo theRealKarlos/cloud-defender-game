@@ -13,10 +13,6 @@ $DistDir = "dist"
 $StagingDir = "$DistDir/backend_staging"
 $OutputZip = "$DistDir/score_api.zip"
 
-# Get the script directory to determine the project root
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ProjectRoot = $ScriptDir
-
 # Since the script is called from the backend directory, we need to go up one level
 $BackendDir = "."
 $DistDir = "../dist"

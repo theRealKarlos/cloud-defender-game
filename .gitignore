@@ -140,6 +140,9 @@ build/
 dist/
 out/
 
+# Exception: Include scripts/build folder (contains build scripts, not build outputs)
+!scripts/build/
+
 # Logs
 logs
 *.log

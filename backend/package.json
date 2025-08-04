@@ -9,8 +9,9 @@
     "lint:check": "eslint *.js src/**/*.js",
     "security": "npm audit",
     "security:fix": "npm audit fix",
-    "build": "zip -r score_api.zip .",
-    "deploy": "aws lambda update-function-code --function-name cloud-defenders-score-api --zip-file fileb://score_api.zip"
+    "build": "powershell -ExecutionPolicy Bypass -File ../scripts/build-backend.ps1",
+    "build:dev": "powershell -ExecutionPolicy Bypass -File ../scripts/build-backend.ps1 -Environment development",
+    "deploy": "aws lambda update-function-code --function-name cloud-defenders-score-api --zip-file fileb://../dist/score_api.zip"
   },
   "keywords": [
     "aws",

@@ -62,17 +62,11 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Create deployment package for Lambda
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  source_dir  = "${path.root}/../backend"
-  output_path = "${path.root}/lambda_deployment.zip"
-  excludes    = ["node_modules", "*.zip", ".git"]
-}
+# Use pre-built deployment package from dist/score_api.zip
 
 # Lambda function
 resource "aws_lambda_function" "score_api" {
-  filename      = data.archive_file.lambda_zip.output_path
+  filename      = local.lambda_zip_path
   function_name = "${var.project_name}-${var.environment}-score-api"
   role          = aws_iam_role.lambda_role.arn
   handler       = "index.handler"
@@ -80,7 +74,7 @@ resource "aws_lambda_function" "score_api" {
   timeout       = 30
   memory_size   = 256
 
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  source_code_hash = filebase64sha256(local.lambda_zip_path)
 
   environment {
     variables = {

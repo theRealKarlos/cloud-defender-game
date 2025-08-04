@@ -1,23 +1,16 @@
 # Build script for Cloud Defenders Backend
 # Creates a lean deployment package for AWS Lambda
 
-param(
-    [string]$Environment = "production"
-)
+Write-Host "Building Cloud Defenders Backend..." -ForegroundColor Green
 
-Write-Host "Building Cloud Defenders Backend for $Environment environment..." -ForegroundColor Green
+# Determine project root and set paths
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ProjectRoot = Split-Path -Parent (Split-Path -Parent $ScriptDir)
 
-# Configuration
-$BackendDir = "backend"
-$DistDir = "dist"
-$StagingDir = "$DistDir/backend_staging"
-$OutputZip = "$DistDir/score_api.zip"
-
-# Since the script is called from the backend directory, we need to go up one level
-$BackendDir = "."
-$DistDir = "../dist"
-$StagingDir = "$DistDir/backend_staging"
-$OutputZip = "$DistDir/score_api.zip"
+$BackendDir = Join-Path $ProjectRoot "backend"
+$DistDir = Join-Path $ProjectRoot "dist"
+$StagingDir = Join-Path $DistDir "backend_staging"
+$OutputZip = Join-Path $DistDir "score_api.zip"
 
 # Step 1: Clean previous build artifacts
 Write-Host "Cleaning previous build artifacts..." -ForegroundColor Yellow
@@ -42,7 +35,7 @@ Copy-Item -Path "$BackendDir/src" -Destination $StagingDir -Recurse -Force
 Copy-Item -Path "$BackendDir/package.json" -Destination $StagingDir -Force
 
 # Step 4: Install production dependencies only
-Write-Host "Installing production dependencies..." -ForegroundColor Yellow
+Write-Host "Installing dependencies..." -ForegroundColor Yellow
 Push-Location $StagingDir
 try {
     npm install --omit=dev --silent
@@ -57,6 +50,17 @@ catch {
 }
 finally {
     Pop-Location
+}
+
+# Step 4.5: Remove unnecessary files from deployment package
+Write-Host "Removing unnecessary files..." -ForegroundColor Yellow
+$filesToRemove = @("package.json", "package-lock.json")
+foreach ($file in $filesToRemove) {
+    $filePath = Join-Path $StagingDir $file
+    if (Test-Path $filePath) {
+        Remove-Item -Path $filePath -Force
+        Write-Host "   Removed $file"
+    }
 }
 
 # Step 5: Create deployment package
@@ -80,16 +84,5 @@ Remove-Item -Path $StagingDir -Recurse -Force
 Write-Host "Build completed successfully!" -ForegroundColor Green
 Write-Host "Deployment package: $OutputZip" -ForegroundColor Cyan
 Write-Host "Package size: $sizeMB MB" -ForegroundColor Cyan
-
-# Optional: Show what's included in the package
-if ($Environment -eq "development") {
-    Write-Host "Package contents:" -ForegroundColor Yellow
-    $tempDir = "$DistDir/temp_inspect"
-    Expand-Archive -Path $OutputZip -DestinationPath $tempDir -Force
-    Get-ChildItem -Path $tempDir -Recurse | ForEach-Object {
-        Write-Host "   $($_.FullName.Replace($tempDir, ''))"
-    }
-    Remove-Item -Path $tempDir -Recurse -Force
-}
 
 Write-Host "Ready for deployment!" -ForegroundColor Green 

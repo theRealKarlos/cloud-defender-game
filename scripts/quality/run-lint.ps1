@@ -11,7 +11,7 @@ param(
 Write-Host "Running Cloud Defenders Code Quality Checks..." -ForegroundColor Green
 
 # Function to run linting for a project
-function Run-Linting {
+function Invoke-Linting {
     param(
         [string]$ProjectPath,
         [string]$ProjectName
@@ -49,7 +49,7 @@ function Run-Linting {
 }
 
 # Function to run security audit
-function Run-SecurityAudit {
+function Invoke-SecurityAudit {
     param(
         [string]$ProjectPath,
         [string]$ProjectName
@@ -81,7 +81,7 @@ function Run-SecurityAudit {
 
 # Main execution
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$projectRoot = Split-Path -Parent $scriptRoot
+$projectRoot = Split-Path -Parent (Split-Path -Parent $scriptRoot)
 
 $frontendPath = Join-Path $projectRoot "frontend"
 $backendPath = Join-Path $projectRoot "backend"
@@ -92,8 +92,8 @@ $allPassed = $true
 if (-not $SecurityOnly) {
     Write-Host "`nRunning Linting Checks..." -ForegroundColor Cyan
     
-    $frontendLintPassed = Run-Linting -ProjectPath $frontendPath -ProjectName "Frontend"
-    $backendLintPassed = Run-Linting -ProjectPath $backendPath -ProjectName "Backend"
+    $frontendLintPassed = Invoke-Linting -ProjectPath $frontendPath -ProjectName "Frontend"
+    $backendLintPassed = Invoke-Linting -ProjectPath $backendPath -ProjectName "Backend"
     
     if (-not $frontendLintPassed -or -not $backendLintPassed) {
         $allPassed = $false
@@ -104,8 +104,8 @@ if (-not $SecurityOnly) {
 if (-not $LintOnly) {
     Write-Host "`nRunning Security Audits..." -ForegroundColor Cyan
     
-    $frontendSecurityPassed = Run-SecurityAudit -ProjectPath $frontendPath -ProjectName "Frontend"
-    $backendSecurityPassed = Run-SecurityAudit -ProjectPath $backendPath -ProjectName "Backend"
+    $frontendSecurityPassed = Invoke-SecurityAudit -ProjectPath $frontendPath -ProjectName "Frontend"
+    $backendSecurityPassed = Invoke-SecurityAudit -ProjectPath $backendPath -ProjectName "Backend"
     
     if (-not $frontendSecurityPassed -or -not $backendSecurityPassed) {
         $allPassed = $false

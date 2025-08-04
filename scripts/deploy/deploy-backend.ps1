@@ -2,6 +2,9 @@
 # Consolidates Lambda and API Gateway deployment
 
 param(
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$Profile,
     [string]$Environment = "dev",
     [string]$Region = "eu-west-2",
     [switch]$LambdaOnly,
@@ -20,7 +23,7 @@ if ($LambdaOnly -and $ApiOnly) {
 # Build the backend package first
 Write-Host "Building backend deployment package..." -ForegroundColor Yellow
 $buildScript = Join-Path $PSScriptRoot "..\build\build-backend.ps1"
-& $buildScript -Environment $Environment
+& $buildScript
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Backend build failed!" -ForegroundColor Red
@@ -40,14 +43,20 @@ if (-not $ApiOnly) {
     }
     
     try {
-        aws lambda update-function-code `
-            --function-name $lambdaFunctionName `
-            --zip-file "fileb://$zipPath" `
-            --region $Region
+        $awsArgs = @(
+            "lambda", "update-function-code",
+            "--function-name", $lambdaFunctionName,
+            "--zip-file", "fileb://$zipPath",
+            "--region", $Region,
+            "--profile", $Profile
+        )
+        
+        aws @awsArgs
         
         if ($LASTEXITCODE -eq 0) {
             Write-Host "Lambda function updated successfully" -ForegroundColor Green
-        } else {
+        }
+        else {
             Write-Host "Lambda deployment failed!" -ForegroundColor Red
             exit 1
         }
@@ -63,29 +72,36 @@ if (-not $LambdaOnly) {
     Write-Host "Deploying API Gateway..." -ForegroundColor Yellow
     
     try {
-        # Get the API Gateway ID
+        # Get the API Gateway v2 ID
         $apiName = "cloud-defenders-$Environment-api"
-        $apiId = aws apigateway get-rest-apis --query "items[?name=='$apiName'].id" --output text --region $Region
+        $getApiArgs = @(
+            "apigatewayv2", "get-apis",
+            "--query", "Items[?Name=='$apiName'].ApiId",
+            "--output", "text",
+            "--region", $Region,
+            "--profile", $Profile
+        )
         
-        if (-not $apiId) {
-            Write-Host "Error: API Gateway '$apiName' not found" -ForegroundColor Red
+        Write-Host "Searching for API Gateway: $apiName" -ForegroundColor Yellow
+        $apiId = aws @getApiArgs
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Error: AWS CLI command failed" -ForegroundColor Red
             exit 1
         }
         
-        # Create deployment
-        $deploymentId = aws apigateway create-deployment `
-            --rest-api-id $apiId `
-            --stage-name $Environment `
-            --region $Region `
-            --query 'id' `
-            --output text
+        # Debug: Show what we got back
+        Write-Host "Raw API ID result: '$apiId'" -ForegroundColor Yellow
         
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "API Gateway deployed successfully (Deployment ID: $deploymentId)" -ForegroundColor Green
-        } else {
-            Write-Host "API Gateway deployment failed!" -ForegroundColor Red
+        if ([string]::IsNullOrWhiteSpace($apiId) -or $apiId -eq "None") {
+            Write-Host "Error: API Gateway v2 '$apiName' not found" -ForegroundColor Red
+            Write-Host "Available APIs:" -ForegroundColor Yellow
+            aws apigatewayv2 get-apis --query "items[].{Name:name,Id:apiId}" --output table --region $Region --profile $Profile
             exit 1
         }
+        
+        Write-Host "API Gateway v2 found with ID: $apiId" -ForegroundColor Green
+        Write-Host "Note: HTTP API deployments are automatic with auto_deploy=true" -ForegroundColor Cyan
     }
     catch {
         Write-Host "Error deploying API Gateway: $_" -ForegroundColor Red

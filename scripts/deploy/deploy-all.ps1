@@ -88,7 +88,7 @@ Write-Host ""
 # Test API connectivity
 Write-Host "Testing API connectivity..." -ForegroundColor Blue
 try {
-    $response = Invoke-RestMethod -Uri "$apiUrl/api/leaderboard" -Method GET -TimeoutSec 10
+    Invoke-RestMethod -Uri "$apiUrl/api/leaderboard" -Method GET -TimeoutSec 10 | Out-Null
     Write-Host "API is responding!" -ForegroundColor Green
 }
 catch {

@@ -5,6 +5,65 @@
 
 const dbService = require('../services/dbService');
 const apiResponses = require('../utils/apiResponses');
+const { ScoreValidator } = require('../services/scoreValidator');
+
+/**
+ * Validate basic score input fields
+ * @param {Object} scoreData - The score data to validate
+ * @returns {Object|null} Error response or null if valid
+ */
+function validateBasicInputs(scoreData) {
+    const { playerName, score, wave } = scoreData;
+    
+    if (!playerName || typeof playerName !== 'string' || playerName.trim().length === 0) {
+        return apiResponses.badRequest('Player name is required and must be a non-empty string');
+    }
+    
+    if (typeof score !== 'number' || score < 0) {
+        return apiResponses.badRequest('Score must be a non-negative number');
+    }
+    
+    if (typeof wave !== 'number' || wave < 1) {
+        return apiResponses.badRequest('Wave must be a positive number');
+    }
+    
+    return null; // No validation errors
+}
+
+/**
+ * Perform advanced score validation using ScoreValidator
+ * @param {Object} scoreData - The score data to validate
+ * @returns {Object|null} Error response or null if valid
+ */
+function performAdvancedValidation(scoreData) {
+    const validator = new ScoreValidator();
+    const validationResult = validator.validateScore(scoreData);
+    
+    console.log('Score validation result:', {
+        action: validationResult.action,
+        confidence: validationResult.confidence,
+        flags: validationResult.flags
+    });
+    
+    // Reject scores that fail validation
+    if (validationResult.action === 'REJECT') {
+        return apiResponses.badRequest(
+            'Score validation failed',
+            { 
+                flags: validationResult.flags,
+                confidence: validationResult.confidence
+            }
+        );
+    }
+    
+    // For lab environment, accept both ACCEPT and REVIEW actions
+    // In production, you might want to handle REVIEW differently
+    if (validationResult.action === 'REVIEW') {
+        console.log('Score marked for review but accepted in lab environment');
+    }
+    
+    return null; // Validation passed
+}
 
 /**
  * Submit a new score
@@ -15,19 +74,16 @@ async function submitScore(scoreData) {
     try {
         console.log('Score submission requested:', scoreData);
         
-        // Validate required fields
-        const { playerName, score, wave } = scoreData;
-        
-        if (!playerName || typeof playerName !== 'string' || playerName.trim().length === 0) {
-            return apiResponses.badRequest('Player name is required and must be a non-empty string');
+        // Validate basic input fields
+        const basicValidationError = validateBasicInputs(scoreData);
+        if (basicValidationError) {
+            return basicValidationError;
         }
         
-        if (typeof score !== 'number' || score < 0) {
-            return apiResponses.badRequest('Score must be a non-negative number');
-        }
-        
-        if (typeof wave !== 'number' || wave < 1) {
-            return apiResponses.badRequest('Wave must be a positive number');
+        // Perform advanced score validation
+        const advancedValidationError = performAdvancedValidation(scoreData);
+        if (advancedValidationError) {
+            return advancedValidationError;
         }
         
         // Create score record

@@ -60,23 +60,28 @@ class ScoreValidator {
     }
     
     validateBasicInputs(playerName, score, wave) {
-        // Player name validation
-        if (!playerName || typeof playerName !== 'string' || 
-            playerName.length < 1 || playerName.length > 50) {
-            return false;
-        }
-        
-        // Score validation
-        if (typeof score !== 'number' || score < 0 || score > 1000000) {
-            return false;
-        }
-        
-        // Wave validation
-        if (typeof wave !== 'number' || wave < 1 || wave > 15) {
-            return false;
-        }
-        
-        return true;
+        return this.validatePlayerNameInput(playerName) &&
+               this.validateScoreInput(score) &&
+               this.validateWaveInput(wave);
+    }
+    
+    validatePlayerNameInput(playerName) {
+        return playerName && 
+               typeof playerName === 'string' && 
+               playerName.length >= 1 && 
+               playerName.length <= 50;
+    }
+    
+    validateScoreInput(score) {
+        return typeof score === 'number' && 
+               score >= 0 && 
+               score <= 1000000;
+    }
+    
+    validateWaveInput(wave) {
+        return typeof wave === 'number' && 
+               wave >= 1 && 
+               wave <= 15;
     }
     
     validateScorePlausibility(submission, validation) {

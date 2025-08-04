@@ -3,6 +3,12 @@
 # ============================================================================
 # Automatically updates the frontend API configuration with the correct API Gateway URL
 
+param(
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$Profile
+)
+
 Write-Host "Updating API configuration..." -ForegroundColor Green
 
 # Change to infrastructure directory to get Terraform outputs
@@ -11,7 +17,7 @@ Set-Location -Path "infra"
 try {
     # Get the API URL from Terraform outputs
     Write-Host "Getting API URL from Terraform..." -ForegroundColor Yellow
-    $apiUrl = terraform output -raw api_gateway_url
+    $apiUrl = terraform output -raw api_gateway_url -var="aws_profile=$Profile"
     
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to get API URL from Terraform. Make sure infrastructure is deployed."

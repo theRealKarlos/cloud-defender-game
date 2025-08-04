@@ -2,6 +2,10 @@
 # Cloud Defenders Infrastructure Cleanup Script
 
 param(
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$Profile,
+    
     [Parameter(Mandatory = $false)]
     [ValidateSet("dev", "staging", "prod")]
     [string]$Environment = "dev",
@@ -68,9 +72,9 @@ Set-Location $infraDir
 # Get resource information before destroying
 Write-Host "Getting resource information..." -ForegroundColor Blue
 try {
-    $bucketName = terraform output -raw s3_bucket_name 2>$null
-    $lambdaName = terraform output -raw lambda_function_name 2>$null
-    $tableName = terraform output -raw dynamodb_table_name 2>$null
+    $bucketName = terraform output -raw s3_bucket_name -var="aws_profile=$Profile" 2>$null
+    $lambdaName = terraform output -raw lambda_function_name -var="aws_profile=$Profile" 2>$null
+    $tableName = terraform output -raw dynamodb_table_name -var="aws_profile=$Profile" 2>$null
     
     Write-Host "Resources to be destroyed:" -ForegroundColor Yellow
     if ($bucketName) { Write-Host "  • S3 Bucket: $bucketName" -ForegroundColor Gray }
@@ -84,7 +88,8 @@ catch {
 # Empty S3 bucket first (required for deletion)
 if ($bucketName) {
     Write-Host "Emptying S3 bucket..." -ForegroundColor Blue
-    aws s3 rm "s3://$bucketName" --recursive 2>$null
+    $s3RmArgs = @("s3", "rm", "s3://$bucketName", "--recursive", "--profile", $Profile)
+    aws @s3RmArgs 2>$null
     if ($LASTEXITCODE -eq 0) {
         Write-Host "S3 bucket emptied" -ForegroundColor Green
     }
@@ -98,7 +103,8 @@ Write-Host "💥 Destroying infrastructure..." -ForegroundColor Red
 terraform destroy -auto-approve `
     -var="environment=$Environment" `
     -var="aws_region=$Region" `
-    -var="project_name=$ProjectName"
+    -var="project_name=$ProjectName" `
+    -var="aws_profile=$Profile"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Terraform destroy failed"

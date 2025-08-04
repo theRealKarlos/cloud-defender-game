@@ -2,6 +2,10 @@
 # Consolidates API testing, Lambda testing, and diagnostics
 
 param(
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$Profile,
+    
     [string]$Environment = "dev",
     [string]$Region = "eu-west-2",
     [switch]$ApiOnly,
@@ -22,7 +26,7 @@ function Test-ApiEndpoints {
     Push-Location $infraPath
     
     try {
-        $apiUrl = terraform output -raw api_gateway_url 2>$null
+        $apiUrl = terraform output -raw api_gateway_url -var="aws_profile=$Profile" 2>$null
         if (-not $apiUrl) {
             Write-Host "  Error: Could not get API Gateway URL from Terraform outputs" -ForegroundColor Red
             return $false
@@ -91,11 +95,16 @@ function Test-LambdaDirect {
     try {
         Write-Host "  Invoking Lambda function: $lambdaFunctionName" -ForegroundColor Yellow
         
-        $response = aws lambda invoke `
-            --function-name $lambdaFunctionName `
-            --payload ($testPayload | ConvertTo-Json) `
-            --region $Region `
-            response.json
+        $lambdaArgs = @(
+            "lambda", "invoke",
+            "--function-name", $lambdaFunctionName,
+            "--payload", ($testPayload | ConvertTo-Json),
+            "--region", $Region,
+            "--profile", $Profile,
+            "response.json"
+        )
+        
+        aws @lambdaArgs
         
         if ($LASTEXITCODE -eq 0) {
             $result = Get-Content response.json | ConvertFrom-Json
@@ -124,22 +133,32 @@ function Check-LambdaLogs {
     try {
         Write-Host "  Getting recent logs for: $logGroupName" -ForegroundColor Yellow
         
-        $logs = aws logs describe-log-streams `
-            --log-group-name $logGroupName `
-            --order-by LastEventTime `
-            --descending `
-            --max-items 5 `
-            --region $Region `
-            --query 'logStreams[0].logStreamName' `
-            --output text
+        $logsArgs = @(
+            "logs", "describe-log-streams",
+            "--log-group-name", $logGroupName,
+            "--order-by", "LastEventTime",
+            "--descending",
+            "--max-items", "5",
+            "--region", $Region,
+            "--profile", $Profile,
+            "--query", "logStreams[0].logStreamName",
+            "--output", "text"
+        )
+        
+        $logs = aws @logsArgs
         
         if ($logs -and $logs -ne "None") {
-            $recentLogs = aws logs get-log-events `
-                --log-group-name $logGroupName `
-                --log-stream-name $logs `
-                --region $Region `
-                --query 'events[*].message' `
-                --output text
+            $getLogsArgs = @(
+                "logs", "get-log-events",
+                "--log-group-name", $logGroupName,
+                "--log-stream-name", $logs,
+                "--region", $Region,
+                "--profile", $Profile,
+                "--query", "events[*].message",
+                "--output", "text"
+            )
+            
+            $recentLogs = aws @getLogsArgs
             
             Write-Host "  Recent logs:" -ForegroundColor White
             $recentLogs -split "`n" | ForEach-Object { Write-Host "    $_" -ForegroundColor Gray }
@@ -164,13 +183,15 @@ function Diagnose-ApiIssues {
     try {
         # Check API Gateway status
         Write-Host "  Checking API Gateway status..." -ForegroundColor Yellow
-        $apiId = aws apigateway get-rest-apis --query "items[?name=='$apiName'].id" --output text --region $Region
+        $apiArgs = @("apigateway", "get-rest-apis", "--query", "items[?name=='$apiName'].id", "--output", "text", "--region", $Region, "--profile", $Profile)
+        $apiId = aws @apiArgs
         
         if ($apiId) {
             Write-Host "  API Gateway found: $apiId" -ForegroundColor Green
             
             # Check deployments
-            $deployments = aws apigateway get-deployments --rest-api-id $apiId --region $Region --query 'items[*].{id:id,createdDate:createdDate}' --output table
+            $deployArgs = @("apigateway", "get-deployments", "--rest-api-id", $apiId, "--region", $Region, "--profile", $Profile, "--query", "items[*].{id:id,createdDate:createdDate}", "--output", "table")
+            $deployments = aws @deployArgs
             Write-Host "  Recent deployments:" -ForegroundColor White
             Write-Host $deployments -ForegroundColor Gray
         } else {
@@ -181,7 +202,8 @@ function Diagnose-ApiIssues {
         # Check Lambda function status
         Write-Host "  Checking Lambda function status..." -ForegroundColor Yellow
         $lambdaFunctionName = "cloud-defenders-$Environment-score-api"
-        $lambdaStatus = aws lambda get-function --function-name $lambdaFunctionName --region $Region --query 'Configuration.State' --output text 2>$null
+        $lambdaStatusArgs = @("lambda", "get-function", "--function-name", $lambdaFunctionName, "--region", $Region, "--profile", $Profile, "--query", "Configuration.State", "--output", "text")
+        $lambdaStatus = aws @lambdaStatusArgs 2>$null
         
         if ($lambdaStatus -eq "Active") {
             Write-Host "  Lambda function is active" -ForegroundColor Green

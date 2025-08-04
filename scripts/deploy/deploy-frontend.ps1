@@ -2,6 +2,10 @@
 # Cloud Defenders Frontend Deployment Script
 
 param(
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$Profile,
+    
     [Parameter(Mandatory = $false)]
     [ValidateSet("dev", "staging", "prod")]
     [string]$Environment = "dev",
@@ -25,7 +29,7 @@ if (-not (Get-Command aws -ErrorAction SilentlyContinue)) {
 
 # Check AWS credentials
 try {
-    $awsAccount = aws sts get-caller-identity --query Account --output text 2>$null
+    $awsAccount = aws sts get-caller-identity --query Account --output text --profile $Profile 2>$null
     if ($LASTEXITCODE -ne 0) {
         throw "AWS credentials not configured"
     }
@@ -47,7 +51,7 @@ Set-Location $infraDir
 
 Write-Host "Getting S3 bucket information..." -ForegroundColor Blue
 try {
-    $bucketName = terraform output -raw s3_bucket_name 2>$null
+    $bucketName = terraform output -raw s3_bucket_name -var="aws_profile=$Profile" 2>$null
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrEmpty($bucketName)) {
         throw "Failed to get bucket name"
     }
@@ -91,14 +95,20 @@ if (-not $Force) {
 
 # Upload files to S3
 Write-Host "📤 Uploading files to S3..." -ForegroundColor Blue
-aws s3 sync . "s3://$bucketName" --delete `
-    --exclude "*.git/*" `
-    --exclude ".DS_Store" `
-    --exclude "node_modules/*" `
-    --exclude "package*.json" `
-    --exclude "eslint.config.js" `
-    --exclude "tests/*" `
-    --exclude "debug.html"
+$s3SyncArgs = @(
+    "s3", "sync", ".", "s3://$bucketName",
+    "--delete",
+    "--exclude", "*.git/*",
+    "--exclude", ".DS_Store",
+    "--exclude", "node_modules/*",
+    "--exclude", "package*.json",
+    "--exclude", "eslint.config.js",
+    "--exclude", "tests/*",
+    "--exclude", "debug.html",
+    "--profile", $Profile
+)
+
+aws @s3SyncArgs
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to upload files to S3"
@@ -109,22 +119,28 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Setting content types..." -ForegroundColor Blue
 
 # HTML files
-aws s3 cp "s3://$bucketName" "s3://$bucketName" --recursive --exclude "*" --include "*.html" --content-type "text/html" --metadata-directive REPLACE
+$htmlArgs = @("s3", "cp", "s3://$bucketName", "s3://$bucketName", "--recursive", "--exclude", "*", "--include", "*.html", "--content-type", "text/html", "--metadata-directive", "REPLACE", "--profile", $Profile)
+aws @htmlArgs
+
 # CSS files
-aws s3 cp "s3://$bucketName" "s3://$bucketName" --recursive --exclude "*" --include "*.css" --content-type "text/css" --metadata-directive REPLACE
+$cssArgs = @("s3", "cp", "s3://$bucketName", "s3://$bucketName", "--recursive", "--exclude", "*", "--include", "*.css", "--content-type", "text/css", "--metadata-directive", "REPLACE", "--profile", $Profile)
+aws @cssArgs
+
 # JavaScript files
-aws s3 cp "s3://$bucketName" "s3://$bucketName" --recursive --exclude "*" --include "*.js" --content-type "application/javascript" --metadata-directive REPLACE
+$jsArgs = @("s3", "cp", "s3://$bucketName", "s3://$bucketName", "--recursive", "--exclude", "*", "--include", "*.js", "--content-type", "application/javascript", "--metadata-directive", "REPLACE", "--profile", $Profile)
+aws @jsArgs
 
 # Get website URL and CloudFront distribution ID
 Set-Location $infraDir
-$websiteUrl = terraform output -raw s3_website_url
-$distributionId = terraform output -raw cloudfront_distribution_id
+$websiteUrl = terraform output -raw s3_website_url -var="aws_profile=$Profile"
+$distributionId = terraform output -raw cloudfront_distribution_id -var="aws_profile=$Profile"
 
 # Only invalidate CloudFront cache if we have a real distribution ID
 if ($distributionId -and $distributionId -ne "N/A - S3 Website Mode" -and $distributionId -notlike "E*") {
     Write-Host ""
     Write-Host "Invalidating CloudFront cache..." -ForegroundColor Blue
-    aws cloudfront create-invalidation --distribution-id $distributionId --paths "/*"
+    $invalidationArgs = @("cloudfront", "create-invalidation", "--distribution-id", $distributionId, "--paths", "/*", "--profile", $Profile)
+    aws @invalidationArgs
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host "CloudFront cache invalidation initiated" -ForegroundColor Green
@@ -140,7 +156,8 @@ elseif ($distributionId -eq "N/A - S3 Website Mode") {
 else {
     Write-Host ""
     Write-Host "Invalidating CloudFront cache..." -ForegroundColor Blue
-    aws cloudfront create-invalidation --distribution-id $distributionId --paths "/*"
+    $invalidationArgs = @("cloudfront", "create-invalidation", "--distribution-id", $distributionId, "--paths", "/*", "--profile", $Profile)
+    aws @invalidationArgs
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host "CloudFront cache invalidation initiated" -ForegroundColor Green

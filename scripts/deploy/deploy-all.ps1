@@ -2,6 +2,10 @@
 # Cloud Defenders Complete Deployment Script
 
 param(
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$Profile,
+    
     [Parameter(Mandatory = $false)]
     [ValidateSet("dev", "staging", "prod")]
     [string]$Environment = "dev",
@@ -25,7 +29,7 @@ $startTime = Get-Date
 
 # Step 1: Deploy Infrastructure
 Write-Host "Step 1: Deploying Infrastructure..." -ForegroundColor Cyan
-& "$PSScriptRoot/deploy-infra.ps1" -Environment $Environment -Region $Region -ProjectName $ProjectName -DestroyFirst:$DestroyFirst
+& "$PSScriptRoot/deploy-infra.ps1" -Profile $Profile -Environment $Environment -Region $Region -ProjectName $ProjectName -DestroyFirst:$DestroyFirst
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Infrastructure deployment failed"
@@ -48,7 +52,7 @@ if ($LASTEXITCODE -ne 0) {
 # Step 3: Deploy Frontend
 Write-Host ""
 Write-Host "Step 3: Deploying Frontend..." -ForegroundColor Cyan
-& "$PSScriptRoot/deploy-frontend.ps1" -Environment $Environment -ProjectName $ProjectName -Force
+& "$PSScriptRoot/deploy-frontend.ps1" -Profile $Profile -Environment $Environment -ProjectName $ProjectName -Force
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Frontend deployment failed"
@@ -59,9 +63,9 @@ if ($LASTEXITCODE -ne 0) {
 $infraDir = Join-Path $PSScriptRoot ".." "infra"
 Set-Location $infraDir
 
-$apiUrl = terraform output -raw api_gateway_url
-$websiteUrl = terraform output -raw s3_website_url
-$lambdaName = terraform output -raw lambda_function_name
+$apiUrl = terraform output -raw api_gateway_url -var="aws_profile=$Profile"
+$websiteUrl = terraform output -raw s3_website_url -var="aws_profile=$Profile"
+$lambdaName = terraform output -raw lambda_function_name -var="aws_profile=$Profile"
 
 $endTime = Get-Date
 $duration = $endTime - $startTime

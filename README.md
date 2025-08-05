@@ -6,6 +6,20 @@ A tower defence-style web game where players defend cloud infrastructure compone
 
 **This is an educational lab project intended for learning and demonstration purposes.** While this project aims to follow industry best practices and production-level patterns, it is provided "as-is" and should not be considered production-ready without thorough review and customisation for your specific requirements.
 
+## ⚠️ AI Driven Development
+
+I'm not a JavaScript developer, but I am a coder of sorts! I tend to know what good looks like, this project was built using AI prompts and a lot of trial and error.
+
+I've strived to have the AI build a modular and secure JavaScript browser game engine, and I've tried to follow best practices for security and deployment.
+
+I've also tried to make the code as readable as possible, and I've added a lot of comments to help explain the code.
+
+I know what I want to achieve with this project and my aim is to have an AI build it for me with minimal manual coding.
+
+The build pipeline was also AI generated but with a lot of guidence as to how I wanted it to work.
+
+In essence this project is an experiment in AI driven development.
+
 ### Educational Intent
 
 - Demonstrates modern CI/CD pipeline architecture

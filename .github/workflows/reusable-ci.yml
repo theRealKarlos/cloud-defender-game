@@ -30,12 +30,45 @@ jobs:
       test-results: ${{ steps.ci-artefacts.outputs.artefact-name }}
 
     steps:
-      - name: Prepare job environment
-        uses: ./.github/workflows/reusable-prepare-job.yml
+      # =================================================================
+      # ⚙️ JOB PREPARATION
+      # =================================================================
+      # The following preparation steps (checkout, setup node, cache)
+      # are intentionally duplicated in both reusable-ci.yml and
+      # reusable-build.yml.
+      #
+      # WHY: GitHub Actions does not permit calling a reusable workflow
+      # from within a step. Common setup logic must therefore be
+      # defined explicitly within each reusable workflow that needs it,
+      # rather than being abstracted into a separate, nested reusable
+      # workflow.
+      # =================================================================
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          component: ${{ inputs.component }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
           node-version: ${{ inputs.node-version }}
-          working-directory: ${{ inputs.working-directory }}
+          cache: "npm"
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ inputs.working-directory }}/node_modules
+          key: ${{ runner.os }}-node-${{ inputs.node-version }}-${{ inputs.component }}-${{ hashFiles(format('{0}/package-lock.json', inputs.working-directory)) }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ inputs.node-version }}-${{ inputs.component }}-
+            ${{ runner.os }}-node-${{ inputs.node-version }}-
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Installing dependencies for ${{ inputs.component }}..."
+          npm ci
 
       - name: Run ESLint
         working-directory: ${{ inputs.working-directory }}

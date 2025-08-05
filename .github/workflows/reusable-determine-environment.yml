@@ -6,6 +6,9 @@ on:
       environment:
         description: "Environment determined from branch"
         value: ${{ jobs.determine-environment.outputs.environment }}
+      should_deploy:
+        description: "Whether deployment should occur"
+        value: ${{ jobs.determine-environment.outputs.should_deploy }}
 
 jobs:
   determine-environment:
@@ -28,7 +31,7 @@ jobs:
             echo "environment=development" >> $GITHUB_OUTPUT
             echo "✅ Environment determined: development (non-master branch)"
           fi
-          
+
           # Determine if deployment should occur
           if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "should_deploy=true" >> $GITHUB_OUTPUT
@@ -36,4 +39,4 @@ jobs:
           else
             echo "should_deploy=false" >> $GITHUB_OUTPUT
             echo "⏭️  Deployment skipped (pull_request)"
-          fi 
+          fi

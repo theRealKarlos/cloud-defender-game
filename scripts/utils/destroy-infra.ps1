@@ -61,7 +61,7 @@ if (-not (Get-Command aws -ErrorAction SilentlyContinue)) {
 }
 
 # Navigate to infrastructure directory
-$infraDir = Join-Path $PSScriptRoot ".." "infra"
+$infraDir = Join-Path $PSScriptRoot ".." ".." "infra"
 if (-not (Test-Path $infraDir)) {
     Write-Error "Infrastructure directory not found: $infraDir"
     exit 1
@@ -69,12 +69,29 @@ if (-not (Test-Path $infraDir)) {
 
 Set-Location $infraDir
 
+# Set AWS profile for Terraform
+$env:AWS_PROFILE = $Profile
+
+# Temporarily remove prevent_destroy from CloudWatch log group for cleanup
+Write-Host "Preparing for infrastructure destruction..." -ForegroundColor Blue
+$lambdaModulePath = Join-Path $infraDir "modules" "lambda_function" "main.tf"
+if (Test-Path $lambdaModulePath) {
+    $content = Get-Content $lambdaModulePath -Raw
+    $backupPath = "$lambdaModulePath.backup"
+    Copy-Item $lambdaModulePath $backupPath -Force
+    
+    # Remove the prevent_destroy lifecycle rule
+    $content = $content -replace 'lifecycle\s*\{\s*prevent_destroy\s*=\s*true\s*\}', ''
+    Set-Content $lambdaModulePath $content
+    Write-Host "  • Temporarily removed prevent_destroy protection" -ForegroundColor Gray
+}
+
 # Get resource information before destroying
 Write-Host "Getting resource information..." -ForegroundColor Blue
 try {
-    $bucketName = terraform output -raw s3_bucket_name -var="aws_profile=$Profile" 2>$null
-    $lambdaName = terraform output -raw lambda_function_name -var="aws_profile=$Profile" 2>$null
-    $tableName = terraform output -raw dynamodb_table_name -var="aws_profile=$Profile" 2>$null
+    $bucketName = terraform output -raw s3_bucket_name 2>$null
+    $lambdaName = terraform output -raw lambda_function_name 2>$null
+    $tableName = terraform output -raw dynamodb_table_name 2>$null
     
     Write-Host "Resources to be destroyed:" -ForegroundColor Yellow
     if ($bucketName) { Write-Host "  • S3 Bucket: $bucketName" -ForegroundColor Gray }
@@ -103,13 +120,27 @@ Write-Host "💥 Destroying infrastructure..." -ForegroundColor Red
 terraform destroy -auto-approve `
     -var="environment=$Environment" `
     -var="aws_region=$Region" `
-    -var="project_name=$ProjectName" `
-    -var="aws_profile=$Profile"
+    -var="project_name=$ProjectName"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Terraform destroy failed"
     Write-Host "You may need to manually clean up some resources" -ForegroundColor Yellow
+    
+    # Restore the original file if destroy failed
+    if (Test-Path $backupPath) {
+        Copy-Item $backupPath $lambdaModulePath -Force
+        Remove-Item $backupPath -Force
+        Write-Host "  • Restored original Terraform configuration" -ForegroundColor Gray
+    }
+    
     exit 1
+}
+
+# Restore the original Terraform configuration
+if (Test-Path $backupPath) {
+    Copy-Item $backupPath $lambdaModulePath -Force
+    Remove-Item $backupPath -Force
+    Write-Host "  • Restored original Terraform configuration" -ForegroundColor Gray
 }
 
 # Clean up local files

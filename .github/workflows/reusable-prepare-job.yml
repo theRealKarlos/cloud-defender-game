@@ -1,0 +1,59 @@
+name: Reusable Job Preparation
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        description: "Component to prepare (frontend, backend)"
+        required: true
+        type: string
+      node-version:
+        description: "Node.js version to use"
+        required: true
+        type: string
+      working-directory:
+        description: "Working directory for the component"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  prepare:
+    name: Prepare Job Environment for ${{ inputs.component }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: "npm"
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ inputs.working-directory }}/node_modules
+          key: ${{ runner.os }}-node-${{ inputs.node-version }}-${{ inputs.component }}-${{ hashFiles(format('{0}/package-lock.json', inputs.working-directory)) }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ inputs.node-version }}-${{ inputs.component }}-
+            ${{ runner.os }}-node-${{ inputs.node-version }}-
+
+      - name: Verify environment preparation
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "✅ Environment prepared for ${{ inputs.component }}"
+          echo "Node.js version: $(node --version)"
+          echo "npm version: $(npm --version)"
+          echo "Working directory: ${{ inputs.working-directory }}"
+          if [ -d "node_modules" ]; then
+            echo "✅ node_modules directory found"
+          else
+            echo "⚠️  node_modules directory not found"
+          fi 

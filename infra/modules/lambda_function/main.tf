@@ -107,3 +107,10 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
     prevent_destroy = true
   }
 }
+
+# Lambda alias for deployment management
+resource "aws_lambda_alias" "live" {
+  name             = "live"
+  function_name    = aws_lambda_function.score_api.function_name
+  function_version = "$LATEST"
+}

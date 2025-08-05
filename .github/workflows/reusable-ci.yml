@@ -1,0 +1,125 @@
+name: Reusable CI Checks
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        description: "Component to test (frontend, backend)"
+        required: true
+        type: string
+      node-version:
+        description: "Node.js version to use"
+        required: true
+        type: string
+      working-directory:
+        description: "Working directory for the component"
+        required: false
+        type: string
+        default: ""
+    outputs:
+      test-results:
+        description: "Test results artefact name"
+        value: ${{ jobs.ci-checks.outputs.test-results }}
+
+jobs:
+  ci-checks:
+    name: CI Checks for ${{ inputs.component }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      test-results: ${{ steps.ci-artefacts.outputs.artefact-name }}
+
+    steps:
+      - name: Prepare job environment
+        uses: ./.github/workflows/reusable-prepare-job.yml
+        with:
+          component: ${{ inputs.component }}
+          node-version: ${{ inputs.node-version }}
+          working-directory: ${{ inputs.working-directory }}
+
+      - name: Run ESLint
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Running ESLint on ${{ inputs.component }}..."
+          npm run lint
+
+      - name: Check Prettier formatting
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Checking Prettier formatting on ${{ inputs.component }}..."
+          npm run format:check
+
+      - name: Run tests with coverage
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Running tests for ${{ inputs.component }}..."
+          npm test -- --coverage --watchAll=false --passWithNoTests
+
+      - name: Run npm audit
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Running security audit for ${{ inputs.component }}..."
+          npm audit --audit-level=high --json > audit-results.json || echo "Audit completed with findings"
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
+
+      - name: Check for high/critical vulnerabilities
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Checking for high/critical vulnerabilities in ${{ inputs.component }}..."
+
+          if [ -f audit-results.json ]; then
+            HIGH_VULN=$(jq '.metadata.vulnerabilities.high // 0' audit-results.json)
+            CRITICAL_VULN=$(jq '.metadata.vulnerabilities.critical // 0' audit-results.json)
+            
+            echo "High vulnerabilities found: $HIGH_VULN"
+            echo "Critical vulnerabilities found: $CRITICAL_VULN"
+            
+            if [ $HIGH_VULN -gt 0 ] || [ $CRITICAL_VULN -gt 0 ]; then
+              echo "❌ High or critical vulnerabilities found. Pipeline will fail."
+              exit 1
+            else
+              echo "✅ No high or critical vulnerabilities found."
+            fi
+          else
+            echo "✅ No audit results found - assuming no vulnerabilities."
+          fi
+
+      - name: Initialise CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+          queries: security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript"
+
+      - name: Upload essential CI artefacts
+        id: ci-artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.component }}-ci-artefacts
+          path: |
+            ${{ inputs.working-directory }}/coverage/lcov-report/
+            ${{ inputs.working-directory }}/audit-results.json
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Generate CI summary
+        run: |
+          echo "## 🧪 CI Checks Summary for ${{ inputs.component }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Linting**: Passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Formatting**: Passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Tests**: Passed with coverage" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Security Audit**: Passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **CodeQL Analysis**: Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Component**: ${{ inputs.component }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Working Directory**: \`${{ inputs.working-directory }}\`" >> $GITHUB_STEP_SUMMARY

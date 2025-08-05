@@ -1,0 +1,79 @@
+name: Security Issue
+description: Report a security vulnerability (use private reporting for sensitive issues)
+title: "[Security]: "
+labels: ["security", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **⚠️ IMPORTANT: For sensitive security vulnerabilities, please use GitHub''s private vulnerability reporting feature instead of creating a public issue.**
+
+        This template is for non-sensitive security improvements and general security discussions.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Security Issue Description
+      description: Describe the security concern or improvement suggestion
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity Level
+      description: How severe do you consider this issue?
+      options:
+        - Low
+        - Medium
+        - High
+        - Critical
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: Which component is affected?
+      options:
+        - Frontend
+        - Backend
+        - Infrastructure
+        - CI/CD Pipeline
+        - Dependencies
+        - Configuration
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Potential Impact
+      description: What could happen if this security issue is not addressed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Suggested Mitigation
+      description: Do you have any suggestions for how to address this issue?
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      description: Please confirm the following
+      options:
+        - label: This is not a sensitive vulnerability that could be exploited
+          required: true
+        - label: I have checked that this issue hasn''t been reported before
+          required: true
+        - label: I agree to follow this project''s Code of Conduct
+          required: true

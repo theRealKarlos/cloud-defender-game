@@ -1,0 +1,371 @@
+name: "Deploy Frontend to AWS"
+description: "Deploy frontend application to S3 and CloudFront with cache invalidation for Cloud Defenders"
+author: "Cloud Defenders Team"
+
+inputs:
+  aws-region:
+    description: "AWS region for deployment"
+    required: false
+    default: "eu-west-2"
+  s3-bucket:
+    description: "S3 bucket name for static assets"
+    required: true
+  cloudfront-distribution-id:
+    description: "CloudFront distribution ID for cache invalidation"
+    required: false
+  build-directory:
+    description: "Directory containing built frontend assets"
+    required: false
+    default: "./frontend/dist"
+  source-directory:
+    description: "Source directory for frontend code"
+    required: false
+    default: "./frontend"
+  environment:
+    description: "Deployment environment (development, production)"
+    required: false
+    default: "development"
+  cache-control:
+    description: "Cache-Control header for static assets"
+    required: false
+    default: "public, max-age=31536000"
+  index-cache-control:
+    description: "Cache-Control header for index.html"
+    required: false
+    default: "public, max-age=0, must-revalidate"
+  dry-run:
+    description: "Perform a dry run without actual deployment"
+    required: false
+    default: "false"
+
+outputs:
+  deployment-url:
+    description: "URL of the deployed application"
+    value: ${{ steps.deploy.outputs.url }}
+  s3-sync-output:
+    description: "Output from S3 sync operation"
+    value: ${{ steps.s3-sync.outputs.result }}
+  cache-invalidation-id:
+    description: "CloudFront cache invalidation ID"
+    value: ${{ steps.invalidate.outputs.invalidation-id }}
+  build-size:
+    description: "Total size of built assets"
+    value: ${{ steps.build-info.outputs.size }}
+  version-path:
+    description: "S3 version path for this deployment"
+    value: ${{ steps.deploy.outputs.version-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.s3-bucket }}" ]; then
+          echo "::error::S3 bucket name is required"
+          exit 1
+        fi
+
+        if [ ! -d "${{ inputs.source-directory }}" ]; then
+          echo "::error::Source directory ${{ inputs.source-directory }} does not exist"
+          exit 1
+        fi
+
+    - name: Validate build directory
+      shell: bash
+      run: |
+        if [ ! -d "${{ inputs.build-directory }}" ]; then
+          echo "::error::Build directory ${{ inputs.build-directory }} does not exist"
+          exit 1
+        fi
+        
+        echo "✅ Build directory validated: ${{ inputs.build-directory }}"
+
+    - name: Generate version path
+      id: version-path
+      shell: bash
+      run: |
+        # Generate a version path based on timestamp and commit SHA
+        timestamp=$(date +%Y%m%d-%H%M%S)
+        commit_sha=$(echo ${{ github.sha }} | cut -c1-8)
+        version_path="v$timestamp-$commit_sha"
+        
+        echo "version-path=$version_path" >> $GITHUB_OUTPUT
+        echo "Generated version path: $version_path"
+
+    - name: Get current CloudFront origin path for rollback
+      id: current-origin
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry-run }}" != "true" ] && [ -n "${{ inputs.cloudfront-distribution-id }}" ]; then
+          echo "Getting current CloudFront origin path for rollback..."
+          
+          # Get the current origin path from CloudFront distribution
+          current_path=$(aws cloudfront get-distribution \
+            --id "${{ inputs.cloudfront-distribution-id }}" \
+            --region "${{ inputs.aws-region }}" \
+            --query 'Distribution.DistributionConfig.Origins.Items[0].OriginPath' \
+            --output text 2>/dev/null || echo "")
+          
+          if [ -n "$current_path" ] && [ "$current_path" != "None" ]; then
+            echo "current-origin-path=$current_path" >> $GITHUB_OUTPUT
+            echo "origin-exists=true" >> $GITHUB_OUTPUT
+            echo "Current origin path: $current_path"
+          else
+            echo "current-origin-path=" >> $GITHUB_OUTPUT
+            echo "origin-exists=false" >> $GITHUB_OUTPUT
+            echo "No origin path found, will set new one"
+          fi
+        else
+          echo "current-origin-path=" >> $GITHUB_OUTPUT
+          echo "origin-exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Optimise build assets
+      shell: bash
+      working-directory: ${{ inputs.build-directory }}
+      run: |
+        echo "Optimising build assets..."
+
+        # Compress JavaScript and CSS files
+        find . -name "*.js" -o -name "*.css" | while read file; do
+          if command -v gzip >/dev/null 2>&1; then
+            gzip -9 -c "$file" > "$file.gz"
+            echo "Compressed: $file"
+          fi
+        done
+
+        # Generate file checksums for integrity verification
+        find . -type f \( -name "*.js" -o -name "*.css" -o -name "*.html" \) -exec sha256sum {} \; > checksums.txt
+        echo "Generated checksums for verification"
+
+    - name: Get build information
+      id: build-info
+      shell: bash
+      working-directory: ${{ inputs.build-directory }}
+      run: |
+        if [ -d "." ]; then
+          size=$(du -sh . | cut -f1)
+          file_count=$(find . -type f | wc -l)
+          echo "size=$size" >> $GITHUB_OUTPUT
+          echo "file_count=$file_count" >> $GITHUB_OUTPUT
+          echo "Build size: $size ($file_count files)"
+        else
+          echo "::error::Build directory ${{ inputs.build-directory }} does not exist"
+          exit 1
+        fi
+
+    - name: Deploy to versioned S3 path
+      id: s3-sync
+      shell: bash
+      run: |
+        version_path="${{ steps.version-path.outputs.version-path }}"
+        echo "Deploying frontend assets to S3 bucket: ${{ inputs.s3-bucket }}/$version_path"
+
+        if [ "${{ inputs.dry-run }}" = "true" ]; then
+          echo "DRY RUN: Would sync to s3://${{ inputs.s3-bucket }}/$version_path"
+          aws s3 sync "${{ inputs.build-directory }}" "s3://${{ inputs.s3-bucket }}/$version_path" \
+            --region "${{ inputs.aws-region }}" \
+            --dryrun
+        else
+          # Sync static assets with long cache to versioned path
+          aws s3 sync "${{ inputs.build-directory }}" "s3://${{ inputs.s3-bucket }}/$version_path" \
+            --region "${{ inputs.aws-region }}" \
+            --exclude "*.html" \
+            --cache-control "${{ inputs.cache-control }}" \
+            --metadata-directive REPLACE
+          
+          # Sync HTML files with short cache to versioned path
+          aws s3 sync "${{ inputs.build-directory }}" "s3://${{ inputs.s3-bucket }}/$version_path" \
+            --region "${{ inputs.aws-region }}" \
+            --exclude "*" \
+            --include "*.html" \
+            --cache-control "${{ inputs.index-cache-control }}" \
+            --metadata-directive REPLACE
+        fi
+
+        echo "result=success" >> $GITHUB_OUTPUT
+
+    - name: Update CloudFront origin path
+      id: update-origin
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry-run }}" = "true" ]; then
+          echo "DRY RUN: Would update CloudFront origin path to /${{ steps.version-path.outputs.version-path }}"
+        elif [ -n "${{ inputs.cloudfront-distribution-id }}" ]; then
+          echo "Updating CloudFront origin path to /${{ steps.version-path.outputs.version-path }}..."
+          
+          # Get current distribution configuration
+          aws cloudfront get-distribution-config \
+            --id "${{ inputs.cloudfront-distribution-id }}" \
+            --region "${{ inputs.aws-region }}" > dist-config.json
+          
+          # Update the origin path in the configuration
+          jq --arg new_path "/${{ steps.version-path.outputs.version-path }}" \
+            '.DistributionConfig.Origins.Items[0].OriginPath = $new_path' \
+            dist-config.json > dist-config-updated.json
+          
+          # Get the ETag for the update
+          etag=$(jq -r '.ETag' dist-config.json)
+          
+          # Update the distribution
+          aws cloudfront update-distribution \
+            --id "${{ inputs.cloudfront-distribution-id }}" \
+            --distribution-config file://dist-config-updated.json \
+            --if-match "$etag" \
+            --region "${{ inputs.aws-region }}"
+          
+          echo "✅ CloudFront origin path updated to /${{ steps.version-path.outputs.version-path }}"
+          
+          # Clean up temporary files
+          rm -f dist-config.json dist-config-updated.json
+        else
+          echo "⚠️  No CloudFront distribution ID provided, skipping origin path update"
+        fi
+
+    - name: Set S3 bucket website configuration
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry-run }}" != "true" ]; then
+          echo "Configuring S3 bucket for static website hosting..."
+          aws s3 website "s3://${{ inputs.s3-bucket }}" \
+            --index-document index.html \
+            --error-document error.html \
+            --region "${{ inputs.aws-region }}" || echo "Website configuration may already be set"
+        fi
+
+    - name: Invalidate CloudFront cache
+      id: invalidate
+      if: inputs.cloudfront-distribution-id != ''
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry-run }}" = "true" ]; then
+          echo "DRY RUN: Would invalidate CloudFront distribution ${{ inputs.cloudfront-distribution-id }}"
+        else
+          echo "Invalidating CloudFront cache for distribution: ${{ inputs.cloudfront-distribution-id }}"
+          
+          # Create targeted invalidation for HTML files only
+          # This is more efficient than invalidating everything
+          invalidation_id=$(aws cloudfront create-invalidation \
+            --distribution-id "${{ inputs.cloudfront-distribution-id }}" \
+            --paths "/index.html" "/error.html" "/404.html" \
+            --query 'Invalidation.Id' \
+            --output text)
+          
+          echo "invalidation-id=$invalidation_id" >> $GITHUB_OUTPUT
+          echo "Cache invalidation created with ID: $invalidation_id"
+          
+          # Wait for invalidation to complete (optional, can be removed for faster execution)
+          echo "Waiting for cache invalidation to complete..."
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "${{ inputs.cloudfront-distribution-id }}" \
+            --id "$invalidation_id" || echo "Invalidation may still be in progress"
+        fi
+
+    - name: Verify deployment
+      id: deploy
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry-run }}" != "true" ]; then
+          # Construct deployment URL
+          if [ -n "${{ inputs.cloudfront-distribution-id }}" ]; then
+            # Get CloudFront domain name
+            domain=$(aws cloudfront get-distribution \
+              --id "${{ inputs.cloudfront-distribution-id }}" \
+              --region "${{ inputs.aws-region }}" \
+              --query 'Distribution.DomainName' \
+              --output text)
+            url="https://$domain"
+          else
+            # Use S3 website endpoint
+            url="http://${{ inputs.s3-bucket }}.s3-website-${{ inputs.aws-region }}.amazonaws.com"
+          fi
+          
+          echo "url=$url" >> $GITHUB_OUTPUT
+          echo "version-path=/${{ steps.version-path.outputs.version-path }}" >> $GITHUB_OUTPUT
+          echo "Deployment URL: $url"
+          echo "Version path: /${{ steps.version-path.outputs.version-path }}"
+          
+          # Basic health check
+          echo "Performing basic health check..."
+          if curl -f -s -o /dev/null "$url" --max-time 30; then
+            echo "✅ Health check passed - application is accessible"
+          else
+            echo "⚠️  Health check failed - application may not be immediately accessible"
+            echo "This could be due to DNS propagation or CloudFront distribution delays"
+          fi
+        else
+          echo "url=dry-run-mode" >> $GITHUB_OUTPUT
+          echo "version-path=/${{ steps.version-path.outputs.version-path }}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Rollback on verification failure
+      if: inputs.dry-run != 'true' && steps.deploy.outputs.url != 'dry-run-mode'
+      shell: bash
+      run: |
+        echo "🔄 Initiating rollback due to verification failure..."
+        
+        current_path="${{ steps.current-origin.outputs.current-origin-path }}"
+        
+        if [ -n "$current_path" ] && [ "${{ steps.current-origin.outputs.origin-exists }}" = "true" ]; then
+          echo "Rolling back CloudFront origin path to $current_path..."
+          
+          # Get current distribution configuration
+          aws cloudfront get-distribution-config \
+            --id "${{ inputs.cloudfront-distribution-id }}" \
+            --region "${{ inputs.aws-region }}" > dist-config.json
+          
+          # Update the origin path back to the previous version
+          jq --arg old_path "$current_path" \
+            '.DistributionConfig.Origins.Items[0].OriginPath = $old_path' \
+            dist-config.json > dist-config-rollback.json
+          
+          # Get the ETag for the update
+          etag=$(jq -r '.ETag' dist-config.json)
+          
+          # Update the distribution
+          aws cloudfront update-distribution \
+            --id "${{ inputs.cloudfront-distribution-id }}" \
+            --distribution-config file://dist-config-rollback.json \
+            --if-match "$etag" \
+            --region "${{ inputs.aws-region }}"
+          
+          echo "✅ Rollback completed - origin path reverted to $current_path"
+          
+          # Clean up temporary files
+          rm -f dist-config.json dist-config-rollback.json
+        else
+          echo "⚠️  No previous origin path available for rollback"
+        fi
+        
+        echo "Rollback process completed"
+        exit 1
+
+    - name: Generate deployment summary
+      shell: bash
+      run: |
+        echo "## 🚀 Frontend Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Environment | ${{ inputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| S3 Bucket | ${{ inputs.s3-bucket }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Version Path | /${{ steps.version-path.outputs.version-path }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Build Size | ${{ steps.build-info.outputs.size }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| File Count | ${{ steps.build-info.outputs.file_count }} |" >> $GITHUB_STEP_SUMMARY
+
+        if [ -n "${{ inputs.cloudfront-distribution-id }}" ]; then
+          echo "| CloudFront Distribution | ${{ inputs.cloudfront-distribution-id }} |" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ steps.invalidate.outputs.invalidation-id }}" ]; then
+            echo "| Cache Invalidation ID | ${{ steps.invalidate.outputs.invalidation-id }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+        fi
+
+        if [ "${{ inputs.dry-run }}" != "true" ]; then
+          echo "| Deployment URL | ${{ steps.deploy.outputs.url }} |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| Mode | Dry Run |" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Deployment completed successfully! 🎉" >> $GITHUB_STEP_SUMMARY

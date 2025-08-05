@@ -9,6 +9,8 @@
     "lint:check": "eslint *.js src/**/*.js",
     "security": "npm audit",
     "security:fix": "npm audit fix",
+    "format": "prettier --write *.js src/**/*.js __tests__/**/*.js",
+    "format:check": "prettier --check *.js src/**/*.js __tests__/**/*.js",
     "build": "powershell -ExecutionPolicy Bypass -File ../scripts/build-backend.ps1",
     "build:dev": "powershell -ExecutionPolicy Bypass -File ../scripts/build-backend.ps1 -Environment development",
     "deploy": "aws lambda update-function-code --function-name cloud-defenders-score-api --zip-file fileb://../dist/score_api.zip"
@@ -28,6 +30,21 @@
   "devDependencies": {
     "jest": "^30.0.0",
     "@eslint/js": "^9.32.0",
-    "eslint": "^9.32.0"
+    "eslint": "^9.32.0",
+    "prettier": "^3.0.0"
+  },
+  "jest": {
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ],
+    "testEnvironment": "node",
+    "collectCoverage": true,
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "html"],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "*.js",
+      "!*.test.js"
+    ]
   }
 }

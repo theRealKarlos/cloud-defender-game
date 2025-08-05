@@ -1,0 +1,257 @@
+name: Main CI/CD Pipeline
+
+# Workflow triggers for comprehensive CI/CD coverage
+on:
+  push:
+    branches: [master, development]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - ".vscode/**"
+      - ".kiro/**"
+      - "dist/**"
+      - "scripts/README.md"
+  pull_request:
+    branches: [master, development]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - ".vscode/**"
+      - ".kiro/**"
+      - "dist/**"
+      - "scripts/README.md"
+  workflow_dispatch: # Allow manual triggering
+
+# Cancel previous runs on new push
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Shared environment variables supplied by GitHub repository variables
+
+# Define minimal default permissions
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # Job 1: Determine Environment
+  determine-environment:
+    name: Determine Environment
+    uses: ./.github/workflows/reusable-determine-environment.yml
+
+  # Job 2: Setup Frontend Node.js Environment
+  setup-frontend:
+    name: Setup Frontend Node.js Environment
+    uses: ./.github/workflows/reusable-setup-node.yml
+    with:
+      component: frontend
+      node-version: "${{ vars.NODE_VERSION }}"
+      working-directory: frontend
+
+  # Job 3: Setup Backend Node.js Environment
+  setup-backend:
+    name: Setup Backend Node.js Environment
+    uses: ./.github/workflows/reusable-setup-node.yml
+    with:
+      component: backend
+      node-version: "${{ vars.NODE_VERSION }}"
+      working-directory: backend
+
+  # Job 4: CI Checks for Frontend
+  ci-frontend:
+    name: CI Checks - Frontend
+    uses: ./.github/workflows/reusable-ci.yml
+    needs: [setup-frontend]
+    with:
+      component: frontend
+      node-version: "${{ vars.NODE_VERSION }}"
+      working-directory: frontend
+
+  # Job 5: CI Checks for Backend
+  ci-backend:
+    name: CI Checks - Backend
+    uses: ./.github/workflows/reusable-ci.yml
+    needs: [setup-backend]
+    with:
+      component: backend
+      node-version: "${{ vars.NODE_VERSION }}"
+      working-directory: backend
+
+  # Job 6: Build Frontend
+  build-frontend:
+    name: Build Frontend
+    uses: ./.github/workflows/reusable-build.yml
+    needs: [ci-frontend, ci-backend, setup-frontend, determine-environment]
+    if: success()
+    with:
+      component: frontend
+      node-version: "${{ vars.NODE_VERSION }}"
+      working-directory: frontend
+      build-command: build
+      artefact-name: frontend-build
+      environment: ${{ needs.determine-environment.outputs.environment }}
+
+  # Job 7: Build Backend
+  build-backend:
+    name: Build Backend
+    uses: ./.github/workflows/reusable-build.yml
+    needs: [ci-frontend, ci-backend, setup-backend, determine-environment]
+    if: success()
+    with:
+      component: backend
+      node-version: "${{ vars.NODE_VERSION }}"
+      working-directory: backend
+      build-command: build
+      artefact-name: backend-build
+      environment: ${{ needs.determine-environment.outputs.environment }}
+
+  # Job 8: Deploy to Development
+  deploy-development:
+    name: Deploy to Development
+    uses: ./.github/workflows/reusable-deploy.yml
+    needs: [build-frontend, build-backend, determine-environment]
+    if: success() && needs.determine-environment.outputs.should_deploy == 'true' && needs.determine-environment.outputs.environment == 'development'
+    permissions:
+      id-token: write
+      pull-requests: write
+    with:
+      environment: ${{ needs.determine-environment.outputs.environment }}
+      aws-region: "${{ vars.AWS_REGION }}"
+      terraform-version: "${{ vars.TERRAFORM_VERSION }}"
+      working-directory: infra
+      frontend-artefact: frontend-build
+      backend-artefact: backend-build
+      aws-role-secret: AWS_ROLE_TO_ASSUME
+
+  # Job 9: Deploy to Production
+  deploy-production:
+    name: Deploy to Production
+    uses: ./.github/workflows/reusable-deploy.yml
+    needs: [build-frontend, build-backend, determine-environment]
+    if: success() && needs.determine-environment.outputs.should_deploy == 'true' && needs.determine-environment.outputs.environment == 'production'
+    permissions:
+      id-token: write
+      pull-requests: write
+    with:
+      environment: ${{ needs.determine-environment.outputs.environment }}
+      aws-region: "${{ vars.AWS_REGION }}"
+      terraform-version: "${{ vars.TERRAFORM_VERSION }}"
+      working-directory: infra
+      frontend-artefact: frontend-build
+      backend-artefact: backend-build
+      aws-role-secret: AWS_ROLE_TO_ASSUME
+
+  # Summary job to provide overall pipeline status
+  pipeline-summary:
+    name: Pipeline Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      [
+        determine-environment,
+        setup-frontend,
+        setup-backend,
+        ci-frontend,
+        ci-backend,
+        build-frontend,
+        build-backend,
+        deploy-development,
+        deploy-production,
+      ]
+    if: always()
+    permissions:
+      checks: write
+
+    steps:
+      - name: Check pipeline results
+        run: |
+          echo "## 🚀 CI/CD Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.setup-frontend.result }}" == "success" ]; then
+            echo "✅ Frontend Setup: Completed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Frontend Setup: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.setup-backend.result }}" == "success" ]; then
+            echo "✅ Backend Setup: Completed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Backend Setup: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.ci-frontend.result }}" == "success" ]; then
+            echo "✅ Frontend CI: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Frontend CI: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.ci-backend.result }}" == "success" ]; then
+            echo "✅ Backend CI: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Backend CI: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.build-frontend.result }}" == "success" ]; then
+            echo "✅ Frontend Build: Created" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Frontend Build: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.build-backend.result }}" == "success" ]; then
+            echo "✅ Backend Build: Created" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Backend Build: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Deployment status
+          if [ "${{ needs.deploy-development.result }}" == "success" ]; then
+            echo "✅ Development Deployment: Successful" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.deploy-development.result }}" == "skipped" ]; then
+            echo "⏭️ Development Deployment: Skipped" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.deploy-development.result }}" == "failure" ]; then
+            echo "❌ Development Deployment: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.deploy-production.result }}" == "success" ]; then
+            echo "✅ Production Deployment: Successful" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.deploy-production.result }}" == "skipped" ]; then
+            echo "⏭️ Production Deployment: Skipped" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.deploy-production.result }}" == "failure" ]; then
+            echo "❌ Production Deployment: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Set pipeline status
+        run: |
+          # Check core jobs
+          core_success=true
+          if [ "${{ needs.setup-frontend.result }}" != "success" ] || \
+             [ "${{ needs.setup-backend.result }}" != "success" ] || \
+             [ "${{ needs.ci-frontend.result }}" != "success" ] || \
+             [ "${{ needs.ci-backend.result }}" != "success" ] || \
+             [ "${{ needs.build-frontend.result }}" != "success" ] || \
+             [ "${{ needs.build-backend.result }}" != "success" ]; then
+            core_success=false
+          fi
+
+          # Check deployment jobs (only fail if they ran and failed)
+          deployment_success=true
+          if [ "${{ needs.deploy-development.result }}" == "failure" ] || \
+             [ "${{ needs.deploy-production.result }}" == "failure" ]; then
+            deployment_success=false
+          fi
+
+          if [ "$core_success" = true ] && [ "$deployment_success" = true ]; then
+            echo "🎉 CI/CD Pipeline completed successfully!"
+            if [ "${{ needs.determine-environment.outputs.environment }}" == "production" ]; then
+              echo "Production deployment completed successfully."
+            elif [ "${{ needs.determine-environment.outputs.environment }}" == "development" ]; then
+              echo "Development deployment completed successfully."
+            else
+              echo "All CI checks passed. Ready for deployment."
+            fi
+          else
+            echo "❌ CI/CD Pipeline failed. Please check the failed jobs above."
+            exit 1
+          fi

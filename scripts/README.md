@@ -116,7 +116,7 @@ Deploy frontend files to S3 hosting.
 ## Quality Scripts
 
 ### `quality/run-lint.ps1`
-Run linting and security checks across all projects.
+Run linting, YAML validation, and security checks across all projects.
 
 **Usage:**
 ```powershell
@@ -127,6 +127,32 @@ Run linting and security checks across all projects.
 - `-Fix`: Auto-fix linting issues
 - `-SecurityOnly`: Run only security audits
 - `-LintOnly`: Run only linting checks
+
+**Features:**
+- YAML validation for GitHub Actions and configuration files
+- JavaScript/Node.js linting for frontend and backend
+- Security audits using npm audit
+- Comprehensive error reporting
+
+### `quality/validate-yaml.ps1`
+Dedicated YAML validation for all project configuration files.
+
+**Usage:**
+```powershell
+.\scripts\quality\validate-yaml.ps1 [-Verbose] [-InstallTools] [-Path <string>]
+```
+
+**Parameters:**
+- `-Verbose`: Show detailed validation results for each file
+- `-InstallTools`: Install YAML validation tools (PyYAML, yq, PowerShell YAML)
+- `-Path`: Specify custom path to validate (default: current directory)
+
+**Features:**
+- Multiple validation methods (Python PyYAML, yq, PowerShell YAML, basic structure)
+- GitHub Actions specific validation (checks for required fields)
+- Automatic tool installation support
+- Detailed error reporting with line numbers
+- Validates all YAML files excluding node_modules
 
 ### `quality/run-tests.ps1`
 Run comprehensive tests for API and Lambda function.

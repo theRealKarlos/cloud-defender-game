@@ -1,0 +1,70 @@
+name: Reusable Node.js Setup
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        description: "Component to setup (frontend, backend)"
+        required: true
+        type: string
+      node-version:
+        description: "Node.js version to use"
+        required: true
+        type: string
+      working-directory:
+        description: "Working directory for the component"
+        required: false
+        type: string
+        default: ""
+    outputs:
+      cache-key:
+        description: "Cache key for node_modules"
+        value: ${{ jobs.setup.outputs.cache-key }}
+
+jobs:
+  setup:
+    name: Setup Node.js Environment for ${{ inputs.component }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      cache-key: ${{ steps.cache-deps.outputs.cache-key }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: "npm"
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Installing dependencies for ${{ inputs.component }}..."
+          npm ci --prefer-offline --no-audit
+          echo "✅ Dependencies installed successfully"
+
+      - name: Cache dependencies
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: ${{ inputs.working-directory }}/node_modules
+          key: ${{ runner.os }}-node-${{ inputs.node-version }}-${{ inputs.component }}-${{ hashFiles(format('{0}/package-lock.json', inputs.working-directory)) }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ inputs.node-version }}-${{ inputs.component }}-
+            ${{ runner.os }}-node-${{ inputs.node-version }}-
+
+      - name: Generate setup summary
+        run: |
+          echo "## 🔧 Node.js Setup Summary for ${{ inputs.component }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Node.js Version**: ${{ inputs.node-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Dependencies**: Installed and cached" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Working Directory**: \`${{ inputs.working-directory }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Environment ready for CI and build jobs! 🚀" >> $GITHUB_STEP_SUMMARY

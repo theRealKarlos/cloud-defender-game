@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability (Private)
+    url: https://github.com/your-org/cloud-defenders/security/advisories/new
+    about: Please report sensitive security vulnerabilities privately
+  - name: Documentation
+    url: https://github.com/your-org/cloud-defenders/wiki
+    about: Check our documentation and wiki for answers
+  - name: Discussions
+    url: https://github.com/your-org/cloud-defenders/discussions
+    about: Ask questions and discuss ideas with the community

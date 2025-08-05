@@ -1,0 +1,150 @@
+name: Reusable Build
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        description: "Component to build (frontend, backend)"
+        required: true
+        type: string
+      node-version:
+        description: "Node.js version to use"
+        required: true
+        type: string
+      working-directory:
+        description: "Working directory for the component"
+        required: false
+        type: string
+        default: ""
+      build-command:
+        description: "Build command to run"
+        required: false
+        type: string
+        default: "build"
+      artefact-name:
+        description: "Name for the build artefact"
+        required: false
+        type: string
+        default: ""
+      environment:
+        description: "Environment for the build (development, staging, production)"
+        required: false
+        type: string
+        default: "production"
+    outputs:
+      build-artefact:
+        description: "Build artefact name"
+        value: ${{ jobs.build.outputs.build-artefact }}
+
+jobs:
+  build:
+    name: Build ${{ inputs.component }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      build-artefact: ${{ steps.build-artefact.outputs.artefact-name }}
+
+    steps:
+      - name: Prepare job environment
+        uses: ./.github/workflows/reusable-prepare-job.yml
+        with:
+          component: ${{ inputs.component }}
+          node-version: ${{ inputs.node-version }}
+          working-directory: ${{ inputs.working-directory }}
+
+      - name: Build application
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Building ${{ inputs.component }}..."
+
+          # Set environment variables for build
+          export NODE_ENV=${{ inputs.environment }}
+          export ENVIRONMENT=${{ inputs.environment }}
+
+          # Run build command
+          if npm run ${{ inputs.build-command }} 2>/dev/null; then
+            echo "✅ Build completed successfully"
+          else
+            echo "❌ Build failed"
+            exit 1
+          fi
+
+      - name: Create build artefact
+        id: build-artefact
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Creating build artefact for ${{ inputs.component }}..."
+
+          # Determine artefact name
+          if [ -n "${{ inputs.artefact-name }}" ]; then
+            artefact_name="${{ inputs.artefact-name }}"
+          else
+            artefact_name="${{ inputs.component }}-build-$(date +%s)"
+          fi
+
+          # Create artefact based on component type
+          if [ "${{ inputs.component }}" = "frontend" ]; then
+            # Frontend: Create tar.gz of dist folder
+            if [ -d "dist" ]; then
+              tar -czf "../$artefact_name.tar.gz" dist/
+              echo "artefact-name=$artefact_name.tar.gz" >> $GITHUB_OUTPUT
+              echo "artefact-path=../$artefact_name.tar.gz" >> $GITHUB_OUTPUT
+              echo "✅ Frontend artefact created: $artefact_name.tar.gz"
+            else
+              echo "❌ dist folder not found"
+              exit 1
+            fi
+          else
+            # Backend: Create ZIP package
+            if [ -d "dist" ] || [ -f "index.js" ] || [ -f "app.js" ]; then
+              # Create deployment package
+              zip -r "../$artefact_name.zip" . \
+                -x "node_modules/.cache/*" \
+                -x "*.test.js" \
+                -x "__tests__/*" \
+                -x ".env*" \
+                -x "coverage/*" \
+                -x ".nyc_output/*" \
+                -x "README.md" \
+                -x ".eslintrc*" \
+                -x ".prettierrc*" \
+                -x "jest.config.js"
+              
+              echo "artefact-name=$artefact_name.zip" >> $GITHUB_OUTPUT
+              echo "artefact-path=../$artefact_name.zip" >> $GITHUB_OUTPUT
+              echo "✅ Backend artefact created: $artefact_name.zip"
+            else
+              echo "❌ No build output found"
+              exit 1
+            fi
+          fi
+
+      - name: Generate build checksum
+        run: |
+          artefact_path="${{ steps.build-artefact.outputs.artefact-path }}"
+          if [ -f "$artefact_path" ]; then
+            sha256sum "$artefact_path" > "$artefact_path.sha256"
+            echo "✅ Checksum generated for $artefact_path"
+          fi
+
+      - name: Upload build artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.build-artefact.outputs.artefact-name }}
+          path: |
+            ${{ steps.build-artefact.outputs.artefact-path }}
+            ${{ steps.build-artefact.outputs.artefact-path }}.sha256
+          retention-days: 30
+
+      - name: Generate build summary
+        run: |
+          echo "## 🔨 Build Summary for ${{ inputs.component }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Dependencies**: Installed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Build**: Completed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Artefact**: Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Component**: ${{ inputs.component }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Working Directory**: \`${{ inputs.working-directory }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Command**: \`npm run ${{ inputs.build-command }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Artefact**: \`${{ steps.build-artefact.outputs.artefact-name }}\`" >> $GITHUB_STEP_SUMMARY

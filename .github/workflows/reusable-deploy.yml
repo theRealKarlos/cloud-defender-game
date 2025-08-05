@@ -1,0 +1,409 @@
+name: Reusable Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Environment to deploy to (development, production)"
+        required: true
+        type: string
+      aws-region:
+        description: "AWS region for deployment"
+        required: true
+        type: string
+      terraform-version:
+        description: "Terraform version to use"
+        required: true
+        type: string
+      working-directory:
+        description: "Working directory for Terraform"
+        required: false
+        type: string
+        default: "infra"
+      frontend-artefact:
+        description: "Frontend build artefact name"
+        required: false
+        type: string
+        default: ""
+      backend-artefact:
+        description: "Backend build artefact name"
+        required: false
+        type: string
+        default: ""
+      aws-role-secret:
+        description: "Secret name for AWS role to assume"
+        required: true
+        type: string
+    outputs:
+      deployment-url:
+        description: "URL of the deployed application"
+        value: ${{ jobs.deploy.outputs.deployment-url }}
+      function-url:
+        description: "Lambda function URL"
+        value: ${{ jobs.deploy.outputs.function-url }}
+
+jobs:
+  validate-infrastructure:
+    name: Validate Infrastructure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Setup Terraform Environment
+        uses: ./.github/workflows/reusable-setup-terraform.yml
+        with:
+          terraform-version: ${{ inputs.terraform-version }}
+          working-directory: ${{ inputs.working-directory }}
+          with-backend: false
+
+      - name: Terraform Format Check
+        run: |
+          echo "Checking Terraform formatting..."
+          if ! terraform fmt -check -recursive -diff; then
+            echo "❌ Terraform formatting check failed"
+            echo "Run 'terraform fmt -recursive' to fix formatting issues"
+            exit 1
+          else
+            echo "✅ Terraform formatting is correct"
+          fi
+
+      - name: Terraform Validate
+        run: |
+          echo "Validating Terraform configuration..."
+          if terraform validate -json > validation-results.json; then
+            echo "✅ Terraform validation passed"
+            cat validation-results.json | jq -r '.diagnostics[]? | "[\(.severity | ascii_upcase)] \(.summary): \(.detail)"' || true
+          else
+            echo "❌ Terraform validation failed"
+            cat validation-results.json | jq -r '.diagnostics[]? | "[\(.severity | ascii_upcase)] \(.summary): \(.detail)"'
+            exit 1
+          fi
+
+      - name: Upload validation results
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-validation-results
+          path: ${{ inputs.working-directory }}/validation-results.json
+          retention-days: 30
+
+  security-scan:
+    name: Infrastructure Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Setup Terraform Environment
+        uses: ./.github/workflows/reusable-setup-terraform.yml
+        with:
+          terraform-version: ${{ inputs.terraform-version }}
+          working-directory: ${{ inputs.working-directory }}
+          with-backend: false
+
+      - name: Run tfsec security scan
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          working_directory: ${{ inputs.working-directory }}
+          format: json
+          soft_fail: true
+
+      - name: Setup Python for Checkov
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Checkov
+        run: |
+          pip install checkov
+
+      - name: Run Checkov compliance scan
+        run: |
+          echo "Running Checkov compliance scan..."
+          checkov -d . --framework terraform --output json --output-file checkov-results.json --soft-fail
+
+      - name: Upload security scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: infrastructure-security-reports
+          path: |
+            ${{ inputs.working-directory }}/tfsec-results.json
+            ${{ inputs.working-directory }}/checkov-results.json
+          retention-days: 30
+
+  plan-and-cost:
+    name: Terraform Plan & Cost Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [validate-infrastructure, security-scan]
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    # OIDC permissions for AWS authentication
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Setup Terraform Environment
+        uses: ./.github/workflows/reusable-setup-terraform.yml
+        with:
+          terraform-version: ${{ inputs.terraform-version }}
+          working-directory: ${{ inputs.working-directory }}
+          with-backend: true
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets[inputs.aws-role-secret] }}
+          role-session-name: GitHubActions-TerraformPlan
+          aws-region: ${{ inputs.aws-region }}
+          mask-aws-account-id: false
+
+      - name: Cache Terraform directory
+        uses: actions/cache@v4
+        with:
+          path: ${{ inputs.working-directory }}/.terraform
+          key: ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-
+            ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-
+
+      - name: Generate Terraform plan
+        id: plan
+        run: |
+          echo "Creating Terraform plan..."
+          terraform plan \
+            -input=false \
+            -out=tfplan \
+            -detailed-exitcode \
+            -var="environment=${{ inputs.environment }}" \
+            -no-color > plan-output.txt 2>&1
+
+          PLAN_EXIT_CODE=$?
+
+          if [ $PLAN_EXIT_CODE -eq 0 ]; then
+            echo "✅ No changes detected in Terraform plan"
+            echo "plan_status=no-changes" >> $GITHUB_OUTPUT
+          elif [ $PLAN_EXIT_CODE -eq 2 ]; then
+            echo "✅ Terraform plan completed with changes"
+            echo "plan_status=changes" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Terraform plan failed"
+            echo "plan_status=failed" >> $GITHUB_OUTPUT
+            cat plan-output.txt
+            exit 1
+          fi
+
+      - name: Generate cost estimate with Infracost
+        uses: infracost/actions/comment@v1
+        if: steps.plan.outputs.plan_status == 'changes'
+        with:
+          path: ${{ inputs.working-directory }}/tfplan
+          behavior: new
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Terraform plan artefacts
+        if: steps.plan.outputs.plan_status != 'failed'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-artefacts
+          path: |
+            ${{ inputs.working-directory }}/tfplan
+            ${{ inputs.working-directory }}/plan-output.txt
+          retention-days: 30
+
+  deploy:
+    name: Deploy Infrastructure & Applications
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [plan-and-cost]
+    if: success()
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ steps.deploy-frontend.outputs.deployment-url }}
+
+    # OIDC permissions for AWS authentication
+    permissions:
+      id-token: write
+      contents: read
+
+    outputs:
+      deployment-url: ${{ steps.deploy-frontend.outputs.deployment-url }}
+      function-url: ${{ steps.deploy-backend.outputs.function-url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets[inputs.aws-role-secret] }}
+          role-session-name: GitHubActions-Deploy
+          aws-region: ${{ inputs.aws-region }}
+          mask-aws-account-id: false
+
+      - name: Download build artefacts
+        if: inputs.frontend-artefact != '' || inputs.backend-artefact != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.frontend-artefact }}
+          path: ./frontend-artefact
+        continue-on-error: true
+
+      - name: Download backend artefact
+        if: inputs.backend-artefact != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.backend-artefact }}
+          path: ./backend-artefact
+        continue-on-error: true
+
+      - name: Download Terraform plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan-artefacts
+          path: ./terraform-artefacts
+
+      - name: Setup Terraform for infrastructure deployment
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+          terraform_wrapper: false
+
+      - name: Restore Terraform directory cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ inputs.working-directory }}/.terraform
+          key: ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-
+            ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-
+
+      - name: Apply Terraform infrastructure changes
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Applying Terraform infrastructure changes for ${{ inputs.environment }}..."
+
+          # Copy the plan from artefacts
+          cp ../terraform-artefacts/tfplan .
+
+          # Apply the plan (no init needed as cache is restored)
+          if terraform apply -input=false tfplan; then
+            echo "✅ Infrastructure deployment completed successfully"
+          else
+            echo "❌ Infrastructure deployment failed"
+            exit 1
+          fi
+
+      - name: Get infrastructure outputs
+        id: terraform-outputs
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          # Get key infrastructure outputs for deployment
+          s3_bucket=$(terraform output -raw s3_bucket_name 2>/dev/null || echo "")
+          cloudfront_id=$(terraform output -raw cloudfront_distribution_id 2>/dev/null || echo "")
+          lambda_function=$(terraform output -raw lambda_function_name 2>/dev/null || echo "")
+
+          echo "s3_bucket=$s3_bucket" >> $GITHUB_OUTPUT
+          echo "cloudfront_id=$cloudfront_id" >> $GITHUB_OUTPUT
+          echo "lambda_function=$lambda_function" >> $GITHUB_OUTPUT
+
+          echo "Infrastructure outputs retrieved:"
+          echo "- S3 Bucket: $s3_bucket"
+          echo "- CloudFront Distribution: $cloudfront_id"
+          echo "- Lambda Function: $lambda_function"
+
+      - name: Extract frontend artefacts
+        if: inputs.frontend-artefact != ''
+        run: |
+          cd frontend-artefact
+          tar -xzf *.tar.gz -C ../frontend/
+          echo "Frontend artefacts extracted to frontend/dist/"
+
+      - name: Deploy frontend
+        id: deploy-frontend
+        if: inputs.frontend-artefact != ''
+        uses: ./.github/actions/deploy-frontend
+        with:
+          aws-region: ${{ inputs.aws-region }}
+          s3-bucket: ${{ steps.terraform-outputs.outputs.s3_bucket }}
+          cloudfront-distribution-id: ${{ steps.terraform-outputs.outputs.cloudfront_id }}
+          environment: ${{ inputs.environment }}
+          build-directory: ./frontend/dist
+          source-directory: ./frontend
+
+      - name: Deploy backend
+        id: deploy-backend
+        if: inputs.backend-artefact != ''
+        uses: ./.github/actions/deploy-backend
+        with:
+          aws-region: ${{ inputs.aws-region }}
+          function-name: ${{ steps.terraform-outputs.outputs.lambda_function }}
+          environment: ${{ inputs.environment }}
+          source-directory: ./backend-artefact
+          environment-variables: |
+            {
+              "NODE_ENV": "${{ inputs.environment }}",
+              "ENVIRONMENT": "${{ inputs.environment }}",
+              "LOG_LEVEL": "${{ inputs.environment == 'production' && 'info' || 'debug' }}"
+            }
+
+      - name: Run post-deployment health checks
+        run: |
+          echo "Running post-deployment health checks for ${{ inputs.environment }} environment..."
+
+          # Use the dedicated health check script
+          pwsh -File scripts/health-check.ps1 \
+            -FrontendUrl "${{ steps.deploy-frontend.outputs.deployment-url }}" \
+            -BackendUrl "${{ steps.deploy-backend.outputs.function-url }}" \
+            -Timeout 30
+
+      - name: Generate deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary for ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Infrastructure Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Terraform Apply:** Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ inputs.frontend-artefact }}" != "" ]; then
+            echo "### Frontend Deployment" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ steps.deploy-frontend.outcome }}" == "success" ]; then
+              echo "✅ **Status:** Successful" >> $GITHUB_STEP_SUMMARY
+              echo "🔗 **URL:** ${{ steps.deploy-frontend.outputs.deployment-url }}" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ **Status:** Failed" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ inputs.backend-artefact }}" != "" ]; then
+            echo "### Backend Deployment" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ steps.deploy-backend.outcome }}" == "success" ]; then
+              echo "✅ **Status:** Successful" >> $GITHUB_STEP_SUMMARY
+              echo "🔗 **Function ARN:** ${{ steps.deploy-backend.outputs.function-arn }}" >> $GITHUB_STEP_SUMMARY
+              if [ -n "${{ steps.deploy-backend.outputs.function-url }}" ]; then
+                echo "🔗 **Function URL:** ${{ steps.deploy-backend.outputs.function-url }}" >> $GITHUB_STEP_SUMMARY
+              fi
+            else
+              echo "❌ **Status:** Failed" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "Deployment completed successfully! 🎉" >> $GITHUB_STEP_SUMMARY

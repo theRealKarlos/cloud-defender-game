@@ -1,0 +1,430 @@
+name: 'Deploy Backend to AWS Lambda'
+description: 'Deploy backend application to AWS Lambda with packaging and verification for Cloud Defenders'
+author: 'Cloud Defenders Team'
+
+inputs:
+  aws-region:
+    description: 'AWS region for deployment'
+    required: false
+    default: 'eu-west-2'
+  function-name:
+    description: 'Lambda function name'
+    required: true
+  source-directory:
+    description: 'Source directory for backend code'
+    required: false
+    default: './backend'
+  environment:
+    description: 'Deployment environment (development, production)'
+    required: false
+    default: 'development'
+  runtime:
+    description: 'Lambda runtime version'
+    required: false
+    default: 'nodejs22.x'
+  timeout:
+    description: 'Lambda function timeout in seconds'
+    required: false
+    default: '30'
+  memory-size:
+    description: 'Lambda function memory size in MB'
+    required: false
+    default: '256'
+  environment-variables:
+    description: 'JSON string of environment variables'
+    required: false
+    default: '{}'
+  dry-run:
+    description: 'Perform a dry run without actual deployment'
+    required: false
+    default: 'false'
+  package-exclude:
+    description: 'Comma-separated list of files/patterns to exclude from package'
+    required: false
+    default: '__tests__,*.test.js,*.spec.js,.env*,README.md'
+
+outputs:
+  function-arn:
+    description: 'ARN of the deployed Lambda function'
+    value: ${{ steps.deploy.outputs.function-arn }}
+  function-url:
+    description: 'Function URL if configured'
+    value: ${{ steps.deploy.outputs.function-url }}
+  package-size:
+    description: 'Size of the deployment package'
+    value: ${{ steps.package.outputs.size }}
+  deployment-status:
+    description: 'Status of the deployment'
+    value: ${{ steps.deploy.outputs.status }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.function-name }}" ]; then
+          echo "::error::Lambda function name is required"
+          exit 1
+        fi
+        
+        if [ ! -d "${{ inputs.source-directory }}" ]; then
+          echo "::error::Source directory ${{ inputs.source-directory }} does not exist"
+          exit 1
+        fi
+        
+        if [ ! -f "${{ inputs.source-directory }}/package.json" ]; then
+          echo "::error::package.json not found in ${{ inputs.source-directory }}"
+          exit 1
+        fi
+
+    - name: Validate source directory
+      shell: bash
+      run: |
+        if [ ! -d "${{ inputs.source-directory }}" ]; then
+          echo "::error::Source directory ${{ inputs.source-directory }} does not exist"
+          exit 1
+        fi
+        
+        echo "✅ Source directory validated: ${{ inputs.source-directory }}"
+
+    - name: Create deployment package
+      id: package
+      shell: bash
+      working-directory: ${{ inputs.source-directory }}
+      run: |
+        echo "Creating Lambda deployment package..."
+        
+        # Create temporary directory for packaging
+        package_dir=$(mktemp -d)
+        package_file="lambda-deployment-$(date +%s).zip"
+        
+        # Copy source files excluding specified patterns
+        echo "Copying source files..."
+        rsync -av --progress . "$package_dir/" \
+          --exclude=node_modules \
+          --exclude=.git \
+          --exclude=.github \
+          --exclude=.env* \
+          --exclude=__tests__ \
+          --exclude=*.test.js \
+          --exclude=*.spec.js \
+          --exclude=coverage \
+          --exclude=.nyc_output \
+          --exclude=README.md \
+          --exclude=.eslintrc* \
+          --exclude=.prettierrc* \
+          --exclude=jest.config.js
+        
+        # Copy production node_modules if they exist
+        if [ -d "node_modules" ]; then
+          echo "Copying production dependencies..."
+          cp -r node_modules "$package_dir/"
+        else
+          echo "⚠️  No node_modules found - package may not include dependencies"
+        fi
+        
+        # Create ZIP package
+        cd "$package_dir"
+        zip -r "../$package_file" . -q
+        cd ..
+        
+        # Move package to workspace
+        mv "$package_file" "$GITHUB_WORKSPACE/"
+        
+        # Get package information
+        package_size=$(du -h "$GITHUB_WORKSPACE/$package_file" | cut -f1)
+        package_size_bytes=$(stat -f%z "$GITHUB_WORKSPACE/$package_file" 2>/dev/null || stat -c%s "$GITHUB_WORKSPACE/$package_file")
+        
+        echo "size=$package_size" >> $GITHUB_OUTPUT
+        echo "file=$package_file" >> $GITHUB_OUTPUT
+        echo "size_bytes=$package_size_bytes" >> $GITHUB_OUTPUT
+        
+        echo "Package created: $package_file ($package_size)"
+        
+        # Validate package size (AWS Lambda limit is 50MB for direct upload)
+        if [ "$package_size_bytes" -gt 52428800 ]; then
+          echo "::warning::Package size ($package_size) exceeds 50MB. Consider using S3 for deployment."
+        fi
+        
+        # Clean up temporary directory
+        rm -rf "$package_dir"
+
+    - name: Validate Lambda function exists
+      id: validate
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry-run }}" != "true" ]; then
+          echo "Checking if Lambda function exists..."
+          if aws lambda get-function --function-name "${{ inputs.function-name }}" --region "${{ inputs.aws-region }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Lambda function ${{ inputs.function-name }} exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Lambda function ${{ inputs.function-name }} does not exist"
+          fi
+        else
+          echo "exists=unknown" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Get current alias information for rollback
+      id: current-alias
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry-run }}" != "true" ] && [ "${{ steps.validate.outputs.exists }}" = "true" ]; then
+          echo "Getting current alias information for rollback..."
+          
+          # Check if the 'live' alias exists
+          if aws lambda get-alias --function-name "${{ inputs.function-name }}" --name "live" --region "${{ inputs.aws-region }}" >/dev/null 2>&1; then
+            current_version=$(aws lambda get-alias \
+              --function-name "${{ inputs.function-name }}" \
+              --name "live" \
+              --region "${{ inputs.aws-region }}" \
+              --query 'FunctionVersion' --output text)
+            
+            echo "current-version=$current_version" >> $GITHUB_OUTPUT
+            echo "alias-exists=true" >> $GITHUB_OUTPUT
+            echo "Current live version: $current_version"
+          else
+            echo "current-version=1" >> $GITHUB_OUTPUT
+            echo "alias-exists=false" >> $GITHUB_OUTPUT
+            echo "No 'live' alias found, will create one"
+          fi
+        else
+          echo "current-version=1" >> $GITHUB_OUTPUT
+          echo "alias-exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Publish new Lambda version
+      id: publish-version
+      shell: bash
+      run: |
+        package_file="${{ steps.package.outputs.file }}"
+        
+        if [ "${{ inputs.dry-run }}" = "true" ]; then
+          echo "DRY RUN: Would publish new version for Lambda function ${{ inputs.function-name }}"
+          echo "new-version=dry-run" >> $GITHUB_OUTPUT
+        else
+          echo "Publishing new version for Lambda function: ${{ inputs.function-name }}"
+          
+          # Parse environment variables
+          env_vars="${{ inputs.environment-variables }}"
+          if [ "$env_vars" != "{}" ] && [ -n "$env_vars" ]; then
+            env_vars_param="--environment Variables=$env_vars"
+          else
+            env_vars_param=""
+          fi
+          
+          if [ "${{ steps.validate.outputs.exists }}" = "true" ]; then
+            # Update function code
+            echo "Updating function code..."
+            aws lambda update-function-code \
+              --function-name "${{ inputs.function-name }}" \
+              --zip-file "fileb://$package_file" \
+              --region "${{ inputs.aws-region }}"
+            
+            # Update function configuration
+            echo "Updating function configuration..."
+            aws lambda update-function-configuration \
+              --function-name "${{ inputs.function-name }}" \
+              --runtime "${{ inputs.runtime }}" \
+              --timeout "${{ inputs.timeout }}" \
+              --memory-size "${{ inputs.memory-size }}" \
+              --region "${{ inputs.aws-region }}" \
+              $env_vars_param
+            
+            # Wait for function to be updated
+            echo "Waiting for function update to complete..."
+            aws lambda wait function-updated \
+              --function-name "${{ inputs.function-name }}" \
+              --region "${{ inputs.aws-region }}"
+            
+            # Publish new version
+            echo "Publishing new version..."
+            new_version=$(aws lambda publish-version \
+              --function-name "${{ inputs.function-name }}" \
+              --region "${{ inputs.aws-region }}" \
+              --query 'Version' --output text)
+            
+            echo "new-version=$new_version" >> $GITHUB_OUTPUT
+            echo "New version published: $new_version"
+          else
+            echo "::error::Lambda function ${{ inputs.function-name }} does not exist. Please create it first using Terraform."
+            exit 1
+          fi
+        fi
+
+    - name: Update alias to new version
+      id: update-alias
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry-run }}" = "true" ]; then
+          echo "DRY RUN: Would update 'live' alias to version ${{ steps.publish-version.outputs.new-version }}"
+        else
+          echo "Updating 'live' alias to version ${{ steps.publish-version.outputs.new-version }}..."
+          
+          if [ "${{ steps.current-alias.outputs.alias-exists }}" = "true" ]; then
+            # Update existing alias
+            aws lambda update-alias \
+              --function-name "${{ inputs.function-name }}" \
+              --name "live" \
+              --function-version "${{ steps.publish-version.outputs.new-version }}" \
+              --region "${{ inputs.aws-region }}"
+          else
+            # Create new alias
+            aws lambda create-alias \
+              --function-name "${{ inputs.function-name }}" \
+              --name "live" \
+              --function-version "${{ steps.publish-version.outputs.new-version }}" \
+              --region "${{ inputs.aws-region }}"
+          fi
+          
+          echo "✅ Alias 'live' updated to version ${{ steps.publish-version.outputs.new-version }}"
+        fi
+
+    - name: Wait for function to be active
+      if: inputs.dry-run != 'true'
+      shell: bash
+      run: |
+        echo "Waiting for Lambda function to be active..."
+        aws lambda wait function-active \
+          --function-name "${{ inputs.function-name }}" \
+          --region "${{ inputs.aws-region }}" || echo "Function may still be updating"
+
+    - name: Verify deployment
+      id: verify
+      if: inputs.dry-run != 'true'
+      shell: bash
+      run: |
+        echo "Verifying Lambda function deployment..."
+        
+        # Get function status
+        function_status=$(aws lambda get-function \
+          --function-name "${{ inputs.function-name }}" \
+          --region "${{ inputs.aws-region }}" \
+          --query 'Configuration.State' --output text)
+        
+        echo "Function state: $function_status"
+        
+        if [ "$function_status" = "Active" ]; then
+          echo "✅ Lambda function is active and ready"
+          
+          # Perform basic invocation test
+          echo "Performing basic health check..."
+          test_payload=''{"test": true, "source": "github-actions"}'' 
+          
+          invoke_result=$(aws lambda invoke \
+            --function-name "${{ inputs.function-name }}" \
+            --qualifier "live" \
+            --payload "$test_payload" \
+            --region "${{ inputs.aws-region }}" \
+            --log-type Tail \
+            response.json 2>&1 || echo "Invocation test skipped")
+          
+          if [ -f "response.json" ]; then
+            echo "Test invocation response:"
+            cat response.json
+            rm -f response.json
+          fi
+          
+          # Set verification status
+          echo "verification_status=success" >> $GITHUB_OUTPUT
+        else
+          echo "⚠️  Function state is $function_status - may need additional time to become active"
+          echo "verification_status=failed" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Rollback on verification failure
+      if: inputs.dry-run != 'true' && steps.verify.outputs.verification_status == 'failed'
+      shell: bash
+      run: |
+        echo "🔄 Initiating rollback due to verification failure..."
+        
+        current_version="${{ steps.current-alias.outputs.current-version }}"
+        
+        if [ "$current_version" != "1" ] && [ "${{ steps.current-alias.outputs.alias-exists }}" = "true" ]; then
+          echo "Rolling back alias 'live' to version $current_version..."
+          
+          # Update the alias back to the previous version
+          aws lambda update-alias \
+            --function-name "${{ inputs.function-name }}" \
+            --name "live" \
+            --function-version "$current_version" \
+            --region "${{ inputs.aws-region }}"
+          
+          echo "✅ Rollback completed - alias 'live' now points to version $current_version"
+        else
+          echo "⚠️  No previous version available for rollback"
+        fi
+        
+        echo "Rollback process completed"
+        exit 1
+
+    - name: Clean up deployment package
+      shell: bash
+      run: |
+        package_file="${{ steps.package.outputs.file }}"
+        if [ -f "$package_file" ]; then
+          rm -f "$package_file"
+          echo "Cleaned up deployment package: $package_file"
+        fi
+
+    - name: Get function information
+      id: function-info
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry-run }}" != "true" ]; then
+          # Get function information
+          function_info=$(aws lambda get-function \
+            --function-name "${{ inputs.function-name }}" \
+            --region "${{ inputs.aws-region }}")
+          
+          function_arn=$(echo "$function_info" | jq -r '.Configuration.FunctionArn')
+          echo "function-arn=$function_arn" >> $GITHUB_OUTPUT
+          
+          # Check if function URL is configured
+          function_url=$(aws lambda get-function-url-config \
+            --function-name "${{ inputs.function-name }}" \
+            --region "${{ inputs.aws-region }}" \
+            --query 'FunctionUrl' --output text 2>/dev/null || echo "")
+          
+          if [ -n "$function_url" ] && [ "$function_url" != "None" ]; then
+            echo "function-url=$function_url" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "status=success" >> $GITHUB_OUTPUT
+        else
+          echo "function-arn=arn:aws:lambda:${{ inputs.aws-region }}:123456789012:function:${{ inputs.function-name }}" >> $GITHUB_OUTPUT
+          echo "status=dry-run" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Generate deployment summary
+      shell: bash
+      run: |
+        echo "## 🚀 Backend Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Environment | ${{ inputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Function Name | ${{ inputs.function-name }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Runtime | ${{ inputs.runtime }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Memory Size | ${{ inputs.memory-size }} MB |" >> $GITHUB_STEP_SUMMARY
+        echo "| Timeout | ${{ inputs.timeout }} seconds |" >> $GITHUB_STEP_SUMMARY
+        echo "| Package Size | ${{ steps.package.outputs.size }} |" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ inputs.dry-run }}" != "true" ]; then
+          if [ -n "${{ steps.function-info.outputs.function-arn }}" ]; then
+            echo "| Function ARN | ${{ steps.function-info.outputs.function-arn }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -n "${{ steps.function-info.outputs.function-url }}" ]; then
+            echo "| Function URL | ${{ steps.function-info.outputs.function-url }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "| New Version | ${{ steps.publish-version.outputs.new-version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Alias | live |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ steps.function-info.outputs.status }} |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| Mode | Dry Run |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Backend deployment completed successfully! 🎉" >> $GITHUB_STEP_SUMMARY

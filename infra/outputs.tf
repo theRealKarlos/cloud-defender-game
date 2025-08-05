@@ -44,6 +44,11 @@ output "lambda_function_name" {
   value       = module.lambda_function.function_name
 }
 
+output "lambda_alias_name" {
+  description = "Lambda alias name for deployment"
+  value       = module.lambda_function.alias_name
+}
+
 output "dynamodb_table_name" {
   description = "DynamoDB table name"
   value       = module.dynamodb.table_name

@@ -1,0 +1,39 @@
+name: Reusable Determine Environment
+
+on:
+  workflow_call:
+    outputs:
+      environment:
+        description: "Environment determined from branch"
+        value: ${{ jobs.determine-environment.outputs.environment }}
+
+jobs:
+  determine-environment:
+    name: Determine Environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      should_deploy: ${{ steps.env.outputs.should_deploy }}
+
+    steps:
+      - name: Determine environment from branch
+        id: env
+        run: |
+          # Determine environment
+          if [ "${{ github.ref }}" = "refs/heads/master" ]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "✅ Environment determined: production (master branch)"
+          else
+            echo "environment=development" >> $GITHUB_OUTPUT
+            echo "✅ Environment determined: development (non-master branch)"
+          fi
+          
+          # Determine if deployment should occur
+          if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ Deployment should occur (push or workflow_dispatch)"
+          else
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "⏭️  Deployment skipped (pull_request)"
+          fi 

@@ -104,7 +104,6 @@ jobs:
 
       - name: Create build artefact
         id: build-artefact
-        working-directory: ${{ inputs.working-directory }}
         run: |
           echo "Creating build artefact for ${{ inputs.component }}..."
 
@@ -115,39 +114,44 @@ jobs:
             artefact_name="${{ inputs.component }}-build-$(date +%s)"
           fi
 
+          # Ensure dist directory exists at workspace root
+          mkdir -p dist
+
           # Create artefact based on component type
           if [ "${{ inputs.component }}" = "frontend" ]; then
-            # Frontend: Create tar.gz of dist folder
-            if [ -d "dist" ]; then
-              tar -czf "../$artefact_name.tar.gz" dist/
-              echo "artefact-name=$artefact_name.tar.gz" >> $GITHUB_OUTPUT
-              echo "artefact-path=../$artefact_name.tar.gz" >> $GITHUB_OUTPUT
-              echo "✅ Frontend artefact created: $artefact_name.tar.gz"
-            else
-              echo "❌ dist folder not found"
-              exit 1
-            fi
+            # Frontend: Package source files since there's no actual build
+            cd ${{ inputs.working-directory }}
+            tar -czf "../dist/$artefact_name.tar.gz" \
+              --exclude="node_modules" \
+              --exclude="__tests__" \
+              --exclude=".prettierrc" \
+              --exclude="eslint.config.js" \
+              --exclude="package.json" \
+              --exclude="package-lock.json" \
+              index.html \
+              api-diagnostics.html \
+              debug.html \
+              icon-test.html \
+              js/ \
+              styles/
+            
+            echo "artefact-name=$artefact_name.tar.gz" >> $GITHUB_OUTPUT
+            echo "artefact-path=dist/$artefact_name.tar.gz" >> $GITHUB_OUTPUT
+            echo "✅ Frontend artefact created: dist/$artefact_name.tar.gz"
           else
-            # Backend: Create ZIP package
-            if [ -d "dist" ] || [ -f "index.js" ] || [ -f "app.js" ]; then
-              # Create deployment package
-              zip -r "../$artefact_name.zip" . \
-                -x "node_modules/.cache/*" \
-                -x "*.test.js" \
-                -x "__tests__/*" \
-                -x ".env*" \
-                -x "coverage/*" \
-                -x ".nyc_output/*" \
-                -x "README.md" \
-                -x ".eslintrc*" \
-                -x ".prettierrc*" \
-                -x "jest.config.js"
-              
+            # Backend: Use the existing build output from the build script
+            cd ${{ inputs.working-directory }}
+            
+            # Check if the build script created the expected artifact
+            if [ -f "../dist/score_api.zip" ]; then
+              # Rename the existing artifact to match workflow expectations
+              mv "../dist/score_api.zip" "../dist/$artefact_name.zip"
               echo "artefact-name=$artefact_name.zip" >> $GITHUB_OUTPUT
-              echo "artefact-path=../$artefact_name.zip" >> $GITHUB_OUTPUT
-              echo "✅ Backend artefact created: $artefact_name.zip"
+              echo "artefact-path=dist/$artefact_name.zip" >> $GITHUB_OUTPUT
+              echo "✅ Backend artefact created: dist/$artefact_name.zip"
             else
-              echo "❌ No build output found"
+              echo "❌ Backend build artifact not found at ../dist/score_api.zip"
+              echo "Expected the build script to create the deployment package"
               exit 1
             fi
           fi
@@ -158,6 +162,9 @@ jobs:
           if [ -f "$artefact_path" ]; then
             sha256sum "$artefact_path" > "$artefact_path.sha256"
             echo "✅ Checksum generated for $artefact_path"
+          else
+            echo "❌ Artefact not found at $artefact_path"
+            exit 1
           fi
 
       - name: Upload build artefact

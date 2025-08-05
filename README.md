@@ -40,32 +40,90 @@ In essence this project is an experiment in AI driven development.
 cloud-defenders-game/
 ├── frontend/                    # Frontend game code
 │   ├── index.html              # Main HTML5 Canvas game page
+│   ├── api-diagnostics.html    # API testing and diagnostics page
+│   ├── debug.html              # Debug interface for development
+│   ├── icon-test.html          # AWS icon testing interface
 │   ├── js/                     # Modular game engine
+│   │   ├── api-service.js      # API communication layer
+│   │   ├── aws-icons.js        # AWS service icon management
+│   │   ├── config.js           # Game configuration
+│   │   ├── defense.js          # Tower defence mechanics
 │   │   ├── entities.js         # Entity system (core game objects)
-│   │   ├── input-manager.js    # Keyboard and mouse input
-│   │   ├── game-state.js       # Game state management
-│   │   ├── renderer.js         # Canvas rendering system
-│   │   ├── ui-manager.js       # DOM UI management
-│   │   ├── game-loop.js        # Frame timing and game loop
 │   │   ├── event-handler.js    # Event listener management
+│   │   ├── explosive-bomb.js   # Explosive weapon mechanics
+│   │   ├── game-conditions.js  # Game state and conditions
 │   │   ├── game-engine.js      # Main game orchestrator
-│   │   └── game.js             # Application entry point
-│   ├── tests/                  # Test suite
-│   │   ├── entity.test.js      # Entity system tests
-│   │   └── README.md           # Testing documentation
-│   ├── styles/
-│   │   └── game.css            # Game styling
+│   │   ├── game-loop.js        # Frame timing and game loop
+│   │   ├── game-security.js    # Security-themed game mechanics
+│   │   ├── game-state.js       # Game state management
+│   │   ├── game.js             # Application entry point
+│   │   ├── input-manager.js    # Keyboard and mouse input
+│   │   ├── missile.js          # Missile weapon system
+│   │   ├── renderer.js         # Canvas rendering system
+│   │   ├── target.js           # Target and enemy management
+│   │   ├── ui-manager.js       # DOM UI management
+│   │   └── wave-manager.js     # Wave progression system
+│   ├── styles/                 # Game styling
+│   │   └── game.css            # Game stylesheet
+│   ├── __tests__/              # Test suite
+│   ├── .prettierrc             # Prettier configuration
 │   ├── eslint.config.js        # ESLint configuration
 │   └── package.json            # Frontend dependencies
 ├── backend/                    # Backend API code
-│   ├── index.js                # Lambda function for score API
+│   ├── index.js                # Lambda function entry point
+│   ├── src/                    # Source code organization
+│   │   ├── handlers/           # Request handlers
+│   │   ├── services/           # Business logic services
+│   │   └── utils/              # Utility functions
+│   ├── __tests__/              # Test suite
+│   ├── .prettierrc             # Prettier configuration
+│   ├── eslint.config.js        # ESLint configuration
 │   └── package.json            # Backend dependencies
 ├── infra/                      # Terraform infrastructure
 │   ├── main.tf                 # Main Terraform configuration
-│   └── modules/
+│   ├── variables.tf            # Variable definitions
+│   ├── outputs.tf              # Output definitions
+│   ├── providers.tf            # Provider configuration
+│   ├── backend.tf              # Terraform backend configuration
+│   ├── terraform.tf            # Terraform version constraints
+│   ├── terraform.tfvars        # Variable values
+│   ├── terraform.tfvars.example # Example variable file
+│   ├── DEPLOYMENT.md           # Deployment documentation
+│   └── modules/                # Terraform modules
+│       ├── _shared_variables.tf # Shared module variables
+│       ├── api_gateway/        # API Gateway module
+│       ├── dynamodb/           # DynamoDB module
+│       ├── lambda_function/    # Lambda function module
 │       └── s3_game_hosting/    # S3 static hosting module
-└── scripts/                    # Development scripts
-    └── setup-dev-env.ps1       # Automated environment setup
+├── scripts/                    # Development and deployment scripts
+│   ├── build/                  # Build scripts
+│   │   ├── build-backend.ps1   # PowerShell build script (Windows)
+│   │   └── build-backend.sh    # Bash build script (Linux CI)
+│   ├── deploy/                 # Deployment scripts
+│   ├── quality/                # Code quality scripts
+│   ├── utils/                  # Utility scripts
+│   ├── health-check.ps1        # PowerShell health check (Windows)
+│   ├── health-check.sh         # Bash health check (Linux CI)
+│   ├── rollback-manager.ps1    # Rollback management script
+│   ├── setup-dev-env.ps1       # Development environment setup
+│   └── README.md               # Scripts documentation
+├── .github/                    # GitHub configuration
+│   ├── workflows/              # GitHub Actions workflows
+│   │   ├── main.yml            # Primary CI/CD pipeline
+│   │   ├── reusable-ci.yml     # Reusable CI workflow
+│   │   ├── reusable-build.yml  # Reusable build workflow
+│   │   ├── reusable-deploy.yml # Reusable deploy workflow
+│   │   ├── reusable-prepare-job.yml # Job preparation workflow
+│   │   ├── reusable-setup-node.yml # Node.js setup workflow
+│   │   ├── reusable-determine-environment.yml # Environment detection
+│   │   └── reusable-setup-terraform.yml # Terraform setup workflow
+│   ├── actions/                # Custom composite actions
+│   └── ISSUE_TEMPLATE/         # Issue templates
+├── dist/                       # Build artefacts (generated)
+├── .vscode/                    # VS Code configuration
+├── .gitignore                  # Git ignore rules
+├── SECURITY.md                 # Security policy
+└── README.md                   # Project documentation
 ```
 
 ## Development Environment Setup

@@ -1,226 +1,231 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cloud Defenders API Diagnostics</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-        .section {
-            margin: 20px;
-            padding: 20px;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            background: #fafafa;
-        }
-        .section h2 {
-            margin-top: 0;
-            color: #333;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
-        }
-        .test-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 15px;
-            margin: 15px 0;
-        }
-        .test-card {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            padding: 15px;
-        }
-        .test-card h3 {
-            margin-top: 0;
-            color: #555;
-        }
-        button {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            margin: 5px;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background: #5a6fd8;
-        }
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        .status {
-            padding: 10px;
-            border-radius: 4px;
-            margin: 10px 0;
-            font-family: monospace;
-            font-size: 12px;
-        }
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .status.info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-        .status.warning {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
-        }
-        .log-container {
-            background: #2d3748;
-            color: #e2e8f0;
-            padding: 15px;
-            border-radius: 6px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            max-height: 300px;
-            overflow-y: auto;
-            margin: 10px 0;
-        }
-        .timestamp {
-            color: #a0aec0;
-        }
-        .config-display {
-            background: #f7fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 15px;
-            margin: 10px 0;
-        }
-        .config-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .config-item:last-child {
-            border-bottom: none;
-        }
-        .config-key {
-            font-weight: bold;
-            color: #4a5568;
-        }
-        .config-value {
-            font-family: monospace;
-            color: #2d3748;
-            word-break: break-all;
-        }
-        pre {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 4px;
-            padding: 10px;
-            overflow-x: auto;
-            font-size: 12px;
-        }
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+      .section {
+        margin: 20px;
+        padding: 20px;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        background: #fafafa;
+      }
+      .section h2 {
+        margin-top: 0;
+        color: #333;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 10px;
+      }
+      .test-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 15px;
+        margin: 15px 0;
+      }
+      .test-card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 15px;
+      }
+      .test-card h3 {
+        margin-top: 0;
+        color: #555;
+      }
+      button {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin: 5px;
+        transition: background-color 0.3s;
+      }
+      button:hover {
+        background: #5a6fd8;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      .status {
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+        font-family: monospace;
+        font-size: 12px;
+      }
+      .status.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .status.info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      .status.warning {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+      }
+      .log-container {
+        background: #2d3748;
+        color: #e2e8f0;
+        padding: 15px;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        margin: 10px 0;
+      }
+      .timestamp {
+        color: #a0aec0;
+      }
+      .config-display {
+        background: #f7fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 10px 0;
+      }
+      .config-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .config-item:last-child {
+        border-bottom: none;
+      }
+      .config-key {
+        font-weight: bold;
+        color: #4a5568;
+      }
+      .config-value {
+        font-family: monospace;
+        color: #2d3748;
+        word-break: break-all;
+      }
+      pre {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+        padding: 10px;
+        overflow-x: auto;
+        font-size: 12px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="header">
-            <h1>Cloud Defenders API Diagnostics</h1>
-            <p>Comprehensive testing and debugging interface for API integration issues</p>
-        </div>
+      <div class="header">
+        <h1>Cloud Defenders API Diagnostics</h1>
+        <p>
+          Comprehensive testing and debugging interface for API integration
+          issues
+        </p>
+      </div>
 
-        <!-- Configuration Section -->
-        <div class="section">
-            <h2>Configuration Analysis</h2>
-            <button onclick="analyzeConfiguration()">Analyze Configuration</button>
-            <button onclick="validateUrls()">Validate URLs</button>
-            <div id="config-results"></div>
-        </div>
+      <!-- Configuration Section -->
+      <div class="section">
+        <h2>Configuration Analysis</h2>
+        <button onclick="analyzeConfiguration()">Analyze Configuration</button>
+        <button onclick="validateUrls()">Validate URLs</button>
+        <div id="config-results"></div>
+      </div>
 
-        <!-- Connectivity Tests -->
-        <div class="section">
-            <h2>Connectivity Tests</h2>
-            <div class="test-grid">
-                <div class="test-card">
-                    <h3>Basic Connectivity</h3>
-                    <button onclick="testBasicConnectivity()">Test Connection</button>
-                    <div id="connectivity-results"></div>
-                </div>
-                <div class="test-card">
-                    <h3>CORS Compliance</h3>
-                    <button onclick="testCorsCompliance()">Test CORS</button>
-                    <div id="cors-results"></div>
-                </div>
-                <div class="test-card">
-                    <h3>API Endpoints</h3>
-                    <button onclick="testAllEndpoints()">Test All Endpoints</button>
-                    <div id="endpoints-results"></div>
-                </div>
-            </div>
+      <!-- Connectivity Tests -->
+      <div class="section">
+        <h2>Connectivity Tests</h2>
+        <div class="test-grid">
+          <div class="test-card">
+            <h3>Basic Connectivity</h3>
+            <button onclick="testBasicConnectivity()">Test Connection</button>
+            <div id="connectivity-results"></div>
+          </div>
+          <div class="test-card">
+            <h3>CORS Compliance</h3>
+            <button onclick="testCorsCompliance()">Test CORS</button>
+            <div id="cors-results"></div>
+          </div>
+          <div class="test-card">
+            <h3>API Endpoints</h3>
+            <button onclick="testAllEndpoints()">Test All Endpoints</button>
+            <div id="endpoints-results"></div>
+          </div>
         </div>
+      </div>
 
-        <!-- API Testing -->
-        <div class="section">
-            <h2>API Endpoint Testing</h2>
-            <div class="test-grid">
-                <div class="test-card">
-                    <h3>Leaderboard (GET)</h3>
-                    <button onclick="testLeaderboard()">Test Leaderboard</button>
-                    <div id="leaderboard-results"></div>
-                </div>
-                <div class="test-card">
-                    <h3>Score Submission (POST)</h3>
-                    <button onclick="testScoreSubmission()">Test Score Submission</button>
-                    <div id="score-results"></div>
-                </div>
-                <div class="test-card">
-                    <h3>Game Simulation</h3>
-                    <button onclick="simulateGameFlow()">Simulate Game Flow</button>
-                    <div id="simulation-results"></div>
-                </div>
-            </div>
+      <!-- API Testing -->
+      <div class="section">
+        <h2>API Endpoint Testing</h2>
+        <div class="test-grid">
+          <div class="test-card">
+            <h3>Leaderboard (GET)</h3>
+            <button onclick="testLeaderboard()">Test Leaderboard</button>
+            <div id="leaderboard-results"></div>
+          </div>
+          <div class="test-card">
+            <h3>Score Submission (POST)</h3>
+            <button onclick="testScoreSubmission()">
+              Test Score Submission
+            </button>
+            <div id="score-results"></div>
+          </div>
+          <div class="test-card">
+            <h3>Game Simulation</h3>
+            <button onclick="simulateGameFlow()">Simulate Game Flow</button>
+            <div id="simulation-results"></div>
+          </div>
         </div>
+      </div>
 
-        <!-- Real-time Logging -->
-        <div class="section">
-            <h2>📝 Real-time Logging</h2>
-            <button onclick="clearLogs()">Clear Logs</button>
-            <button onclick="exportLogs()">Export Logs</button>
-            <div id="log-container" class="log-container"></div>
-        </div>
+      <!-- Real-time Logging -->
+      <div class="section">
+        <h2>📝 Real-time Logging</h2>
+        <button onclick="clearLogs()">Clear Logs</button>
+        <button onclick="exportLogs()">Export Logs</button>
+        <div id="log-container" class="log-container"></div>
+      </div>
 
-        <!-- Debug Information -->
-        <div class="section">
-            <h2>Debug Information</h2>
-            <button onclick="generateDebugReport()">Generate Debug Report</button>
-            <div id="debug-info"></div>
-        </div>
+      <!-- Debug Information -->
+      <div class="section">
+        <h2>Debug Information</h2>
+        <button onclick="generateDebugReport()">Generate Debug Report</button>
+        <div id="debug-info"></div>
+      </div>
     </div>
 
     <!-- Load game scripts -->
@@ -228,357 +233,497 @@
     <script src="js/api-service.js"></script>
 
     <script>
-        // Diagnostic utilities
-        class ApiDiagnostics {
-            constructor() {
-                this.logs = [];
-                this.startTime = Date.now();
-            }
+      // Diagnostic utilities
+      class ApiDiagnostics {
+        constructor() {
+          this.logs = [];
+          this.startTime = Date.now();
+        }
 
-            log(message, type = 'info', data = null) {
-                const timestamp = new Date().toISOString();
-                const logEntry = {
-                    timestamp,
-                    type,
-                    message,
-                    data,
-                    elapsed: Date.now() - this.startTime
-                };
-                
-                this.logs.push(logEntry);
-                this.displayLog(logEntry);
-                console.log(`[${type.toUpperCase()}] ${message}`, data || '');
-            }
+        log(message, type = 'info', data = null) {
+          const timestamp = new Date().toISOString();
+          const logEntry = {
+            timestamp,
+            type,
+            message,
+            data,
+            elapsed: Date.now() - this.startTime,
+          };
 
-            displayLog(entry) {
-                const container = document.getElementById('log-container');
-                const logLine = document.createElement('div');
-                logLine.innerHTML = `
+          this.logs.push(logEntry);
+          this.displayLog(logEntry);
+          console.log(`[${type.toUpperCase()}] ${message}`, data || '');
+        }
+
+        displayLog(entry) {
+          const container = document.getElementById('log-container');
+          const logLine = document.createElement('div');
+          logLine.innerHTML = `
                     <span class="timestamp">[${entry.timestamp}]</span> 
                     <span class="type">[${entry.type.toUpperCase()}]</span> 
                     ${entry.message}
                     ${entry.data ? '<br><pre>' + JSON.stringify(entry.data, null, 2) + '</pre>' : ''}
                 `;
-                container.appendChild(logLine);
-                container.scrollTop = container.scrollHeight;
-            }
-
-            showResult(elementId, message, type = 'info', data = null) {
-                const element = document.getElementById(elementId);
-                element.innerHTML = `<div class="status ${type}">${message}</div>`;
-                if (data) {
-                    element.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
-                }
-                this.log(message, type, data);
-            }
-
-            async makeRequest(url, options = {}) {
-                const startTime = Date.now();
-                this.log(`Making request to: ${url}`, 'info', options);
-                
-                try {
-                    const response = await fetch(url, {
-                        ...options,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            ...options.headers
-                        }
-                    });
-
-                    const duration = Date.now() - startTime;
-                    const responseData = {
-                        status: response.status,
-                        statusText: response.statusText,
-                        headers: Object.fromEntries(response.headers.entries()),
-                        duration: `${duration}ms`
-                    };
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        this.log(`Request successful (${duration}ms)`, 'success', { response: responseData, data });
-                        return { success: true, data, response: responseData };
-                    } else {
-                        const errorText = await response.text();
-                        this.log(`Request failed (${duration}ms)`, 'error', { response: responseData, error: errorText });
-                        return { success: false, error: errorText, response: responseData };
-                    }
-                } catch (error) {
-                    const duration = Date.now() - startTime;
-                    this.log(`Request error (${duration}ms): ${error.message}`, 'error', error);
-                    return { success: false, error: error.message, exception: error };
-                }
-            }
+          container.appendChild(logLine);
+          container.scrollTop = container.scrollHeight;
         }
 
-        const diagnostics = new ApiDiagnostics();
+        showResult(elementId, message, type = 'info', data = null) {
+          const element = document.getElementById(elementId);
+          element.innerHTML = `<div class="status ${type}">${message}</div>`;
+          if (data) {
+            element.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+          }
+          this.log(message, type, data);
+        }
 
-        // Configuration Analysis
-        function analyzeConfiguration() {
-            diagnostics.log('Starting configuration analysis', 'info');
-            
-            const results = document.getElementById('config-results');
-            results.innerHTML = '';
+        async makeRequest(url, options = {}) {
+          const startTime = Date.now();
+          this.log(`Making request to: ${url}`, 'info', options);
 
-            // Check API_CONFIG
-            if (window.API_CONFIG) {
-                diagnostics.showResult('config-results', 'API_CONFIG loaded successfully', 'success', window.API_CONFIG);
+          try {
+            const response = await fetch(url, {
+              ...options,
+              headers: {
+                'Content-Type': 'application/json',
+                ...options.headers,
+              },
+            });
+
+            const duration = Date.now() - startTime;
+            const responseData = {
+              status: response.status,
+              statusText: response.statusText,
+              headers: Object.fromEntries(response.headers.entries()),
+              duration: `${duration}ms`,
+            };
+
+            if (response.ok) {
+              const data = await response.json();
+              this.log(`Request successful (${duration}ms)`, 'success', {
+                response: responseData,
+                data,
+              });
+              return { success: true, data, response: responseData };
             } else {
-                diagnostics.showResult('config-results', 'API_CONFIG not found', 'error');
-                return;
+              const errorText = await response.text();
+              this.log(`Request failed (${duration}ms)`, 'error', {
+                response: responseData,
+                error: errorText,
+              });
+              return {
+                success: false,
+                error: errorText,
+                response: responseData,
+              };
             }
+          } catch (error) {
+            const duration = Date.now() - startTime;
+            this.log(
+              `Request error (${duration}ms): ${error.message}`,
+              'error',
+              error
+            );
+            return { success: false, error: error.message, exception: error };
+          }
+        }
+      }
 
-            // Check apiService
-            if (window.apiService) {
-                const serviceInfo = {
-                    baseUrl: window.apiService.API_BASE_URL,
-                    timeout: window.apiService.timeout,
-                    scoreUrl: `${window.apiService.API_BASE_URL}/api/scores`,
-                    leaderboardUrl: `${window.apiService.API_BASE_URL}/api/leaderboard`
-                };
-                
-                results.innerHTML += '<div class="config-display">';
-                Object.entries(serviceInfo).forEach(([key, value]) => {
-                    results.innerHTML += `
+      const diagnostics = new ApiDiagnostics();
+
+      // Configuration Analysis
+      function analyzeConfiguration() {
+        diagnostics.log('Starting configuration analysis', 'info');
+
+        const results = document.getElementById('config-results');
+        results.innerHTML = '';
+
+        // Check API_CONFIG
+        if (window.API_CONFIG) {
+          diagnostics.showResult(
+            'config-results',
+            'API_CONFIG loaded successfully',
+            'success',
+            window.API_CONFIG
+          );
+        } else {
+          diagnostics.showResult(
+            'config-results',
+            'API_CONFIG not found',
+            'error'
+          );
+          return;
+        }
+
+        // Check apiService
+        if (window.apiService) {
+          const serviceInfo = {
+            baseUrl: window.apiService.API_BASE_URL,
+            timeout: window.apiService.timeout,
+            scoreUrl: `${window.apiService.API_BASE_URL}/api/scores`,
+            leaderboardUrl: `${window.apiService.API_BASE_URL}/api/leaderboard`,
+          };
+
+          results.innerHTML += '<div class="config-display">';
+          Object.entries(serviceInfo).forEach(([key, value]) => {
+            results.innerHTML += `
                         <div class="config-item">
                             <span class="config-key">${key}:</span>
                             <span class="config-value">${value}</span>
                         </div>
                     `;
-                });
-                results.innerHTML += '</div>';
-                
-                diagnostics.log('API Service configuration', 'success', serviceInfo);
-            } else {
-                diagnostics.showResult('config-results', 'API Service not found', 'error');
-            }
+          });
+          results.innerHTML += '</div>';
+
+          diagnostics.log('API Service configuration', 'success', serviceInfo);
+        } else {
+          diagnostics.showResult(
+            'config-results',
+            'API Service not found',
+            'error'
+          );
+        }
+      }
+
+      function validateUrls() {
+        if (!window.apiService) {
+          diagnostics.showResult(
+            'config-results',
+            'API Service not available for URL validation',
+            'error'
+          );
+          return;
         }
 
-        function validateUrls() {
-            if (!window.apiService) {
-                diagnostics.showResult('config-results', 'API Service not available for URL validation', 'error');
-                return;
-            }
+        const urls = {
+          base: window.apiService.API_BASE_URL,
+          scores: `${window.apiService.API_BASE_URL}/api/scores`,
+          leaderboard: `${window.apiService.API_BASE_URL}/api/leaderboard`,
+        };
 
-            const urls = {
-                base: window.apiService.API_BASE_URL,
-                scores: `${window.apiService.API_BASE_URL}/api/scores`,
-                leaderboard: `${window.apiService.API_BASE_URL}/api/leaderboard`
-            };
+        diagnostics.log('Validating URLs', 'info', urls);
 
-            diagnostics.log('Validating URLs', 'info', urls);
+        // Basic URL validation
+        const urlPattern = /^https?:\/\/.+/;
+        let allValid = true;
 
-            // Basic URL validation
-            const urlPattern = /^https?:\/\/.+/;
-            let allValid = true;
-
-            Object.entries(urls).forEach(([key, url]) => {
-                if (!urlPattern.test(url)) {
-                    diagnostics.log(`Invalid URL format for ${key}: ${url}`, 'error');
-                    allValid = false;
-                }
-            });
-
-            if (allValid) {
-                diagnostics.showResult('config-results', 'All URLs have valid format', 'success', urls);
-            } else {
-                diagnostics.showResult('config-results', 'Some URLs have invalid format', 'error', urls);
-            }
-        }
-
-        // Connectivity Tests
-        async function testBasicConnectivity() {
-            if (!window.apiService) {
-                diagnostics.showResult('connectivity-results', 'API Service not available', 'error');
-                return;
-            }
-
-            const baseUrl = window.apiService.API_BASE_URL;
-            diagnostics.log(`Testing basic connectivity to: ${baseUrl}`, 'info');
-
-            try {
-                const result = await diagnostics.makeRequest(`${baseUrl}/api/leaderboard`);
-                if (result.success) {
-                    diagnostics.showResult('connectivity-results', 'Basic connectivity successful', 'success', result);
-                } else {
-                    diagnostics.showResult('connectivity-results', 'Connectivity failed', 'error', result);
-                }
-            } catch (error) {
-                diagnostics.showResult('connectivity-results', `Connectivity error: ${error.message}`, 'error', error);
-            }
-        }
-
-        async function testCorsCompliance() {
-            if (!window.apiService) {
-                diagnostics.showResult('cors-results', 'API Service not available', 'error');
-                return;
-            }
-
-            diagnostics.log('Testing CORS compliance', 'info');
-
-            try {
-                // Test preflight request
-                const result = await diagnostics.makeRequest(`${window.apiService.API_BASE_URL}/api/scores`, {
-                    method: 'OPTIONS'
-                });
-
-                if (result.success || result.response?.status === 200) {
-                    diagnostics.showResult('cors-results', 'CORS preflight successful', 'success', result);
-                } else {
-                    diagnostics.showResult('cors-results', 'CORS preflight issues detected', 'warning', result);
-                }
-            } catch (error) {
-                diagnostics.showResult('cors-results', `❌ CORS test failed: ${error.message}`, 'error', error);
-            }
-        }
-
-        async function testAllEndpoints() {
-            diagnostics.log('Testing all API endpoints', 'info');
-            
-            const endpoints = [
-                { name: 'Leaderboard', url: `${window.apiService.API_BASE_URL}/api/leaderboard`, method: 'GET' },
-                { name: 'Score Submission', url: `${window.apiService.API_BASE_URL}/api/scores`, method: 'POST', body: {
-                    playerName: 'DiagnosticTest',
-                    score: 1000,
-                    wave: 5,
-                    gameMode: 'normal',
-                    timestamp: Date.now()
-                }}
-            ];
-
-            let results = '';
-            for (const endpoint of endpoints) {
-                const options = {
-                    method: endpoint.method,
-                    ...(endpoint.body && { body: JSON.stringify(endpoint.body) })
-                };
-
-                const result = await diagnostics.makeRequest(endpoint.url, options);
-                const status = result.success ? '✅' : '❌';
-                results += `<div class="status ${result.success ? 'success' : 'error'}">${status} ${endpoint.name}: ${result.success ? 'OK' : result.error}</div>`;
-            }
-
-            document.getElementById('endpoints-results').innerHTML = results;
-        }
-
-        // API Testing
-        async function testLeaderboard() {
-            if (!window.apiService) {
-                diagnostics.showResult('leaderboard-results', '❌ API Service not available', 'error');
-                return;
-            }
-
-            try {
-                diagnostics.log('Testing leaderboard endpoint', 'info');
-                const data = await window.apiService.getLeaderboard();
-                diagnostics.showResult('leaderboard-results', '✅ Leaderboard test successful', 'success', data);
-            } catch (error) {
-                diagnostics.showResult('leaderboard-results', `❌ Leaderboard test failed: ${error.message}`, 'error', error);
-            }
-        }
-
-        async function testScoreSubmission() {
-            if (!window.apiService) {
-                diagnostics.showResult('score-results', '❌ API Service not available', 'error');
-                return;
-            }
-
-            try {
-                const scoreData = {
-                    playerName: 'DiagnosticTest',
-                    score: 2500,
-                    wave: 8,
-                    gameMode: 'normal'
-                };
-
-                diagnostics.log('Testing score submission', 'info', scoreData);
-                const result = await window.apiService.submitScore(scoreData);
-                diagnostics.showResult('score-results', '✅ Score submission successful', 'success', result);
-            } catch (error) {
-                diagnostics.showResult('score-results', `❌ Score submission failed: ${error.message}`, 'error', error);
-            }
-        }
-
-        async function simulateGameFlow() {
-            diagnostics.log('Simulating complete game flow', 'info');
-            
-            try {
-                // Step 1: Test leaderboard
-                await window.apiService.getLeaderboard();
-                diagnostics.log('✅ Step 1: Leaderboard loaded', 'success');
-
-                // Step 2: Submit score
-                const scoreData = {
-                    playerName: 'GameFlowTest',
-                    score: 3500,
-                    wave: 10,
-                    gameMode: 'normal'
-                };
-                
-                await window.apiService.submitScore(scoreData);
-                diagnostics.log('✅ Step 2: Score submitted', 'success');
-
-                // Step 3: Reload leaderboard
-                const updatedLeaderboard = await window.apiService.getLeaderboard();
-                diagnostics.log('✅ Step 3: Updated leaderboard loaded', 'success');
-
-                diagnostics.showResult('simulation-results', '✅ Complete game flow simulation successful', 'success', {
-                    scoreSubmitted: scoreData,
-                    updatedLeaderboard
-                });
-            } catch (error) {
-                diagnostics.showResult('simulation-results', `❌ Game flow simulation failed: ${error.message}`, 'error', error);
-            }
-        }
-
-        // Utility functions
-        function clearLogs() {
-            diagnostics.logs = [];
-            document.getElementById('log-container').innerHTML = '';
-            diagnostics.log('Logs cleared', 'info');
-        }
-
-        function exportLogs() {
-            const logData = {
-                timestamp: new Date().toISOString(),
-                userAgent: navigator.userAgent,
-                url: window.location.href,
-                logs: diagnostics.logs
-            };
-
-            const blob = new Blob([JSON.stringify(logData, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `api-diagnostics-${Date.now()}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-
-            diagnostics.log('Logs exported', 'info');
-        }
-
-        function generateDebugReport() {
-            const debugInfo = {
-                timestamp: new Date().toISOString(),
-                userAgent: navigator.userAgent,
-                url: window.location.href,
-                configuration: window.API_CONFIG || null,
-                apiService: window.apiService ? {
-                    baseUrl: window.apiService.API_BASE_URL,
-                    timeout: window.apiService.timeout
-                } : null,
-                recentLogs: diagnostics.logs.slice(-10)
-            };
-
-            diagnostics.showResult('debug-info', 'Debug report generated', 'info', debugInfo);
-        }
-
-        // Auto-run basic checks on load
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                diagnostics.log('API Diagnostics interface loaded', 'info');
-                analyzeConfiguration();
-            }, 100);
+        Object.entries(urls).forEach(([key, url]) => {
+          if (!urlPattern.test(url)) {
+            diagnostics.log(`Invalid URL format for ${key}: ${url}`, 'error');
+            allValid = false;
+          }
         });
+
+        if (allValid) {
+          diagnostics.showResult(
+            'config-results',
+            'All URLs have valid format',
+            'success',
+            urls
+          );
+        } else {
+          diagnostics.showResult(
+            'config-results',
+            'Some URLs have invalid format',
+            'error',
+            urls
+          );
+        }
+      }
+
+      // Connectivity Tests
+      async function testBasicConnectivity() {
+        if (!window.apiService) {
+          diagnostics.showResult(
+            'connectivity-results',
+            'API Service not available',
+            'error'
+          );
+          return;
+        }
+
+        const baseUrl = window.apiService.API_BASE_URL;
+        diagnostics.log(`Testing basic connectivity to: ${baseUrl}`, 'info');
+
+        try {
+          const result = await diagnostics.makeRequest(
+            `${baseUrl}/api/leaderboard`
+          );
+          if (result.success) {
+            diagnostics.showResult(
+              'connectivity-results',
+              'Basic connectivity successful',
+              'success',
+              result
+            );
+          } else {
+            diagnostics.showResult(
+              'connectivity-results',
+              'Connectivity failed',
+              'error',
+              result
+            );
+          }
+        } catch (error) {
+          diagnostics.showResult(
+            'connectivity-results',
+            `Connectivity error: ${error.message}`,
+            'error',
+            error
+          );
+        }
+      }
+
+      async function testCorsCompliance() {
+        if (!window.apiService) {
+          diagnostics.showResult(
+            'cors-results',
+            'API Service not available',
+            'error'
+          );
+          return;
+        }
+
+        diagnostics.log('Testing CORS compliance', 'info');
+
+        try {
+          // Test preflight request
+          const result = await diagnostics.makeRequest(
+            `${window.apiService.API_BASE_URL}/api/scores`,
+            {
+              method: 'OPTIONS',
+            }
+          );
+
+          if (result.success || result.response?.status === 200) {
+            diagnostics.showResult(
+              'cors-results',
+              'CORS preflight successful',
+              'success',
+              result
+            );
+          } else {
+            diagnostics.showResult(
+              'cors-results',
+              'CORS preflight issues detected',
+              'warning',
+              result
+            );
+          }
+        } catch (error) {
+          diagnostics.showResult(
+            'cors-results',
+            `❌ CORS test failed: ${error.message}`,
+            'error',
+            error
+          );
+        }
+      }
+
+      async function testAllEndpoints() {
+        diagnostics.log('Testing all API endpoints', 'info');
+
+        const endpoints = [
+          {
+            name: 'Leaderboard',
+            url: `${window.apiService.API_BASE_URL}/api/leaderboard`,
+            method: 'GET',
+          },
+          {
+            name: 'Score Submission',
+            url: `${window.apiService.API_BASE_URL}/api/scores`,
+            method: 'POST',
+            body: {
+              playerName: 'DiagnosticTest',
+              score: 1000,
+              wave: 5,
+              gameMode: 'normal',
+              timestamp: Date.now(),
+            },
+          },
+        ];
+
+        let results = '';
+        for (const endpoint of endpoints) {
+          const options = {
+            method: endpoint.method,
+            ...(endpoint.body && { body: JSON.stringify(endpoint.body) }),
+          };
+
+          const result = await diagnostics.makeRequest(endpoint.url, options);
+          const status = result.success ? '✅' : '❌';
+          results += `<div class="status ${result.success ? 'success' : 'error'}">${status} ${endpoint.name}: ${result.success ? 'OK' : result.error}</div>`;
+        }
+
+        document.getElementById('endpoints-results').innerHTML = results;
+      }
+
+      // API Testing
+      async function testLeaderboard() {
+        if (!window.apiService) {
+          diagnostics.showResult(
+            'leaderboard-results',
+            '❌ API Service not available',
+            'error'
+          );
+          return;
+        }
+
+        try {
+          diagnostics.log('Testing leaderboard endpoint', 'info');
+          const data = await window.apiService.getLeaderboard();
+          diagnostics.showResult(
+            'leaderboard-results',
+            '✅ Leaderboard test successful',
+            'success',
+            data
+          );
+        } catch (error) {
+          diagnostics.showResult(
+            'leaderboard-results',
+            `❌ Leaderboard test failed: ${error.message}`,
+            'error',
+            error
+          );
+        }
+      }
+
+      async function testScoreSubmission() {
+        if (!window.apiService) {
+          diagnostics.showResult(
+            'score-results',
+            '❌ API Service not available',
+            'error'
+          );
+          return;
+        }
+
+        try {
+          const scoreData = {
+            playerName: 'DiagnosticTest',
+            score: 2500,
+            wave: 8,
+            gameMode: 'normal',
+          };
+
+          diagnostics.log('Testing score submission', 'info', scoreData);
+          const result = await window.apiService.submitScore(scoreData);
+          diagnostics.showResult(
+            'score-results',
+            '✅ Score submission successful',
+            'success',
+            result
+          );
+        } catch (error) {
+          diagnostics.showResult(
+            'score-results',
+            `❌ Score submission failed: ${error.message}`,
+            'error',
+            error
+          );
+        }
+      }
+
+      async function simulateGameFlow() {
+        diagnostics.log('Simulating complete game flow', 'info');
+
+        try {
+          // Step 1: Test leaderboard
+          await window.apiService.getLeaderboard();
+          diagnostics.log('✅ Step 1: Leaderboard loaded', 'success');
+
+          // Step 2: Submit score
+          const scoreData = {
+            playerName: 'GameFlowTest',
+            score: 3500,
+            wave: 10,
+            gameMode: 'normal',
+          };
+
+          await window.apiService.submitScore(scoreData);
+          diagnostics.log('✅ Step 2: Score submitted', 'success');
+
+          // Step 3: Reload leaderboard
+          const updatedLeaderboard = await window.apiService.getLeaderboard();
+          diagnostics.log('✅ Step 3: Updated leaderboard loaded', 'success');
+
+          diagnostics.showResult(
+            'simulation-results',
+            '✅ Complete game flow simulation successful',
+            'success',
+            {
+              scoreSubmitted: scoreData,
+              updatedLeaderboard,
+            }
+          );
+        } catch (error) {
+          diagnostics.showResult(
+            'simulation-results',
+            `❌ Game flow simulation failed: ${error.message}`,
+            'error',
+            error
+          );
+        }
+      }
+
+      // Utility functions
+      function clearLogs() {
+        diagnostics.logs = [];
+        document.getElementById('log-container').innerHTML = '';
+        diagnostics.log('Logs cleared', 'info');
+      }
+
+      function exportLogs() {
+        const logData = {
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          url: window.location.href,
+          logs: diagnostics.logs,
+        };
+
+        const blob = new Blob([JSON.stringify(logData, null, 2)], {
+          type: 'application/json',
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `api-diagnostics-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        diagnostics.log('Logs exported', 'info');
+      }
+
+      function generateDebugReport() {
+        const debugInfo = {
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          url: window.location.href,
+          configuration: window.API_CONFIG || null,
+          apiService: window.apiService
+            ? {
+                baseUrl: window.apiService.API_BASE_URL,
+                timeout: window.apiService.timeout,
+              }
+            : null,
+          recentLogs: diagnostics.logs.slice(-10),
+        };
+
+        diagnostics.showResult(
+          'debug-info',
+          'Debug report generated',
+          'info',
+          debugInfo
+        );
+      }
+
+      // Auto-run basic checks on load
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          diagnostics.log('API Diagnostics interface loaded', 'info');
+          analyzeConfiguration();
+        }, 100);
+      });
     </script>
-</body>
+  </body>
 </html>

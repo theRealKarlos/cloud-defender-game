@@ -1,93 +1,120 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cloud Defenders - Missile Mayhem on AWS</title>
-    <link rel="stylesheet" href="styles/game.css">
-</head>
-<body>
+    <link rel="stylesheet" href="styles/game.css" />
+  </head>
+  <body>
     <div id="game-container">
-        <header class="game-header">
-            <h1>Cloud Defenders</h1>
-            <div class="game-stats">
-                <span id="score">Score: 0</span>
-                <span id="wave">Wave: 1</span>
-                <span id="lives">Lives: 3</span>
-            </div>
-        </header>
-        
-        <main class="game-main">
-            <canvas id="game-canvas" width="800" height="600">
-                Your browser does not support the HTML5 Canvas element.
-                Please upgrade to a modern browser to play Cloud Defenders.
-            </canvas>
-            
-            <div id="game-ui">
-                <div class="control-panel">
-                    <button id="start-btn" class="game-btn">Start Game</button>
-                    <button id="pause-btn" class="game-btn" disabled>Pause</button>
-                    <button id="restart-btn" class="game-btn">Restart</button>
-                    <div class="keyboard-hints">
-                        <small>Shortcuts: <kbd>Space</kbd> Pause • <kbd>R</kbd> Restart • <kbd>Esc</kbd> Close</small>
-                    </div>
-                </div>
-                
-                <div class="power-ups">
-                    <h3>Active Power-ups</h3>
-                    <div id="active-powerups"></div>
-                </div>
-            </div>
-        </main>
-        
-        <div id="game-modal" class="modal hidden">
-            <div class="modal-content">
-                <h2 id="modal-title">Game Over</h2>
-                <p id="modal-message">Your final score: <span id="final-score">0</span></p>
-                
-                <!-- Score Submission Form -->
-                <div id="score-submission" class="score-submission">
-                    <h3>Submit to Leaderboard</h3>
-                    <form id="score-form">
-                        <div class="form-group">
-                            <label for="player-name">Player Name:</label>
-                            <input type="text" id="player-name" name="playerName" maxlength="50" placeholder="Enter your name" required>
-                            <small class="input-hint">Keyboard shortcuts (R, Space) are disabled while typing</small>
-                        </div>
-                        <div class="form-actions">
-                            <button type="submit" id="submit-score-btn" class="game-btn primary">Submit Score</button>
-                            <button type="button" id="skip-submission-btn" class="game-btn secondary">Skip</button>
-                        </div>
-                    </form>
-                    <div id="submission-status" class="submission-status hidden"></div>
-                </div>
-                
-                <!-- Leaderboard Display -->
-                <div id="leaderboard-display" class="leaderboard-display hidden">
-                    <h3>Top Scores</h3>
-                    <div id="leaderboard-list"></div>
-                </div>
-                
-                <div class="modal-actions">
-                    <button id="modal-close" class="game-btn">Close</button>
-                    <button id="modal-restart" class="game-btn">Play Again</button>
-                </div>
-            </div>
+      <header class="game-header">
+        <h1>Cloud Defenders</h1>
+        <div class="game-stats">
+          <span id="score">Score: 0</span>
+          <span id="wave">Wave: 1</span>
+          <span id="lives">Lives: 3</span>
         </div>
+      </header>
+
+      <main class="game-main">
+        <canvas id="game-canvas" width="800" height="600">
+          Your browser does not support the HTML5 Canvas element. Please upgrade
+          to a modern browser to play Cloud Defenders.
+        </canvas>
+
+        <div id="game-ui">
+          <div class="control-panel">
+            <button id="start-btn" class="game-btn">Start Game</button>
+            <button id="pause-btn" class="game-btn" disabled>Pause</button>
+            <button id="restart-btn" class="game-btn">Restart</button>
+            <div class="keyboard-hints">
+              <small
+                >Shortcuts: <kbd>Space</kbd> Pause • <kbd>R</kbd> Restart •
+                <kbd>Esc</kbd> Close</small
+              >
+            </div>
+          </div>
+
+          <div class="power-ups">
+            <h3>Active Power-ups</h3>
+            <div id="active-powerups"></div>
+          </div>
+        </div>
+      </main>
+
+      <div id="game-modal" class="modal hidden">
+        <div class="modal-content">
+          <h2 id="modal-title">Game Over</h2>
+          <p id="modal-message">
+            Your final score: <span id="final-score">0</span>
+          </p>
+
+          <!-- Score Submission Form -->
+          <div id="score-submission" class="score-submission">
+            <h3>Submit to Leaderboard</h3>
+            <form id="score-form">
+              <div class="form-group">
+                <label for="player-name">Player Name:</label>
+                <input
+                  type="text"
+                  id="player-name"
+                  name="playerName"
+                  maxlength="50"
+                  placeholder="Enter your name"
+                  required
+                />
+                <small class="input-hint"
+                  >Keyboard shortcuts (R, Space) are disabled while
+                  typing</small
+                >
+              </div>
+              <div class="form-actions">
+                <button
+                  type="submit"
+                  id="submit-score-btn"
+                  class="game-btn primary"
+                >
+                  Submit Score
+                </button>
+                <button
+                  type="button"
+                  id="skip-submission-btn"
+                  class="game-btn secondary"
+                >
+                  Skip
+                </button>
+              </div>
+            </form>
+            <div id="submission-status" class="submission-status hidden"></div>
+          </div>
+
+          <!-- Leaderboard Display -->
+          <div id="leaderboard-display" class="leaderboard-display hidden">
+            <h3>Top Scores</h3>
+            <div id="leaderboard-list"></div>
+          </div>
+
+          <div class="modal-actions">
+            <button id="modal-close" class="game-btn">Close</button>
+            <button id="modal-restart" class="game-btn">Play Again</button>
+          </div>
+        </div>
+      </div>
     </div>
-    
+
     <!-- Configuration -->
     <script src="js/config.js"></script>
-    
+
     <!-- API Service -->
     <script src="js/api-service.js"></script>
-    
+
     <!-- AWS Icons -->
     <script src="js/aws-icons.js"></script>
-    
+
     <!-- Game Security -->
     <script src="js/game-security.js"></script>
-    
+
     <!-- Core game systems -->
     <script src="js/entities.js"></script>
     <script src="js/target.js"></script>
@@ -102,8 +129,8 @@
     <script src="js/wave-manager.js"></script>
     <script src="js/game-conditions.js"></script>
     <script src="js/game-engine.js"></script>
-    
+
     <!-- Main application -->
     <script src="js/game.js"></script>
-</body>
+  </body>
 </html>

@@ -4,152 +4,160 @@
  */
 
 class EventHandler {
-    constructor(canvas, inputManager, gameCallbacks) {
-        this.canvas = canvas;
-        this.inputManager = inputManager;
-        this.callbacks = gameCallbacks;
-        
-        this.setupEventListeners();
+  constructor(canvas, inputManager, gameCallbacks) {
+    this.canvas = canvas;
+    this.inputManager = inputManager;
+    this.callbacks = gameCallbacks;
+
+    this.setupEventListeners();
+  }
+
+  setupEventListeners() {
+    // Canvas mouse events
+    this.canvas.addEventListener('click', (event) =>
+      this.handleCanvasClick(event)
+    );
+    this.canvas.addEventListener('mousemove', (event) =>
+      this.handleMouseMove(event)
+    );
+    this.canvas.addEventListener('mousedown', (event) =>
+      this.handleMouseDown(event)
+    );
+    this.canvas.addEventListener('mouseup', (event) =>
+      this.handleMouseUp(event)
+    );
+
+    // Keyboard events
+    document.addEventListener('keydown', (event) => this.handleKeyDown(event));
+    document.addEventListener('keyup', (event) => this.handleKeyUp(event));
+
+    // Window events
+    window.addEventListener('blur', () => this.handleWindowBlur());
+    window.addEventListener('focus', () => this.handleWindowFocus());
+    window.addEventListener('resize', () => this.handleWindowResize());
+  }
+
+  handleCanvasClick(event) {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    console.log(`Canvas clicked at: (${x}, ${y})`);
+
+    if (this.callbacks.onCanvasClick) {
+      this.callbacks.onCanvasClick(x, y, event);
     }
-    
-    setupEventListeners() {
-        // Canvas mouse events
-        this.canvas.addEventListener('click', (event) => this.handleCanvasClick(event));
-        this.canvas.addEventListener('mousemove', (event) => this.handleMouseMove(event));
-        this.canvas.addEventListener('mousedown', (event) => this.handleMouseDown(event));
-        this.canvas.addEventListener('mouseup', (event) => this.handleMouseUp(event));
-        
-        // Keyboard events
-        document.addEventListener('keydown', (event) => this.handleKeyDown(event));
-        document.addEventListener('keyup', (event) => this.handleKeyUp(event));
-        
-        // Window events
-        window.addEventListener('blur', () => this.handleWindowBlur());
-        window.addEventListener('focus', () => this.handleWindowFocus());
-        window.addEventListener('resize', () => this.handleWindowResize());
-    }
-    
-    handleCanvasClick(event) {
-        const rect = this.canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        
-        console.log(`Canvas clicked at: (${x}, ${y})`);
-        
-        if (this.callbacks.onCanvasClick) {
-            this.callbacks.onCanvasClick(x, y, event);
+  }
+
+  handleMouseMove(event) {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    this.inputManager.updateMousePosition(x, y);
+  }
+
+  handleMouseDown(event) {
+    this.inputManager.setMousePressed(true);
+    event.preventDefault();
+  }
+
+  handleMouseUp(event) {
+    this.inputManager.setMousePressed(false);
+    event.preventDefault();
+  }
+
+  handleKeyDown(event) {
+    this.inputManager.setKeyState(event.code, true);
+
+    // Check if user is typing in an input field
+    const isTypingInInput = this.isUserTypingInInput();
+
+    // Handle special key combinations (but not when typing in inputs)
+    switch (event.code) {
+      case 'Space':
+        if (!isTypingInInput) {
+          event.preventDefault();
+          if (this.callbacks.onSpaceKey) {
+            this.callbacks.onSpaceKey();
+          }
         }
-    }
-    
-    handleMouseMove(event) {
-        const rect = this.canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        
-        this.inputManager.updateMousePosition(x, y);
-    }
-    
-    handleMouseDown(event) {
-        this.inputManager.setMousePressed(true);
+        break;
+      case 'KeyR':
+        if (!isTypingInInput) {
+          event.preventDefault();
+          if (this.callbacks.onRestartKey) {
+            this.callbacks.onRestartKey();
+          }
+        }
+        break;
+      case 'Escape':
+        // Escape should work even in inputs (to close modals)
         event.preventDefault();
-    }
-    
-    handleMouseUp(event) {
-        this.inputManager.setMousePressed(false);
-        event.preventDefault();
-    }
-    
-    handleKeyDown(event) {
-        this.inputManager.setKeyState(event.code, true);
-        
-        // Check if user is typing in an input field
-        const isTypingInInput = this.isUserTypingInInput();
-        
-        // Handle special key combinations (but not when typing in inputs)
-        switch (event.code) {
-        case 'Space':
-            if (!isTypingInInput) {
-                event.preventDefault();
-                if (this.callbacks.onSpaceKey) {
-                    this.callbacks.onSpaceKey();
-                }
-            }
-            break;
-        case 'KeyR':
-            if (!isTypingInInput) {
-                event.preventDefault();
-                if (this.callbacks.onRestartKey) {
-                    this.callbacks.onRestartKey();
-                }
-            }
-            break;
-        case 'Escape':
-            // Escape should work even in inputs (to close modals)
-            event.preventDefault();
-            if (this.callbacks.onEscapeKey) {
-                this.callbacks.onEscapeKey();
-            }
-            break;
+        if (this.callbacks.onEscapeKey) {
+          this.callbacks.onEscapeKey();
         }
+        break;
     }
-    
-    isUserTypingInInput() {
-        const activeElement = document.activeElement;
-        
-        // Check if the active element is an input field, textarea, or contenteditable
-        if (!activeElement) return false;
-        
-        const tagName = activeElement.tagName.toLowerCase();
-        const isInputField = tagName === 'input' || tagName === 'textarea';
-        const isContentEditable = activeElement.contentEditable === 'true';
-        
-        // Also check if it's specifically the player name input
-        const isPlayerNameInput = activeElement.id === 'player-name';
-        
-        return isInputField || isContentEditable || isPlayerNameInput;
+  }
+
+  isUserTypingInInput() {
+    const activeElement = document.activeElement;
+
+    // Check if the active element is an input field, textarea, or contenteditable
+    if (!activeElement) return false;
+
+    const tagName = activeElement.tagName.toLowerCase();
+    const isInputField = tagName === 'input' || tagName === 'textarea';
+    const isContentEditable = activeElement.contentEditable === 'true';
+
+    // Also check if it's specifically the player name input
+    const isPlayerNameInput = activeElement.id === 'player-name';
+
+    return isInputField || isContentEditable || isPlayerNameInput;
+  }
+
+  handleKeyUp(event) {
+    this.inputManager.setKeyState(event.code, false);
+  }
+
+  handleWindowBlur() {
+    if (this.callbacks.onWindowBlur) {
+      this.callbacks.onWindowBlur();
     }
-    
-    handleKeyUp(event) {
-        this.inputManager.setKeyState(event.code, false);
+  }
+
+  handleWindowFocus() {
+    if (this.callbacks.onWindowFocus) {
+      this.callbacks.onWindowFocus();
     }
-    
-    handleWindowBlur() {
-        if (this.callbacks.onWindowBlur) {
-            this.callbacks.onWindowBlur();
-        }
+  }
+
+  handleWindowResize() {
+    if (this.callbacks.onWindowResize) {
+      this.callbacks.onWindowResize();
     }
-    
-    handleWindowFocus() {
-        if (this.callbacks.onWindowFocus) {
-            this.callbacks.onWindowFocus();
-        }
-    }
-    
-    handleWindowResize() {
-        if (this.callbacks.onWindowResize) {
-            this.callbacks.onWindowResize();
-        }
-    }
-    
-    destroy() {
-        // Remove event listeners to prevent memory leaks
-        this.canvas.removeEventListener('click', this.handleCanvasClick);
-        this.canvas.removeEventListener('mousemove', this.handleMouseMove);
-        this.canvas.removeEventListener('mousedown', this.handleMouseDown);
-        this.canvas.removeEventListener('mouseup', this.handleMouseUp);
-        
-        document.removeEventListener('keydown', this.handleKeyDown);
-        document.removeEventListener('keyup', this.handleKeyUp);
-        
-        window.removeEventListener('blur', this.handleWindowBlur);
-        window.removeEventListener('focus', this.handleWindowFocus);
-        window.removeEventListener('resize', this.handleWindowResize);
-    }
+  }
+
+  destroy() {
+    // Remove event listeners to prevent memory leaks
+    this.canvas.removeEventListener('click', this.handleCanvasClick);
+    this.canvas.removeEventListener('mousemove', this.handleMouseMove);
+    this.canvas.removeEventListener('mousedown', this.handleMouseDown);
+    this.canvas.removeEventListener('mouseup', this.handleMouseUp);
+
+    document.removeEventListener('keydown', this.handleKeyDown);
+    document.removeEventListener('keyup', this.handleKeyUp);
+
+    window.removeEventListener('blur', this.handleWindowBlur);
+    window.removeEventListener('focus', this.handleWindowFocus);
+    window.removeEventListener('resize', this.handleWindowResize);
+  }
 }
 
 // Export for Node.js (testing) and browser
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { EventHandler };
+  module.exports = { EventHandler };
 } else {
-    window.EventHandler = EventHandler;
+  window.EventHandler = EventHandler;
 }

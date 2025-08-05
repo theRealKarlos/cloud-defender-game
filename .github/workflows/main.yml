@@ -82,7 +82,7 @@ jobs:
   build-frontend:
     name: Build Frontend
     uses: ./.github/workflows/reusable-build.yml
-    needs: [ci-frontend, ci-backend, setup-frontend, determine-environment]
+    needs: [ci-frontend, setup-frontend, determine-environment]
     if: success()
     with:
       component: frontend
@@ -96,7 +96,7 @@ jobs:
   build-backend:
     name: Build Backend
     uses: ./.github/workflows/reusable-build.yml
-    needs: [ci-frontend, ci-backend, setup-backend, determine-environment]
+    needs: [ci-backend, setup-backend, determine-environment]
     if: success()
     with:
       component: backend

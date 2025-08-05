@@ -52,12 +52,49 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
 
     steps:
-      - name: Setup Terraform Environment
-        uses: ./.github/workflows/reusable-setup-terraform.yml
+      # =================================================================
+      # ⚙️ TERRAFORM SETUP
+      # =================================================================
+      # The following Terraform setup steps (checkout, setup terraform, cache)
+      # are intentionally duplicated in validate-infrastructure, security-scan,
+      # and plan-and-cost jobs.
+      #
+      # WHY: GitHub Actions does not permit calling a reusable workflow
+      # from within a step. Common setup logic must therefore be
+      # defined explicitly within each job that needs it, rather than
+      # being abstracted into a separate, nested reusable workflow.
+      # =================================================================
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          terraform-version: ${{ inputs.terraform-version }}
-          working-directory: ${{ inputs.working-directory }}
-          with-backend: false
+          fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+          terraform_wrapper: false
+
+      - name: Configure Terraform plugin cache
+        run: |
+          mkdir -p ~/.terraform.d/plugin-cache
+          echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: ${{ runner.os }}-terraform-v1-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-v1-${{ inputs.terraform-version }}-
+            ${{ runner.os }}-terraform-v1-
+
+      - name: Terraform Init
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Initialising Terraform..."
+          terraform init -backend=false -input=false
+          echo "✅ Terraform initialisation without backend completed"
 
       - name: Terraform Format Check
         run: |
@@ -98,12 +135,49 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
 
     steps:
-      - name: Setup Terraform Environment
-        uses: ./.github/workflows/reusable-setup-terraform.yml
+      # =================================================================
+      # ⚙️ TERRAFORM SETUP
+      # =================================================================
+      # The following Terraform setup steps (checkout, setup terraform, cache)
+      # are intentionally duplicated in validate-infrastructure, security-scan,
+      # and plan-and-cost jobs.
+      #
+      # WHY: GitHub Actions does not permit calling a reusable workflow
+      # from within a step. Common setup logic must therefore be
+      # defined explicitly within each job that needs it, rather than
+      # being abstracted into a separate, nested reusable workflow.
+      # =================================================================
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          terraform-version: ${{ inputs.terraform-version }}
-          working-directory: ${{ inputs.working-directory }}
-          with-backend: false
+          fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+          terraform_wrapper: false
+
+      - name: Configure Terraform plugin cache
+        run: |
+          mkdir -p ~/.terraform.d/plugin-cache
+          echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: ${{ runner.os }}-terraform-v1-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-v1-${{ inputs.terraform-version }}-
+            ${{ runner.os }}-terraform-v1-
+
+      - name: Terraform Init
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Initialising Terraform..."
+          terraform init -backend=false -input=false
+          echo "✅ Terraform initialisation without backend completed"
 
       - name: Run tfsec security scan
         uses: aquasecurity/tfsec-action@v1.0.0
@@ -151,12 +225,49 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Setup Terraform Environment
-        uses: ./.github/workflows/reusable-setup-terraform.yml
+      # =================================================================
+      # ⚙️ TERRAFORM SETUP
+      # =================================================================
+      # The following Terraform setup steps (checkout, setup terraform, cache)
+      # are intentionally duplicated in validate-infrastructure, security-scan,
+      # and plan-and-cost jobs.
+      #
+      # WHY: GitHub Actions does not permit calling a reusable workflow
+      # from within a step. Common setup logic must therefore be
+      # defined explicitly within each job that needs it, rather than
+      # being abstracted into a separate, nested reusable workflow.
+      # =================================================================
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          terraform-version: ${{ inputs.terraform-version }}
-          working-directory: ${{ inputs.working-directory }}
-          with-backend: true
+          fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+          terraform_wrapper: false
+
+      - name: Configure Terraform plugin cache
+        run: |
+          mkdir -p ~/.terraform.d/plugin-cache
+          echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: ${{ runner.os }}-terraform-v1-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-v1-${{ inputs.terraform-version }}-
+            ${{ runner.os }}-terraform-v1-
+
+      - name: Terraform Init
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Initialising Terraform..."
+          terraform init -input=false
+          echo "✅ Terraform initialisation with backend completed"
 
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4

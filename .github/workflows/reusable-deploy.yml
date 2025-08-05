@@ -344,6 +344,7 @@ jobs:
         id: plan
         run: |
           echo "Creating Terraform plan..."
+          set +e  # Disable immediate exit on error
           terraform plan \
             -input=false \
             -out=tfplan \
@@ -352,6 +353,7 @@ jobs:
             -no-color > plan-output.txt 2>&1
 
           PLAN_EXIT_CODE=$?
+          set -e  # Re-enable immediate exit on error
 
           if [ $PLAN_EXIT_CODE -eq 0 ]; then
             echo "✅ No changes detected in Terraform plan"
@@ -362,6 +364,7 @@ jobs:
           else
             echo "❌ Terraform plan failed"
             echo "plan_status=failed" >> $GITHUB_OUTPUT
+            echo "Error details:"
             cat plan-output.txt
             exit 1
           fi

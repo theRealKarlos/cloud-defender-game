@@ -289,13 +289,6 @@ jobs:
             ${{ runner.os }}-terraform-v1-${{ inputs.terraform-version }}-
             ${{ runner.os }}-terraform-v1-
 
-      - name: Terraform Init
-        working-directory: ${{ inputs.working-directory }}
-        run: |
-          echo "Initialising Terraform..."
-          terraform init -input=false
-          echo "✅ Terraform initialisation with backend completed"
-
       # =================================================================
       # 🎭 DUMMY ARTIFACT CREATION
       # =================================================================
@@ -330,6 +323,13 @@ jobs:
           role-session-name: GitHubActions-TerraformPlan
           aws-region: ${{ inputs.aws-region }}
           mask-aws-account-id: false
+
+      - name: Terraform Init
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Initialising Terraform..."
+          terraform init -input=false
+          echo "✅ Terraform initialisation with backend completed"
 
       - name: Cache Terraform directory
         uses: actions/cache@v4

@@ -4,46 +4,46 @@
  */
 
 class InputManager {
-  constructor() {
-    this.keys = new Map();
-    this.mouse = {
-      x: 0,
-      y: 0,
-      isPressed: false,
-      justPressed: false,
-      justReleased: false,
-    };
-    this.previousMouseState = false;
-  }
+    constructor() {
+        this.keys = new Map();
+        this.mouse = {
+            x: 0,
+            y: 0,
+            isPressed: false,
+            justPressed: false,
+            justReleased: false
+        };
+        this.previousMouseState = false;
+    }
 
-  update() {
+    update() {
     // Update mouse state for frame-based detection
-    this.mouse.justPressed = this.mouse.isPressed && !this.previousMouseState;
-    this.mouse.justReleased = !this.mouse.isPressed && this.previousMouseState;
-    this.previousMouseState = this.mouse.isPressed;
-  }
+        this.mouse.justPressed = this.mouse.isPressed && !this.previousMouseState;
+        this.mouse.justReleased = !this.mouse.isPressed && this.previousMouseState;
+        this.previousMouseState = this.mouse.isPressed;
+    }
 
-  isKeyPressed(key) {
-    return this.keys.get(key) || false;
-  }
+    isKeyPressed(key) {
+        return this.keys.get(key) || false;
+    }
 
-  setKeyState(key, pressed) {
-    this.keys.set(key, pressed);
-  }
+    setKeyState(key, pressed) {
+        this.keys.set(key, pressed);
+    }
 
-  updateMousePosition(x, y) {
-    this.mouse.x = x;
-    this.mouse.y = y;
-  }
+    updateMousePosition(x, y) {
+        this.mouse.x = x;
+        this.mouse.y = y;
+    }
 
-  setMousePressed(pressed) {
-    this.mouse.isPressed = pressed;
-  }
+    setMousePressed(pressed) {
+        this.mouse.isPressed = pressed;
+    }
 }
 
 // Export for Node.js (testing) and browser
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { InputManager };
+    module.exports = { InputManager };
 } else {
-  window.InputManager = InputManager;
+    window.InputManager = InputManager;
 }

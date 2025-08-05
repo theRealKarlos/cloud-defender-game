@@ -4,13 +4,13 @@ A custom GitHub Action for deploying frontend applications to AWS S3 and CloudFr
 
 ## Features
 
-- Automated frontend build with environment-specific configurations
-- Asset optimisation and compression
-- S3 deployment with intelligent cache headers
-- CloudFront cache invalidation
-- Deployment verification and health checks
-- Comprehensive deployment reporting
-- Dry-run support for testing
+- **Pre-built Artefact Deployment**: Expects pre-built frontend artefacts (no internal build process)
+- **Versioned S3 Deployments**: Creates timestamped version folders for rollback capability
+- **CloudFront Origin Path Updates**: Updates CloudFront origin to point to new version
+- **Automated Rollback**: Reverts CloudFront origin path on deployment failure
+- **Asset Optimisation**: Intelligent cache headers for different asset types
+- **Deployment Verification**: Health checks and comprehensive reporting
+- **Dry-run Support**: Testing capability without actual deployment
 
 ## Usage
 
@@ -85,21 +85,23 @@ steps:
 | `cache-invalidation-id` | CloudFront cache invalidation ID |
 | `build-size` | Total size of built assets |
 
-## Build Process
+## Deployment Process
 
-The action automatically handles the frontend build process:
+The action expects pre-built frontend artefacts and handles deployment:
 
-1. **Environment Detection**: Sets appropriate environment variables
-2. **Dependency Installation**: Installs npm dependencies if needed
-3. **Build Execution**: Runs environment-specific or standard build commands
-4. **Asset Optimisation**: Compresses JavaScript and CSS files
-5. **Integrity Verification**: Generates checksums for assets
+1. **Artefact Validation**: Verifies build directory exists and contains files
+2. **Version Generation**: Creates timestamped version path for rollback capability
+3. **S3 Deployment**: Uploads files to versioned S3 path (e.g., `/v20231201-12345678/`)
+4. **CloudFront Update**: Updates origin path to point to new version
+5. **Health Verification**: Performs health checks on deployed application
+6. **Rollback on Failure**: Reverts CloudFront origin path if verification fails
 
-### Supported Build Commands
+### Pre-built Artefact Requirements
 
-The action tries build commands in this order:
-1. `npm run build:${environment}` (e.g., `build:production`)
-2. `npm run build` (standard build command)
+The action expects:
+- **Build Directory**: Contains all static assets (HTML, CSS, JS, images)
+- **Index File**: Must include `index.html` as entry point
+- **Asset Structure**: Properly organised static assets ready for deployment
 
 ## Caching Strategy
 
@@ -117,9 +119,10 @@ The action tries build commands in this order:
 
 When `cloudfront-distribution-id` is provided:
 
-1. **Cache Invalidation**: Creates invalidation for all paths (`/*`)
-2. **Wait for Completion**: Optionally waits for invalidation to complete
-3. **URL Generation**: Uses CloudFront domain for deployment URL
+1. **Origin Path Update**: Updates CloudFront origin path to point to new version folder
+2. **Rollback Capability**: Stores previous origin path for automatic rollback
+3. **Health Verification**: Performs health checks on new deployment
+4. **Automatic Rollback**: Reverts origin path if health checks fail
 
 ## Deployment Verification
 
@@ -132,10 +135,11 @@ The action includes comprehensive verification:
 
 ## Error Handling
 
-- **Missing Dependencies**: Automatically installs if node_modules missing
-- **Build Failures**: Fails fast with clear error messages
-- **S3 Sync Issues**: Provides detailed AWS CLI output
-- **Health Check Failures**: Warns but doesn't fail (allows for DNS propagation)
+- **Missing Artefacts**: Fails if build directory doesn't exist or is empty
+- **S3 Sync Issues**: Provides detailed AWS CLI output for troubleshooting
+- **CloudFront Update Failures**: Handles origin path update errors gracefully
+- **Health Check Failures**: Triggers automatic rollback to previous version
+- **Rollback Failures**: Provides clear error messages for manual intervention
 
 ## Examples
 

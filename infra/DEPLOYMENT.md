@@ -5,6 +5,7 @@ This guide explains how to deploy Cloud Defenders with custom domains using your
 ## Custom Domain Configuration
 
 The infrastructure is configured to use:
+
 - **Website**: `cloud-defenders.lucky4some.com`
 - **API**: `cloud-defenders-api.lucky4some.com`
 
@@ -28,60 +29,73 @@ cp terraform.tfvars.example terraform.tfvars
 
 ## Deployment Steps
 
-### 1. Initialize Terraform
+### Automated Deployment (Recommended)
+
+The project uses GitHub Actions for automated deployment:
+
+1. **Push to Development Branch**: Automatically deploys to development environment
+2. **Push to Master Branch**: Automatically deploys to production environment
+3. **Manual Deployment**: Use GitHub Actions UI for manual deployments
+
+### Manual Deployment
+
+If you prefer manual deployment:
+
+#### 1. Initialize Terraform
 
 ```bash
 cd infra
 terraform init
 ```
 
-### 2. Plan the Deployment
+#### 2. Plan the Deployment
 
 ```bash
 terraform plan
 ```
 
 This will show you all the resources that will be created, including:
+
 - SSL certificates for both domains
 - CloudFront distribution with custom domain
 - API Gateway with custom domain
 - Route53 records
 
-### 3. Deploy the Infrastructure
+#### 3. Deploy the Infrastructure
 
 ```bash
 terraform apply
 ```
 
 **Note**: The deployment will take 15-20 minutes due to:
+
 - SSL certificate validation (2-5 minutes)
 - CloudFront distribution creation (10-15 minutes)
 
-### 4. Upload Game Files
+#### 4. Deploy Applications
 
-After deployment, upload your game files to the S3 bucket:
-
-```bash
-# Get the bucket name from Terraform output
-BUCKET_NAME=$(terraform output -raw s3_bucket_name)
-
-# Upload files
-aws s3 sync ../frontend/ s3://$BUCKET_NAME/ --delete
-```
-
-### 5. Invalidate CloudFront Cache
+The CI/CD pipeline handles application deployment automatically, but you can deploy manually:
 
 ```bash
-# Get the distribution ID
-DISTRIBUTION_ID=$(terraform output -raw cloudfront_distribution_id)
+# Deploy backend
+cd backend
+npm install --production
+zip -r ../dist/score_api.zip . -x "*.test.js" "__tests__/*" ".env*"
 
-# Create invalidation
-aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"
+aws lambda update-function-code \
+  --function-name cloud-defenders-api \
+  --zip-file fileb://../dist/score_api.zip
+
+# Deploy frontend
+cd ../frontend
+npm run build
+aws s3 sync dist/ s3://$(cd ../infra && terraform output -raw s3_bucket_name)/ --delete
 ```
 
 ## Custom Domain URLs
 
 After deployment, your game will be available at:
+
 - **Game Website**: https://cloud-defenders.lucky4some.com
 - **API Endpoint**: https://cloud-defenders-api.lucky4some.com
 
@@ -97,7 +111,7 @@ terraform apply -var="environment=prod"
 terraform apply -var="project_name=my-game"
 
 # This would create:
-# - Website: my-game.lucky4some.com  
+# - Website: my-game.lucky4some.com
 # - API: my-game-api.lucky4some.com
 ```
 
@@ -110,14 +124,18 @@ terraform output
 ```
 
 Key outputs:
+
 - `website_url`: Your custom domain website URL
 - `api_url`: Your custom domain API URL
-- `cloudfront_distribution_id`: For cache invalidation
-- `s3_bucket_name`: For uploading files
+- `cloudfront_distribution_id`: For cache invalidation and CI/CD pipeline
+- `s3_bucket_name`: For uploading files and CI/CD pipeline
+- `lambda_function_name`: Lambda function name for CI/CD pipeline
+- `lambda_alias_name`: Lambda alias name for rollback management
 
 ## SSL Certificates
 
 The infrastructure automatically creates and validates SSL certificates:
+
 - CloudFront certificate (in us-east-1 region)
 - API Gateway certificate (in your deployment region)
 
@@ -142,17 +160,21 @@ terraform destroy
 ## Troubleshooting
 
 ### Certificate Validation Issues
+
 If certificate validation fails:
+
 1. Check that the hosted zone ID is correct
 2. Ensure DNS propagation has completed (can take up to 48 hours)
 3. Verify Route53 permissions
 
 ### CloudFront Distribution Issues
+
 - CloudFront distributions can take 15-20 minutes to deploy
 - Changes to CloudFront require cache invalidation
 - Custom domains require certificates in us-east-1
 
 ### API Gateway Custom Domain Issues
+
 - Ensure the certificate is in the same region as API Gateway
 - Custom domain mapping can take a few minutes to become active
 - Check Route53 record creation

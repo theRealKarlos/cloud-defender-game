@@ -4,12 +4,12 @@ This custom GitHub Action deploys the Cloud Defenders backend application to AWS
 
 ## Features
 
-- 🏗️ **Automated Build Process**: Runs backend build scripts if available
-- 📦 **Smart Packaging**: Creates optimised Lambda deployment packages
+- 📦 **Pre-built Artefact Deployment**: Expects pre-built backend artefacts (no internal build process)
+- 🔄 **Lambda Version Management**: Creates new Lambda versions for rollback capability
+- 🎯 **Alias-based Deployment**: Uses Lambda aliases for zero-downtime deployments
+- ✅ **Automated Rollback**: Reverts alias to previous version on deployment failure
 - 🔍 **Package Validation**: Verifies package size and structure
-- 🚀 **Lambda Deployment**: Updates existing Lambda functions with new code
-- ✅ **Deployment Verification**: Performs health checks and basic invocation tests
-- 🧹 **Cleanup**: Automatically removes temporary files
+- 🚀 **Zero-downtime Deployment**: Updates alias to point to new version
 - 📊 **Detailed Reporting**: Provides comprehensive deployment summaries
 
 ## Usage
@@ -59,23 +59,22 @@ This custom GitHub Action deploys the Cloud Defenders backend application to AWS
 
 ## Deployment Process
 
-1. **Validation**: Validates inputs and checks source directory structure
-2. **Dependencies**: Installs production dependencies only
-3. **Build**: Runs build script if available in `package.json`
-4. **Packaging**: Creates optimised ZIP package excluding test files and development dependencies
-5. **Deployment**: Updates Lambda function code and configuration
-6. **Verification**: Waits for function to be active and performs basic health check
-7. **Cleanup**: Removes temporary deployment package
+1. **Artefact Validation**: Verifies source directory exists and contains required files
+2. **Current Version Capture**: Gets current alias information for rollback capability
+3. **Package Creation**: Creates optimised ZIP package from pre-built artefacts
+4. **Version Publishing**: Publishes new Lambda version with updated code
+5. **Alias Update**: Updates the `live` alias to point to new version
+6. **Health Verification**: Performs health checks on new deployment
+7. **Rollback on Failure**: Reverts alias to previous version if verification fails
 8. **Reporting**: Generates comprehensive deployment summary
 
 ## Package Optimisation
 
-The action automatically excludes the following from deployment packages:
-- Test files (`__tests__`, `*.test.js`, `*.spec.js`)
-- Development configuration files (`.env*`, `.eslintrc*`, `.prettierrc*`)
-- Documentation (`README.md`)
-- Coverage reports (`coverage`, `.nyc_output`)
-- Git files (`.git`, `.github`)
+The action creates deployment packages from pre-built artefacts:
+- **Source Files**: Includes all backend source code and dependencies
+- **Node Modules**: Includes production dependencies (`node_modules`)
+- **Configuration**: Includes environment-specific configuration
+- **Exclusions**: Automatically excludes development files and documentation
 
 ## Security Features
 
@@ -87,11 +86,12 @@ The action automatically excludes the following from deployment packages:
 ## Error Handling
 
 The action includes comprehensive error handling for:
-- Missing or invalid inputs
-- Build failures
+- Missing or invalid artefacts
 - Package creation issues
-- Lambda deployment failures
-- Function verification problems
+- Lambda version publishing failures
+- Alias update failures
+- Health check failures (triggers automatic rollback)
+- Rollback failures (provides clear error messages)
 
 ## Example Workflows
 

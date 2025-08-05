@@ -181,6 +181,53 @@ Destroy all AWS infrastructure.
 **Parameters:**
 - `-Force`: Skip confirmation prompts
 
+### `health-check.ps1`
+Perform post-deployment health checks for both frontend and backend.
+
+**Usage:**
+```powershell
+.\scripts\health-check.ps1 [-Environment <string>] [-Region <string>]
+```
+
+**Parameters:**
+- `-Environment`: Environment to check (default: "production")
+- `-Region`: AWS region (default: "eu-west-2")
+
+**Features:**
+- Frontend health check (HTTP status and response time)
+- Backend health check (Lambda function invocation)
+- Comprehensive reporting with pass/fail status
+- Used by CI/CD pipeline for deployment verification
+
+### `rollback-manager.ps1`
+Manage manual rollbacks for both frontend and backend deployments.
+
+**Usage:**
+```powershell
+# Rollback backend to specific version
+.\scripts\rollback-manager.ps1 -Component "backend" -Environment "production" -FunctionName "my-function" -PreviousVersion "5"
+
+# Rollback frontend to specific origin path
+.\scripts\rollback-manager.ps1 -Component "frontend" -Environment "production" -CloudFrontDistributionId "E123456789" -PreviousOriginPath "/v20231201-12345678"
+
+# Rollback both components
+.\scripts\rollback-manager.ps1 -Component "both" -Environment "production" -FunctionName "my-function" -PreviousVersion "5" -CloudFrontDistributionId "E123456789" -PreviousOriginPath "/v20231201-12345678"
+```
+
+**Parameters:**
+- `-Component`: Component to rollback ("frontend", "backend", or "both")
+- `-Environment`: Environment to rollback (default: "production")
+- `-FunctionName`: Lambda function name (for backend rollback)
+- `-PreviousVersion`: Previous Lambda version number
+- `-CloudFrontDistributionId`: CloudFront distribution ID (for frontend rollback)
+- `-PreviousOriginPath`: Previous CloudFront origin path
+
+**Features:**
+- Backend rollback: Reverts Lambda alias to previous version
+- Frontend rollback: Reverts CloudFront origin path to previous version
+- Comprehensive error handling and reporting
+- Supports both individual and combined rollbacks
+
 ### `utils/fix-existing-resources.ps1`
 Fix conflicts with existing AWS resources.
 

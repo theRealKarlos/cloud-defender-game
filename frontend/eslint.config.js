@@ -87,10 +87,10 @@ module.exports = [
             'no-alert': 'off', // Allow alerts for error handling
             
             // Style consistency
-            'indent': ['error', 4],
+            // 'indent': ['error', 2], // Disabled - Prettier handles indentation
             'quotes': ['error', 'single', { 'avoidEscape': true }],
             'semi': ['error', 'always'],
-            'comma-dangle': ['error', 'never'],
+            // 'comma-dangle': ['error', 'always-multiline'], // Disabled - Prettier handles trailing commas
             
             // Best practices
             'eqeqeq': ['error', 'always'],

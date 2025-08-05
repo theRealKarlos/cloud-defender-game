@@ -113,6 +113,7 @@ jobs:
     needs: [build-frontend, build-backend, determine-environment]
     if: success() && needs.determine-environment.outputs.should_deploy == 'true' && needs.determine-environment.outputs.environment == 'development'
     permissions:
+      contents: read
       id-token: write
       pull-requests: write
     with:
@@ -131,6 +132,7 @@ jobs:
     needs: [build-frontend, build-backend, determine-environment]
     if: success() && needs.determine-environment.outputs.should_deploy == 'true' && needs.determine-environment.outputs.environment == 'production'
     permissions:
+      contents: read
       id-token: write
       pull-requests: write
     with:

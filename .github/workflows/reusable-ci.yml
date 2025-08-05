@@ -95,6 +95,7 @@ jobs:
           npm audit --audit-level=high --json > audit-results.json || echo "Audit completed with findings"
 
       - name: Dependency Review
+        if: github.event_name == 'pull_request'
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high

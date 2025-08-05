@@ -61,7 +61,7 @@ param(
 )
 
 # Function to rollback backend
-function Rollback-Backend {
+function Undo-BackendDeployment {
     param(
         [string]$FunctionName,
         [string]$PreviousVersion,
@@ -98,7 +98,7 @@ function Rollback-Backend {
 }
 
 # Function to rollback frontend
-function Rollback-Frontend {
+function Undo-FrontendDeployment {
     param(
         [string]$CloudFrontDistributionId,
         [string]$PreviousOriginPath,
@@ -162,7 +162,7 @@ $overallSuccess = $true
 # Backend rollback
 if ($Component -eq "backend" -or $Component -eq "both") {
     Write-Host "=== Backend Rollback ===" -ForegroundColor Green
-    $backendSuccess = Rollback-Backend -FunctionName $FunctionName -PreviousVersion $PreviousVersion -AwsRegion $AwsRegion
+    $backendSuccess = Undo-BackendDeployment -FunctionName $FunctionName -PreviousVersion $PreviousVersion -AwsRegion $AwsRegion
     if (-not $backendSuccess) {
         $overallSuccess = $false
     }
@@ -172,7 +172,7 @@ if ($Component -eq "backend" -or $Component -eq "both") {
 # Frontend rollback
 if ($Component -eq "frontend" -or $Component -eq "both") {
     Write-Host "=== Frontend Rollback ===" -ForegroundColor Green
-    $frontendSuccess = Rollback-Frontend -CloudFrontDistributionId $CloudFrontDistributionId -PreviousOriginPath $PreviousOriginPath -AwsRegion $AwsRegion
+    $frontendSuccess = Undo-FrontendDeployment -CloudFrontDistributionId $CloudFrontDistributionId -PreviousOriginPath $PreviousOriginPath -AwsRegion $AwsRegion
     if (-not $frontendSuccess) {
         $overallSuccess = $false
     }
@@ -183,7 +183,8 @@ if ($Component -eq "frontend" -or $Component -eq "both") {
 if ($overallSuccess) {
     Write-Host "🎉 Rollback completed successfully!" -ForegroundColor Green
     exit 0
-} else {
+}
+else {
     Write-Host "💀 Some rollback operations failed!" -ForegroundColor Red
     exit 1
 } 

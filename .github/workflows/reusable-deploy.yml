@@ -30,10 +30,10 @@ on:
         required: false
         type: string
         default: ""
-      aws-role-secret:
-        description: "Secret name for AWS role to assume"
+    secrets:
+      AWS_ROLE_TO_ASSUME:
+        description: "The ARN of the AWS IAM role to assume."
         required: true
-        type: string
     outputs:
       deployment-url:
         description: "URL of the deployed application"
@@ -319,7 +319,7 @@ jobs:
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets[inputs.aws-role-secret] }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-session-name: GitHubActions-TerraformPlan
           aws-region: ${{ inputs.aws-region }}
           mask-aws-account-id: false
@@ -412,7 +412,7 @@ jobs:
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets[inputs.aws-role-secret] }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-session-name: GitHubActions-Deploy
           aws-region: ${{ inputs.aws-region }}
           mask-aws-account-id: false

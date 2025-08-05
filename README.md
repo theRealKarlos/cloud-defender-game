@@ -70,6 +70,65 @@ cloud-defenders-game/
 
 ## Development Environment Setup
 
+### Prerequisites
+
+- Node.js (v18 or higher)
+- npm (comes with Node.js)
+- Git
+- AWS CLI (for deployment)
+- PowerShell (for Windows development)
+
+### Testing CI Scripts Locally
+
+This project uses cross-platform scripts to ensure compatibility between Windows development and Linux CI environments. You can test the Bash scripts locally using WSL (Windows Subsystem for Linux):
+
+#### Prerequisites for WSL Testing
+
+1. **Install WSL** (if not already installed):
+
+   ```powershell
+   wsl --install
+   ```
+
+2. **Install zip utility** in WSL:
+   ```bash
+   sudo apt update
+   sudo apt install -y zip
+   ```
+
+#### Testing Bash Build Scripts
+
+Test the backend build script that will run in CI:
+
+```bash
+# Test the Bash build script
+wsl bash scripts/build/build-backend.sh
+
+# Test via npm script
+wsl bash -c "cd backend && npm run build:ci"
+```
+
+#### Testing Health Check Scripts
+
+Test the deployment health check script:
+
+```bash
+# Test help output
+wsl bash scripts/health-check.sh --help
+
+# Test with actual URLs (replace with your deployment URLs)
+wsl bash scripts/health-check.sh \
+  --frontend-url "https://your-frontend-url.com" \
+  --backend-url "https://your-backend-url.com"
+```
+
+#### Benefits of WSL Testing
+
+- **Validate CI scripts locally**: Test the exact same scripts that run in GitHub Actions
+- **Debug issues early**: Identify and fix problems before pushing to CI
+- **Ensure cross-platform compatibility**: Verify scripts work on both Windows and Linux
+- **Faster development cycle**: No need to push to CI to test script changes
+
 ### Automated Setup (Recommended)
 
 Run the setup script as Administrator:

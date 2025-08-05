@@ -12,6 +12,7 @@
     "format": "prettier --write *.js src/**/*.js __tests__/**/*.js",
     "format:check": "prettier --check *.js src/**/*.js __tests__/**/*.js",
     "build": "powershell -ExecutionPolicy Bypass -File ../scripts/build-backend.ps1",
+    "build:ci": "bash ../scripts/build/build-backend.sh",
     "build:dev": "powershell -ExecutionPolicy Bypass -File ../scripts/build-backend.ps1 -Environment development",
     "deploy": "aws lambda update-function-code --function-name cloud-defenders-score-api --zip-file fileb://../dist/score_api.zip"
   },

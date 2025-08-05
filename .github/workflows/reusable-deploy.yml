@@ -363,10 +363,10 @@ jobs:
           echo "Running post-deployment health checks for ${{ inputs.environment }} environment..."
 
           # Use the dedicated health check script
-          pwsh -File scripts/health-check.ps1 \
-            -FrontendUrl "${{ steps.deploy-frontend.outputs.deployment-url }}" \
-            -BackendUrl "${{ steps.deploy-backend.outputs.function-url }}" \
-            -Timeout 30
+          bash scripts/health-check.sh \
+            --frontend-url "${{ steps.deploy-frontend.outputs.deployment-url }}" \
+            --backend-url "${{ steps.deploy-backend.outputs.function-url }}" \
+            --timeout 30
 
       - name: Generate deployment summary
         run: |

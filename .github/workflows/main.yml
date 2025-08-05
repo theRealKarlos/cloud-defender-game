@@ -102,7 +102,7 @@ jobs:
       component: backend
       node-version: "${{ vars.NODE_VERSION }}"
       working-directory: backend
-      build-command: build
+      build-command: build:ci
       artefact-name: backend-build
       environment: ${{ needs.determine-environment.outputs.environment }}
 

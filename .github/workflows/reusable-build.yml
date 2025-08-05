@@ -178,4 +178,12 @@ jobs:
           echo "✅ **Artefact**: Created" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Component**: ${{ inputs.component }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Working Directory**: \`
+          echo "**Working Directory**: \`${{ inputs.working-directory }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Command**: \`npm run ${{ inputs.build-command }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment**: \`${{ inputs.environment }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Node Version**: \`${{ inputs.node-version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Artefact Name**: \`${{ steps.build-artefact.outputs.artefact-name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Artefact Path**: \`${{ steps.build-artefact.outputs.artefact-path }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Artefact Checksum**: \`${{ steps.build-artefact.outputs.artefact-path }}.sha256\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Artefact Size**: \`$(du -sh ${{ steps.build-artefact.outputs.artefact-path }})\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Artefact Type**: \`$(file ${{ steps.build-artefact.outputs.artefact-path }})\`" >> $GITHUB_STEP_SUMMARY

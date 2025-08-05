@@ -13,8 +13,8 @@
     "lint:check": "eslint js/**/*.js __tests__/**/*.js",
     "security": "npm audit",
     "security:fix": "npm audit fix",
-    "format": "prettier --write js/**/*.js __tests__/**/*.js *.html *.css",
-    "format:check": "prettier --check js/**/*.js __tests__/**/*.js *.html *.css",
+    "format": "prettier --write \"js/**/*.js\" \"__tests__/**/*.js\" \"*.html\"",
+    "format:check": "prettier --check \"js/**/*.js\" \"__tests__/**/*.js\" \"*.html\"",
     "check": "npm run lint:check && npm run security && npm test"
   },
   "keywords": [

@@ -15,7 +15,7 @@ output "stage_name" {
 
 output "api_url" {
   description = "API Gateway v2 URL"
-  value       = "${aws_apigatewayv2_stage.score_api_stage.invoke_url}"
+  value       = aws_apigatewayv2_stage.score_api_stage.invoke_url
 }
 
 output "api_endpoint" {

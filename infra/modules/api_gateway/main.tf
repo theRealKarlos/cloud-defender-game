@@ -29,7 +29,7 @@ resource "aws_apigatewayv2_integration" "lambda_integration" {
   integration_uri    = var.lambda_invoke_arn
   integration_type   = "AWS_PROXY"
   integration_method = "POST"
-  
+
   # Use payload format version 2.0 for HTTP API (not REST API)
   payload_format_version = "2.0"
 }

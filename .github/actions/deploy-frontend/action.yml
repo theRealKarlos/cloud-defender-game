@@ -302,7 +302,7 @@ runs:
         fi
 
     - name: Rollback on verification failure
-      if: inputs.dry-run != 'true' && steps.deploy.outputs.url != 'dry-run-mode'
+      if: failure() && inputs.dry-run != 'true'
       shell: bash
       run: |
         echo "🔄 Initiating rollback due to verification failure..."

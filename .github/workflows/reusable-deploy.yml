@@ -453,9 +453,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan-artefacts
-          # By default, upload-artifact ignores dotfiles. An explicit glob pattern
-          # must be used to include the .terraform.lock.hcl file.
           path: ${{ github.workspace }}/tf-artifacts
+          include-hidden-files: true
           retention-days: 30
           if-no-files-found: error
 

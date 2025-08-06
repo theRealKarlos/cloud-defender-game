@@ -684,17 +684,24 @@ jobs:
         if: inputs.frontend-artefact != ''
         run: |
           echo "Extracting frontend artifacts..."
-          cd frontend-artefact
+          # The deployment action expects the files to be in ./frontend/dist.
+          # We must create this directory first to ensure it exists. This is
+          # a robust way to handle archives that may not contain the root folder.
+          mkdir -p ./frontend/dist
 
-          # Stage 1: Extract the outer zip container
-          echo "Stage 1: Extracting outer zip container..."
-          unzip -q *.zip
+          # Debug: Show what's in the artifact directory.
+          echo "Contents of frontend-artefact directory:"
+          ls -la ./frontend-artefact
 
-          # Stage 2: Extract the inner tar.gz archive
-          echo "Stage 2: Extracting inner tar.gz archive..."
-          tar -xzf *.tar.gz -C ../frontend/
+          # The artifact is a .tar.gz file. We extract its contents directly
+          # into the prepared ./frontend/dist directory.
+          tar -xzf ./frontend-artefact/*.tar.gz -C ./frontend/dist/
 
-          echo "✅ Frontend artifacts extracted to frontend/dist/"
+          echo "✅ Frontend artifacts extracted."
+
+          # Debug: Verify the files are in the correct location.
+          echo "Contents of ./frontend/dist after extraction:"
+          ls -la ./frontend/dist
 
       - name: Deploy frontend
         id: deploy-frontend

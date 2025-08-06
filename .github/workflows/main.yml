@@ -121,8 +121,8 @@ jobs:
       aws-region: "${{ vars.AWS_REGION }}"
       terraform-version: "${{ vars.TERRAFORM_VERSION }}"
       working-directory: infra
-      frontend-artefact: frontend-build
-      backend-artefact: backend-build
+      frontend-artefact: frontend-build.tar.gz
+      backend-artefact: backend-build.zip
     secrets:
       AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
 
@@ -141,8 +141,8 @@ jobs:
       aws-region: "${{ vars.AWS_REGION }}"
       terraform-version: "${{ vars.TERRAFORM_VERSION }}"
       working-directory: infra
-      frontend-artefact: frontend-build
-      backend-artefact: backend-build
+      frontend-artefact: frontend-build.tar.gz
+      backend-artefact: backend-build.zip
     secrets:
       AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
 
@@ -255,7 +255,7 @@ jobs:
             else
               echo "All CI checks passed. Ready for deployment."
             fi
-            else
-              echo "❌ CI/CD Pipeline failed. Please check the failed jobs above."
-              exit 1
-            fi
+          else
+            echo "❌ CI/CD Pipeline failed. Please check the failed jobs above."
+            exit 1
+          fi

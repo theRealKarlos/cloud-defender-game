@@ -406,6 +406,32 @@ jobs:
             exit 1
           fi
 
+      # =================================================================
+      # 📦 PREPARE ARTIFACTS FOR UPLOAD
+      # =================================================================
+      # Copy the .terraform.lock.hcl file into the working directory to
+      # ensure all files are in a single location for the upload step.
+      # This prevents the upload-artifact action from excluding the lock
+      # file due to path inconsistencies.
+      # =================================================================
+      - name: Prepare artifacts for upload
+        if: steps.plan.outputs.plan_status != 'failed'
+        run: |
+          echo "Preparing artifacts for upload..."
+
+          # Copy the lock file to the working directory if it's in the project root
+          if [ -f ".terraform.lock.hcl" ] && [ ! -f "${{ inputs.working-directory }}/.terraform.lock.hcl" ]; then
+            echo "Copying .terraform.lock.hcl from project root to working directory..."
+            cp .terraform.lock.hcl "${{ inputs.working-directory }}/"
+            echo "✅ Lock file copied to working directory"
+          else
+            echo "✅ Lock file already in working directory or not found in root"
+          fi
+
+          # Verify all required files are present in the working directory
+          echo "Verifying required files in working directory:"
+          ls -la "${{ inputs.working-directory }}/" | grep -E "(tfplan|plan-output.txt|.terraform.lock.hcl)" || true
+
       - name: Generate cost estimate with Infracost
         uses: infracost/actions/comment@v1
         if: steps.plan.outputs.plan_status == 'changes'
@@ -418,17 +444,14 @@ jobs:
       # 📦 UPLOAD TERRAFORM PLAN ARTIFACTS
       # =================================================================
       # Upload the Terraform plan and related files for the deploy job.
-      # The lock file path is dynamically determined by the locate-lock-file step.
+      # All files are now consolidated in the working directory.
       # =================================================================
       - name: Upload Terraform plan artefacts
         if: steps.plan.outputs.plan_status != 'failed'
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan-artefacts
-          path: |
-            ${{ inputs.working-directory }}/tfplan
-            ${{ inputs.working-directory }}/plan-output.txt
-            ${{ steps.locate-lock-file.outputs.lock_file_path }}
+          path: ${{ inputs.working-directory }}
           retention-days: 30
           if-no-files-found: error
 
@@ -525,8 +548,8 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         run: |
           echo "Restoring Terraform lock file from plan artifacts..."
-          if [ -f "../terraform-artefacts/.terraform.lock.hcl" ]; then
-            cp ../terraform-artefacts/.terraform.lock.hcl .
+          if [ -f "../terraform-artefacts/infra/.terraform.lock.hcl" ]; then
+            cp ../terraform-artefacts/infra/.terraform.lock.hcl .
             echo "✅ Terraform lock file restored to working directory"
           else
             echo "❌ Terraform lock file not found in artifacts"
@@ -541,7 +564,7 @@ jobs:
           echo "Applying Terraform infrastructure changes for ${{ inputs.environment }}..."
 
           # Copy the plan from artefacts
-          cp ../terraform-artefacts/tfplan .
+          cp ../terraform-artefacts/infra/tfplan .
 
           # Apply the plan (no init needed as cache is restored)
           if terraform apply -input=false tfplan; then

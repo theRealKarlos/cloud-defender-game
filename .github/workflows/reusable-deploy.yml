@@ -324,11 +324,23 @@ jobs:
           aws-region: ${{ inputs.aws-region }}
           mask-aws-account-id: false
 
+      # =================================================================
+      # 🔧 DYNAMIC BACKEND INITIALIZATION
+      # =================================================================
+      # Initialise Terraform with environment-specific backend configuration.
+      # This ensures each environment (development, production) uses its own
+      # isolated state file, preventing state corruption and lock conflicts.
+      #
+      # The -backend-config flag overrides the generic key in backend.tf with
+      # the environment-specific path, ensuring proper state isolation.
+      # =================================================================
       - name: Terraform Init
         working-directory: ${{ inputs.working-directory }}
         run: |
-          echo "Initialising Terraform..."
-          terraform init -input=false
+          echo "Initialising Terraform for environment: ${{ inputs.environment }}..."
+          backend_key="cloud-defenders/envs/${{ inputs.environment }}/terraform.tfstate"
+          echo "Using backend key: $backend_key"
+          terraform init -input=false -backend-config="key=$backend_key"
           echo "✅ Terraform initialisation with backend completed"
 
       - name: Cache Terraform directory
@@ -456,6 +468,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-
             ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-
+
+      # =================================================================
+      # 🔧 DEPLOYMENT BACKEND INITIALIZATION
+      # =================================================================
+      # Initialise Terraform for the deployment job to ensure it operates
+      # on the correct environment-specific state file before applying changes.
+      #
+      # This step is critical because the deployment job relies on cached
+      # Terraform state, but must ensure it targets the correct environment.
+      # =================================================================
+      - name: Terraform Init for Deployment
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Initialising Terraform for deployment to environment: ${{ inputs.environment }}..."
+          backend_key="cloud-defenders/envs/${{ inputs.environment }}/terraform.tfstate"
+          echo "Using backend key: $backend_key"
+          terraform init -input=false -backend-config="key=$backend_key"
+          echo "✅ Terraform initialisation for deployment completed"
 
       - name: Apply Terraform infrastructure changes
         working-directory: ${{ inputs.working-directory }}

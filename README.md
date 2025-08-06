@@ -239,6 +239,50 @@ Before deploying infrastructure, ensure you have:
 2. **Terraform installed** (v1.12 or later)
 3. **S3 bucket with Object Lock enabled** for Terraform state storage
 
+**Important: S3 Backend Configuration Requirements**
+
+The Terraform backend uses S3 with the `use_lockfile = true` setting, which requires:
+
+- **S3 Versioning**: Must be enabled on the bucket to support Object Lock
+- **S3 Object Lock**: Must be enabled to provide state locking functionality
+
+**Why These Are Required:**
+
+- **State Locking**: Prevents multiple Terraform operations from running simultaneously, which could corrupt the state file
+- **Versioning**: Required by AWS to enable Object Lock features
+- **Object Lock**: Provides the actual locking mechanism that prevents concurrent modifications to the state file
+
+**Important Note:** While Terraform may work locally without these settings (due to sequential execution and shorter operation times), it will **fail in GitHub Actions runners** with `412 PreconditionFailed` errors. This is because:
+
+- **Local Development**: Operations are sequential and typically complete quickly, reducing lock contention
+- **CI/CD Environment**: Multiple concurrent runs, longer operation times, and ephemeral runners create higher lock contention
+- **GitHub Actions**: Uses temporary credentials and different authentication patterns that are more sensitive to missing Object Lock configuration
+
+Without these settings, you'll encounter `412 PreconditionFailed` errors when Terraform tries to acquire a state lock in CI/CD environments.
+
+#### Dynamic Backend Configuration
+
+This project uses a dynamic backend configuration approach to ensure proper environment isolation:
+
+- **Generic Backend**: The `backend.tf` file contains a generic state file path
+- **Dynamic Override**: Environment-specific paths are provided during `terraform init` using the `-backend-config` flag
+- **Environment Isolation**: Each environment (dev, production) uses its own state file
+- **Prevents Accidents**: Ensures deployments target the correct environment
+
+**Local Development:**
+
+```bash
+terraform init -backend-config="key=cloud-defenders/envs/dev/terraform.tfstate"
+```
+
+**CI/CD Pipeline:**
+
+```bash
+terraform init -backend-config="key=cloud-defenders/envs/${{ inputs.environment }}/terraform.tfstate"
+```
+
+This approach follows Terraform best practices for multi-environment deployments and prevents state corruption from concurrent operations.
+
 #### Local Development Deployment
 
 For local development, you can use AWS SSO or a named profile:
@@ -252,8 +296,8 @@ $env:AWS_PROFILE = "your-profile-name"
 # Login to AWS SSO (if using SSO)
 aws sso login
 
-# Initialize Terraform
-terraform init
+# Initialise Terraform with environment-specific backend
+terraform init -backend-config="key=cloud-defenders/envs/dev/terraform.tfstate"
 
 # Plan the deployment
 terraform plan -var="aws_profile=your-profile-name" -var="environment=development"
@@ -261,6 +305,8 @@ terraform plan -var="aws_profile=your-profile-name" -var="environment=developmen
 # Apply the changes
 terraform apply -var="aws_profile=your-profile-name" -var="environment=development"
 ```
+
+**Note:** The `-backend-config` flag is required to specify the environment-specific state file. This ensures proper state isolation between environments.
 
 #### CI/CD Deployment
 

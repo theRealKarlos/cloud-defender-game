@@ -77,11 +77,23 @@ if (-not (Test-Path $lambdaZipPath)) {
 }
 Write-Host "Lambda deployment package found: $lambdaZipPath" -ForegroundColor Green
 
-# Initialize Terraform
-Write-Host "Initializing Terraform..." -ForegroundColor Blue
-terraform init
+# ============================================================================
+# TERRAFORM INITIALISATION WITH DYNAMIC BACKEND
+# ============================================================================
+# Initialise Terraform with environment-specific backend configuration.
+# This ensures each environment (dev, production) uses its own isolated
+# state file, preventing state corruption and accidental deployments.
+#
+# The -backend-config flag overrides the generic key in backend.tf with
+# the environment-specific path, ensuring proper state isolation.
+# ============================================================================
+Write-Host "Initialising Terraform for environment: $Environment..." -ForegroundColor Blue
+$backendKey = "cloud-defenders/envs/$Environment/terraform.tfstate"
+Write-Host "Using backend key: $backendKey" -ForegroundColor Yellow
+
+terraform init -backend-config="key=$backendKey"
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "Terraform initialization failed"
+    Write-Error "Terraform initialisation failed"
     exit 1
 }
 
@@ -137,22 +149,24 @@ Write-Host "  • S3 Website URL: $s3Url" -ForegroundColor White
 Write-Host "  • Lambda Function: $lambdaName" -ForegroundColor White
 Write-Host "  • DynamoDB Table: $dynamoTable" -ForegroundColor White
 
-    # Update frontend API configuration
-    if (-not $SkipBackend) {
-        Write-Host ""
-        Write-Host "Updating frontend API configuration..." -ForegroundColor Blue
-        $updateScript = Join-Path $PSScriptRoot ".." "utils" "update-api-config.ps1"
-        if (Test-Path $updateScript) {
-            & $updateScript -Profile $Profile
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "Frontend API configuration updated successfully" -ForegroundColor Green
-            } else {
-                Write-Warning "Failed to update frontend API configuration"
-            }
-        } else {
-            Write-Warning "update-api-config.ps1 script not found."
+# Update frontend API configuration
+if (-not $SkipBackend) {
+    Write-Host ""
+    Write-Host "Updating frontend API configuration..." -ForegroundColor Blue
+    $updateScript = Join-Path $PSScriptRoot ".." "utils" "update-api-config.ps1"
+    if (Test-Path $updateScript) {
+        & $updateScript -Profile $Profile
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Frontend API configuration updated successfully" -ForegroundColor Green
+        }
+        else {
+            Write-Warning "Failed to update frontend API configuration"
         }
     }
+    else {
+        Write-Warning "update-api-config.ps1 script not found."
+    }
+}
 
 Write-Host ""
 Write-Host "Next Steps:" -ForegroundColor Cyan

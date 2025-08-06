@@ -100,11 +100,11 @@ jobs:
       # 🎭 DUMMY ARTIFACT CREATION
       # =================================================================
       # This step creates a temporary, empty placeholder file that satisfies
-      # Terraform's filebase64sha256() function calls during validation.
+      # Terraform''s filebase64sha256() function calls during validation.
       #
       # WHY: The validate-infrastructure job runs before the real artifacts
       # are downloaded. Terraform validation needs the file to exist for
-      # syntax checking, but doesn't need the actual content at this stage.
+      # syntax checking, but doesn''t need the actual content at this stage.
       #
       # INDUSTRY STANDARD: This is the recommended approach for CI/CD
       # pipelines where infrastructure validation runs in parallel with or
@@ -293,11 +293,11 @@ jobs:
       # 🎭 DUMMY ARTIFACT CREATION
       # =================================================================
       # This step creates a temporary, empty placeholder file that satisfies
-      # Terraform's filebase64sha256() function calls during planning.
+      # Terraform''s filebase64sha256() function calls during planning.
       #
       # WHY: The plan-and-cost job runs before the real artifacts are
       # downloaded. Terraform plan needs the file to exist for state
-      # comparison, but doesn't need the actual content at this stage.
+      # comparison, but doesn''t need the actual content at this stage.
       #
       # INDUSTRY STANDARD: This is the recommended approach for CI/CD
       # pipelines where infrastructure planning runs in parallel with or
@@ -381,24 +381,24 @@ jobs:
             exit 1
           fi
 
-          - name: Generate cost estimate with Infracost
-          uses: infracost/actions/comment@v1
-          if: steps.plan.outputs.plan_status == 'changes'
-          with:
-           path: ${{ inputs.working-directory }}/tfplan
-           behavior: new
-           github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate cost estimate with Infracost
+        uses: infracost/actions/comment@v1
+        if: steps.plan.outputs.plan_status == 'changes'
+        with:
+          path: ${{ inputs.working-directory }}/tfplan
+          behavior: new
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-          - name: Upload Terraform plan artefacts
-          if: steps.plan.outputs.plan_status != 'failed'
-          uses: actions/upload-artifact@v4
-          with:
-           name: terraform-plan-artefacts
-           path: |
-             ${{ inputs.working-directory }}/tfplan
-             ${{ inputs.working-directory }}/plan-output.txt
-             ${{ inputs.working-directory }}/.terraform.lock.hcl
-           retention-days: 30
+      - name: Upload Terraform plan artefacts
+        if: steps.plan.outputs.plan_status != 'failed'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-artefacts
+          path: |
+            ${{ inputs.working-directory }}/tfplan
+            ${{ inputs.working-directory }}/plan-output.txt
+            ${{ inputs.working-directory }}/.terraform.lock.hcl
+          retention-days: 30
 
   deploy:
     name: Deploy Infrastructure & Applications
@@ -470,25 +470,25 @@ jobs:
             ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-
             ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-
 
-                    # =================================================================
-        # 🔧 DEPLOYMENT EXECUTION
-        # =================================================================
-        # The deployment job relies on the cached Terraform state from the
-        # plan-and-cost job, which already has the correct environment-specific
-        # backend configuration. No additional initialisation is needed.
-        #
-        # The cached .terraform directory contains all necessary provider plugins
-        # and the correct backend configuration for the target environment.
-        # =================================================================
+      # =================================================================
+      # 🔧 DEPLOYMENT EXECUTION
+      # =================================================================
+      # The deployment job relies on the cached Terraform state from the
+      # plan-and-cost job, which already has the correct environment-specific
+      # backend configuration. No additional initialisation is needed.
+      #
+      # The cached .terraform directory contains all necessary provider plugins
+      # and the correct backend configuration for the target environment.
+      # =================================================================
 
-        # =================================================================
-        # 🔧 RESTORE DEPENDENCY LOCK FILE
-        # =================================================================
-        # Restore the .terraform.lock.hcl file from the plan job to ensure
-        # consistency between plan and apply operations. This prevents the
-        # "Inconsistent dependency lock file" error by using the exact same
-        # provider versions that were used during planning.
-        # =================================================================
+      # =================================================================
+      # 🔧 RESTORE DEPENDENCY LOCK FILE
+      # =================================================================
+      # Restore the .terraform.lock.hcl file from the plan job to ensure
+      # consistency between plan and apply operations. This prevents the
+      # "Inconsistent dependency lock file" error by using the exact same
+      # provider versions that were used during planning.
+      # =================================================================
       - name: Restore Terraform lock file
         working-directory: ${{ inputs.working-directory }}
         run: |

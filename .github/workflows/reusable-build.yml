@@ -119,7 +119,7 @@ jobs:
 
           # Create artefact based on component type
           if [ "${{ inputs.component }}" = "frontend" ]; then
-            # Frontend: Package source files since there's no actual build
+            # Frontend: Package source files since there is no actual build
             cd ${{ inputs.working-directory }}
             tar -czf "../dist/$artefact_name.tar.gz" \
               --exclude="node_modules" \

@@ -528,6 +528,15 @@ jobs:
             ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-
             ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-
 
+      - name: Debug After Cache Restore
+        if: always()
+        run: |
+          echo "--- Verifying infra directory before apply ---"
+          ls -la ${{ inputs.working-directory }}
+          echo "--- Verifying .terraform directory structure before apply ---"
+          ls -R ${{ inputs.working-directory }}/.terraform
+          echo "--- End of debug ---"
+
       # =================================================================
       # 🔧 DEPLOYMENT EXECUTION
       # =================================================================

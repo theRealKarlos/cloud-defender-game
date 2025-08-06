@@ -392,6 +392,28 @@ jobs:
             exit 1
           fi
 
+      - name: Stage Deployment Artifacts
+        if: steps.plan.outputs.plan_status != 'failed'
+        run: |
+          echo "Staging deployment artifacts..."
+          mkdir -p ../tf-artifacts
+
+          echo "Copying tfplan to staging directory..."
+          cp tfplan ../tf-artifacts/
+
+          echo "Copying .terraform.lock.hcl to staging directory..."
+          cp .terraform.lock.hcl ../tf-artifacts/
+
+          echo "Verifying staged artifacts:"
+          ls -la ../tf-artifacts/
+
+          # Verify both files exist in staging
+          if [ ! -f "../tf-artifacts/tfplan" ] || [ ! -f "../tf-artifacts/.terraform.lock.hcl" ]; then
+            echo "❌ ERROR: Required artifact files missing from staging directory"
+            exit 1
+          fi
+          echo "✅ All required artifacts staged successfully"
+
       - name: Debug File Locations After Plan
         if: always()
         run: |
@@ -413,9 +435,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan-artefacts
-          path: |
-            ${{ inputs.working-directory }}/tfplan
-            ${{ inputs.working-directory }}/.terraform.lock.hcl
+          path: tf-artifacts/
           retention-days: 30
           if-no-files-found: error
 

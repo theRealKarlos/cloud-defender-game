@@ -566,7 +566,7 @@ jobs:
         run: |
           echo "Staging backend artefact for Terraform..."
           mkdir -p ./dist
-          mv ./backend-artefact/score_api.zip ./dist/score_api.zip
+          mv ./backend-artefact/backend-build.zip ./dist/score_api.zip
           echo "✅ Backend artefact moved to ./dist/score_api.zip"
 
       - name: Download Terraform plan

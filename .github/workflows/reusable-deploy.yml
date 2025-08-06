@@ -381,92 +381,56 @@ jobs:
             exit 1
           fi
 
-      - name: Locate Terraform lock file
+      # The 'Locate Terraform lock file' and 'Prepare artifacts for upload' steps
+      # are now replaced by a single, more robust step that uses a staging directory
+      # to prepare a minimal artifact for upload.
+      - name: Prepare minimal artifact for deployment
         if: steps.plan.outputs.plan_status != 'failed'
-        id: locate-lock-file
         run: |
-          echo "Locating Terraform lock file..."
+          set -e
+          echo "Creating staging directory for artifacts..."
+          mkdir -p staging
 
-          # Check in the working directory first (expected location)
-          if [ -f "${{ inputs.working-directory }}/.terraform.lock.hcl" ]; then
-            echo "✅ Terraform lock file found in working directory: ${{ inputs.working-directory }}/.terraform.lock.hcl"
-            echo "lock_file_path=${{ inputs.working-directory }}/.terraform.lock.hcl" >> $GITHUB_OUTPUT
-            ls -la "${{ inputs.working-directory }}/.terraform.lock.hcl"
-          # Check in project root (alternative location)
-          elif [ -f ".terraform.lock.hcl" ]; then
-            echo "✅ Terraform lock file found in project root: .terraform.lock.hcl"
-            echo "lock_file_path=.terraform.lock.hcl" >> $GITHUB_OUTPUT
-            ls -la ".terraform.lock.hcl"
+          echo "Copying terraform plan to staging directory..."
+          cp ${{ inputs.working-directory }}/tfplan staging/
+
+          echo "Locating and copying terraform lock file to staging directory..."
+          if [ -f ".terraform.lock.hcl" ]; then
+            echo "Lock file found in project root. Copying..."
+            cp .terraform.lock.hcl staging/
+          elif [ -f "${{ inputs.working-directory }}/.terraform.lock.hcl" ]; then
+            echo "Lock file found in working directory. Copying..."
+            cp ${{ inputs.working-directory }}/.terraform.lock.hcl staging/
           else
-            echo "❌ Terraform lock file not found in either location"
-            echo "Checking working directory: ${{ inputs.working-directory }}/"
-            ls -la "${{ inputs.working-directory }}/" || true
-            echo "Checking project root:"
-            ls -la ".terraform.lock.hcl" || true
+            echo "❌ ERROR: .terraform.lock.hcl not found in project root or working directory."
             exit 1
           fi
 
-      # =================================================================
-      # 📦 PREPARE ARTIFACTS FOR UPLOAD
-      # =================================================================
-      # Copy the .terraform.lock.hcl file into the working directory to
-      # ensure all files are in a single location for the upload step.
-      # This prevents the upload-artifact action from excluding the lock
-      # file due to path inconsistencies.
-      # =================================================================
-      - name: Prepare artifacts for upload
-        if: steps.plan.outputs.plan_status != 'failed'
-        run: |
-          echo "Preparing artifacts for upload..."
           echo "---"
-          echo "Listing current directory (CWD: $(pwd)):"
-          ls -la
+          echo "Final contents of staging directory to be uploaded:"
+          ls -la staging/
           echo "---"
-          echo "Listing project root (CWD/..):"
-          ls -la ..
-          echo "---"
-
-          # The working directory for this job is `infra`, so the project root is `..`
-          # We need to copy the lock file from the project root (`..`) into the current directory (`.`)
-          if [ -f "../.terraform.lock.hcl" ]; then
-            echo "Lock file found in project root. Copying to current directory..."
-            cp ../.terraform.lock.hcl .
-            echo "✅ Lock file copied."
-          else
-            echo "ℹ️ Terraform lock file not found in project root. Assuming it was generated here."
-          fi
-
-          echo "---"
-          echo "Final check of current directory contents before upload:"
-          ls -la
-          echo "Verifying required files are present for upload:"
-          if ! ls .terraform.lock.hcl tfplan plan-output.txt > /dev/null 2>&1; then
-              echo "❌ ERROR: One or more required artifact files are missing."
-              exit 1
-          else
-              echo "✅ All required artifact files are present."
-          fi
 
       - name: Generate cost estimate with Infracost
         uses: infracost/actions/comment@v1
         if: steps.plan.outputs.plan_status == 'changes'
         with:
-          path: ${{ inputs.working-directory }}/tfplan
+          path: staging/tfplan
           behavior: new
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # =================================================================
       # 📦 UPLOAD TERRAFORM PLAN ARTIFACTS
       # =================================================================
-      # Upload the Terraform plan and related files for the deploy job.
-      # All files are now consolidated in the working directory.
+      # Upload the Terraform plan and lock file for the deploy job.
+      # Only the staging directory with the essential files is uploaded.
       # =================================================================
       - name: Upload Terraform plan artefacts
         if: steps.plan.outputs.plan_status != 'failed'
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan-artefacts
-          path: ${{ inputs.working-directory }}
+          path: staging/
           retention-days: 30
           if-no-files-found: error
 
@@ -566,8 +530,8 @@ jobs:
           echo "Available files in artifacts:"
           ls -la ../terraform-artefacts/
 
-          # The artifact uploads the contents of the `infra` directory, not the directory itself.
-          # Therefore, the lock file should be at the root of the downloaded artifact path.
+          # The artifact now contains only the staging directory contents (tfplan and .terraform.lock.hcl)
+          # These files are at the root of the downloaded artifact path.
           if [ -f "../terraform-artefacts/.terraform.lock.hcl" ]; then
             cp ../terraform-artefacts/.terraform.lock.hcl .
             echo "✅ Terraform lock file restored to working directory"

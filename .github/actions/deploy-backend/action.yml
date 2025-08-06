@@ -42,10 +42,6 @@ inputs:
     description: "Comma-separated list of files/patterns to exclude from package"
     required: false
     default: "__tests__,*.test.js,*.spec.js,.env*,README.md"
-  pre-built-package:
-    description: "Path to pre-built deployment package (if provided, skips packaging)"
-    required: false
-    default: ""
 
 outputs:
   function-arn:
@@ -72,25 +68,14 @@ runs:
           exit 1
         fi
 
-        # If pre-built package is provided, skip source validation
-        if [ -n "${{ inputs.pre-built-package }}" ]; then
-          if [ ! -f "${{ inputs.pre-built-package }}" ]; then
-            echo "::error::Pre-built package ${{ inputs.pre-built-package }} does not exist"
-            exit 1
-          fi
-          echo "✅ Pre-built package validated: ${{ inputs.pre-built-package }}"
-        else
-          # Validate source directory and package.json for source-based deployment
-          if [ ! -d "${{ inputs.source-directory }}" ]; then
-            echo "::error::Source directory ${{ inputs.source-directory }} does not exist"
-            exit 1
-          fi
-          
-          if [ ! -f "${{ inputs.source-directory }}/package.json" ]; then
-            echo "::error::package.json not found in ${{ inputs.source-directory }}"
-            exit 1
-          fi
-          echo "✅ Source directory validated: ${{ inputs.source-directory }}"
+        if [ ! -d "${{ inputs.source-directory }}" ]; then
+          echo "::error::Source directory ${{ inputs.source-directory }} does not exist"
+          exit 1
+        fi
+
+        if [ ! -f "${{ inputs.source-directory }}/package.json" ]; then
+          echo "::error::package.json not found in ${{ inputs.source-directory }}"
+          exit 1
         fi
 
     - name: Validate source directory
@@ -106,77 +91,59 @@ runs:
     - name: Create deployment package
       id: package
       shell: bash
+      working-directory: ${{ inputs.source-directory }}
       run: |
-        # If pre-built package is provided, use it directly
-        if [ -n "${{ inputs.pre-built-package }}" ]; then
-          echo "Using pre-built deployment package..."
-          package_file="lambda-deployment-$(date +%s).zip"
-          
-          # Copy the pre-built package to workspace with a standard name
-          cp "${{ inputs.pre-built-package }}" "$GITHUB_WORKSPACE/$package_file"
-          
-          # Get package information
-          package_size=$(du -h "$GITHUB_WORKSPACE/$package_file" | cut -f1)
-          package_size_bytes=$(stat -f%z "$GITHUB_WORKSPACE/$package_file" 2>/dev/null || stat -c%s "$GITHUB_WORKSPACE/$package_file")
-          
-          echo "size=$package_size" >> $GITHUB_OUTPUT
-          echo "file=$package_file" >> $GITHUB_OUTPUT
-          echo "size_bytes=$package_size_bytes" >> $GITHUB_OUTPUT
-          
-          echo "Pre-built package used: $package_file ($package_size)"
+        echo "Creating Lambda deployment package..."
+
+        # Create temporary directory for packaging
+        package_dir=$(mktemp -d)
+        package_file="lambda-deployment-$(date +%s).zip"
+
+        # Copy source files excluding specified patterns
+        echo "Copying source files..."
+        rsync -av --progress . "$package_dir/" \
+          --exclude=node_modules \
+          --exclude=.git \
+          --exclude=.github \
+          --exclude=.env* \
+          --exclude=__tests__ \
+          --exclude=*.test.js \
+          --exclude=*.spec.js \
+          --exclude=coverage \
+          --exclude=.nyc_output \
+          --exclude=README.md \
+          --exclude=.eslintrc* \
+          --exclude=.prettierrc* \
+          --exclude=jest.config.js
+
+        # Copy production node_modules if they exist
+        if [ -d "node_modules" ]; then
+          echo "Copying production dependencies..."
+          cp -r node_modules "$package_dir/"
         else
-          echo "Creating Lambda deployment package from source..."
-          
-          # Create temporary directory for packaging
-          package_dir=$(mktemp -d)
-          package_file="lambda-deployment-$(date +%s).zip"
-          
-          # Copy source files excluding specified patterns
-          echo "Copying source files..."
-          rsync -av --progress . "$package_dir/" \
-            --exclude=node_modules \
-            --exclude=.git \
-            --exclude=.github \
-            --exclude=.env* \
-            --exclude=__tests__ \
-            --exclude=*.test.js \
-            --exclude=*.spec.js \
-            --exclude=coverage \
-            --exclude=.nyc_output \
-            --exclude=README.md \
-            --exclude=.eslintrc* \
-            --exclude=.prettierrc* \
-            --exclude=jest.config.js
-          
-          # Copy production node_modules if they exist
-          if [ -d "node_modules" ]; then
-            echo "Copying production dependencies..."
-            cp -r node_modules "$package_dir/"
-          else
-            echo "⚠️  No node_modules found - package may not include dependencies"
-          fi
-          
-          # Create ZIP package
-          cd "$package_dir"
-          zip -r "../$package_file" . -q
-          cd ..
-          
-          # Move package to workspace
-          mv "$package_file" "$GITHUB_WORKSPACE/"
-          
-          # Get package information
-          package_size=$(du -h "$GITHUB_WORKSPACE/$package_file" | cut -f1)
-          package_size_bytes=$(stat -f%z "$GITHUB_WORKSPACE/$package_file" 2>/dev/null || stat -c%s "$GITHUB_WORKSPACE/$package_file")
-          
-          echo "size=$package_size" >> $GITHUB_OUTPUT
-          echo "file=$package_file" >> $GITHUB_OUTPUT
-          echo "size_bytes=$package_size_bytes" >> $GITHUB_OUTPUT
-          
-          echo "Package created: $package_file ($package_size)"
-          
-          # Clean up temporary directory
-          rm -rf "$package_dir"
+          echo "⚠️  No node_modules found - package may not include dependencies"
         fi
+
+        # Create ZIP package
+        cd "$package_dir"
+        zip -r "../$package_file" . -q
+        cd ..
+
+        # Move package to workspace
+        mv "$package_file" "$GITHUB_WORKSPACE/"
+
+        # Get package information
+        package_size=$(du -h "$GITHUB_WORKSPACE/$package_file" | cut -f1)
+        package_size_bytes=$(stat -f%z "$GITHUB_WORKSPACE/$package_file" 2>/dev/null || stat -c%s "$GITHUB_WORKSPACE/$package_file")
+
+        echo "size=$package_size" >> $GITHUB_OUTPUT
+        echo "file=$package_file" >> $GITHUB_OUTPUT
+        echo "size_bytes=$package_size_bytes" >> $GITHUB_OUTPUT
+
+        echo "Package created: $package_file ($package_size)"
+
+        # Clean up temporary directory
+        rm -rf "$package_dir"
 
         # Validate package size (AWS Lambda limit is 50MB for direct upload)
         if [ "$package_size_bytes" -gt 52428800 ]; then

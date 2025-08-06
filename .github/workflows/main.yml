@@ -122,7 +122,7 @@ jobs:
       terraform-version: "${{ vars.TERRAFORM_VERSION }}"
       working-directory: infra
       frontend-artefact: frontend-build.tar.gz
-      backend-artefact: backend-build.zip
+      backend-artefact: backend-build
     secrets:
       AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
 
@@ -142,7 +142,7 @@ jobs:
       terraform-version: "${{ vars.TERRAFORM_VERSION }}"
       working-directory: infra
       frontend-artefact: frontend-build.tar.gz
-      backend-artefact: backend-build.zip
+      backend-artefact: backend-build
     secrets:
       AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
 

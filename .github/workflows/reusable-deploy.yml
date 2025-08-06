@@ -419,32 +419,33 @@ jobs:
         run: |
           echo "Preparing artifacts for upload..."
           echo "---"
-          echo "Listing project root before copy:"
+          echo "Listing current directory (CWD: $(pwd)):"
           ls -la
           echo "---"
-          echo "Listing working directory ('${{ inputs.working-directory }}') before copy:"
-          ls -la "${{ inputs.working-directory }}"
+          echo "Listing project root (CWD/..):"
+          ls -la ..
           echo "---"
 
-          # Copy the lock file to the working directory if it''s in the project root
-          if [ -f ".terraform.lock.hcl" ] && [ ! -f "${{ inputs.working-directory }}/.terraform.lock.hcl" ]; then
-            echo "Condition met: Lock file exists in root and not in working directory."
-            echo "Copying .terraform.lock.hcl from project root to working directory..."
-            mkdir -p "${{ inputs.working-directory }}"
-            cp .terraform.lock.hcl "${{ inputs.working-directory }}/"
-            echo "✅ Lock file copied to working directory"
+          # The working directory for this job is `infra`, so the project root is `..`
+          # We need to copy the lock file from the project root (`..`) into the current directory (`.`)
+          if [ -f "../.terraform.lock.hcl" ]; then
+            echo "Lock file found in project root. Copying to current directory..."
+            cp ../.terraform.lock.hcl .
+            echo "✅ Lock file copied."
           else
-            echo "Condition not met. Either lock file is not in root, or it is already in the working directory."
+            echo "ℹ️ Terraform lock file not found in project root. Assuming it was generated here."
           fi
 
           echo "---"
-          echo "Listing working directory ('${{ inputs.working-directory }}') after copy:"
-          ls -la "${{ inputs.working-directory }}"
-          echo "---"
-
-          # Verify all required files are present in the working directory
+          echo "Final check of current directory contents before upload:"
+          ls -la
           echo "Verifying required files are present for upload:"
-          ls -la "${{ inputs.working-directory }}/" | grep -E "(tfplan|plan-output.txt|.terraform.lock.hcl)" || true
+          if ! ls .terraform.lock.hcl tfplan plan-output.txt > /dev/null 2>&1; then
+              echo "❌ ERROR: One or more required artifact files are missing."
+              exit 1
+          else
+              echo "✅ All required artifact files are present."
+          fi
 
       - name: Generate cost estimate with Infracost
         uses: infracost/actions/comment@v1

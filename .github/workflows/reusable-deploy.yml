@@ -387,9 +387,9 @@ jobs:
           echo "Staging backend artifact for Terraform planning..."
           mkdir -p ../dist
           # Extract the tar.gz backend artifact
-          tar -xzf ../backend-artefact-temp/backend-build.tar.gz -C ../backend-artefact-temp/
+          tar -xzf ./backend-artefact-temp/backend-build.tar.gz -C ./backend-artefact-temp/
           # Create the expected score_api.zip for Terraform
-          cd ../backend-artefact-temp
+          cd ./backend-artefact-temp
           zip -r ../dist/score_api.zip . -q
           cd ..
           echo "✅ Backend artifact extracted and packaged as ../dist/score_api.zip"

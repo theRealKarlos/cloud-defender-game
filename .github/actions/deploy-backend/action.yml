@@ -1,64 +1,68 @@
-name: 'Deploy Backend to AWS Lambda'
-description: 'Deploy backend application to AWS Lambda with packaging and verification for Cloud Defenders'
-author: 'Cloud Defenders Team'
+name: "Deploy Backend to AWS Lambda"
+description: "Deploy backend application to AWS Lambda with packaging and verification for Cloud Defenders"
+author: "Cloud Defenders Team"
 
 inputs:
   aws-region:
-    description: 'AWS region for deployment'
+    description: "AWS region for deployment"
     required: false
-    default: 'eu-west-2'
+    default: "eu-west-2"
   function-name:
-    description: 'Lambda function name'
+    description: "Lambda function name"
     required: true
   source-directory:
-    description: 'Source directory for backend code'
+    description: "Source directory for backend code"
     required: false
-    default: './backend'
+    default: "./backend"
   environment:
-    description: 'Deployment environment (development, production)'
+    description: "Deployment environment (development, production)"
     required: false
-    default: 'development'
+    default: "development"
   runtime:
-    description: 'Lambda runtime version'
+    description: "Lambda runtime version"
     required: false
-    default: 'nodejs22.x'
+    default: "nodejs22.x"
   timeout:
-    description: 'Lambda function timeout in seconds'
+    description: "Lambda function timeout in seconds"
     required: false
-    default: '30'
+    default: "30"
   memory-size:
-    description: 'Lambda function memory size in MB'
+    description: "Lambda function memory size in MB"
     required: false
-    default: '256'
+    default: "256"
   environment-variables:
-    description: 'JSON string of environment variables'
+    description: "JSON string of environment variables"
     required: false
-    default: '{}'
+    default: "{}"
   dry-run:
-    description: 'Perform a dry run without actual deployment'
+    description: "Perform a dry run without actual deployment"
     required: false
-    default: 'false'
+    default: "false"
   package-exclude:
-    description: 'Comma-separated list of files/patterns to exclude from package'
+    description: "Comma-separated list of files/patterns to exclude from package"
     required: false
-    default: '__tests__,*.test.js,*.spec.js,.env*,README.md'
+    default: "__tests__,*.test.js,*.spec.js,.env*,README.md"
+  pre-built-package:
+    description: "Path to pre-built deployment package (if provided, skips packaging)"
+    required: false
+    default: ""
 
 outputs:
   function-arn:
-    description: 'ARN of the deployed Lambda function'
+    description: "ARN of the deployed Lambda function"
     value: ${{ steps.deploy.outputs.function-arn }}
   function-url:
-    description: 'Function URL if configured'
+    description: "Function URL if configured"
     value: ${{ steps.deploy.outputs.function-url }}
   package-size:
-    description: 'Size of the deployment package'
+    description: "Size of the deployment package"
     value: ${{ steps.package.outputs.size }}
   deployment-status:
-    description: 'Status of the deployment'
+    description: "Status of the deployment"
     value: ${{ steps.deploy.outputs.status }}
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Validate inputs
       shell: bash
@@ -67,15 +71,26 @@ runs:
           echo "::error::Lambda function name is required"
           exit 1
         fi
-        
-        if [ ! -d "${{ inputs.source-directory }}" ]; then
-          echo "::error::Source directory ${{ inputs.source-directory }} does not exist"
-          exit 1
-        fi
-        
-        if [ ! -f "${{ inputs.source-directory }}/package.json" ]; then
-          echo "::error::package.json not found in ${{ inputs.source-directory }}"
-          exit 1
+
+        # If pre-built package is provided, skip source validation
+        if [ -n "${{ inputs.pre-built-package }}" ]; then
+          if [ ! -f "${{ inputs.pre-built-package }}" ]; then
+            echo "::error::Pre-built package ${{ inputs.pre-built-package }} does not exist"
+            exit 1
+          fi
+          echo "✅ Pre-built package validated: ${{ inputs.pre-built-package }}"
+        else
+          # Validate source directory and package.json for source-based deployment
+          if [ ! -d "${{ inputs.source-directory }}" ]; then
+            echo "::error::Source directory ${{ inputs.source-directory }} does not exist"
+            exit 1
+          fi
+          
+          if [ ! -f "${{ inputs.source-directory }}/package.json" ]; then
+            echo "::error::package.json not found in ${{ inputs.source-directory }}"
+            exit 1
+          fi
+          echo "✅ Source directory validated: ${{ inputs.source-directory }}"
         fi
 
     - name: Validate source directory
@@ -85,70 +100,88 @@ runs:
           echo "::error::Source directory ${{ inputs.source-directory }} does not exist"
           exit 1
         fi
-        
+
         echo "✅ Source directory validated: ${{ inputs.source-directory }}"
 
     - name: Create deployment package
       id: package
       shell: bash
-      working-directory: ${{ inputs.source-directory }}
       run: |
-        echo "Creating Lambda deployment package..."
-        
-        # Create temporary directory for packaging
-        package_dir=$(mktemp -d)
-        package_file="lambda-deployment-$(date +%s).zip"
-        
-        # Copy source files excluding specified patterns
-        echo "Copying source files..."
-        rsync -av --progress . "$package_dir/" \
-          --exclude=node_modules \
-          --exclude=.git \
-          --exclude=.github \
-          --exclude=.env* \
-          --exclude=__tests__ \
-          --exclude=*.test.js \
-          --exclude=*.spec.js \
-          --exclude=coverage \
-          --exclude=.nyc_output \
-          --exclude=README.md \
-          --exclude=.eslintrc* \
-          --exclude=.prettierrc* \
-          --exclude=jest.config.js
-        
-        # Copy production node_modules if they exist
-        if [ -d "node_modules" ]; then
-          echo "Copying production dependencies..."
-          cp -r node_modules "$package_dir/"
+        # If pre-built package is provided, use it directly
+        if [ -n "${{ inputs.pre-built-package }}" ]; then
+          echo "Using pre-built deployment package..."
+          package_file="lambda-deployment-$(date +%s).zip"
+          
+          # Copy the pre-built package to workspace with a standard name
+          cp "${{ inputs.pre-built-package }}" "$GITHUB_WORKSPACE/$package_file"
+          
+          # Get package information
+          package_size=$(du -h "$GITHUB_WORKSPACE/$package_file" | cut -f1)
+          package_size_bytes=$(stat -f%z "$GITHUB_WORKSPACE/$package_file" 2>/dev/null || stat -c%s "$GITHUB_WORKSPACE/$package_file")
+          
+          echo "size=$package_size" >> $GITHUB_OUTPUT
+          echo "file=$package_file" >> $GITHUB_OUTPUT
+          echo "size_bytes=$package_size_bytes" >> $GITHUB_OUTPUT
+          
+          echo "Pre-built package used: $package_file ($package_size)"
         else
-          echo "⚠️  No node_modules found - package may not include dependencies"
+          echo "Creating Lambda deployment package from source..."
+          
+          # Create temporary directory for packaging
+          package_dir=$(mktemp -d)
+          package_file="lambda-deployment-$(date +%s).zip"
+          
+          # Copy source files excluding specified patterns
+          echo "Copying source files..."
+          rsync -av --progress . "$package_dir/" \
+            --exclude=node_modules \
+            --exclude=.git \
+            --exclude=.github \
+            --exclude=.env* \
+            --exclude=__tests__ \
+            --exclude=*.test.js \
+            --exclude=*.spec.js \
+            --exclude=coverage \
+            --exclude=.nyc_output \
+            --exclude=README.md \
+            --exclude=.eslintrc* \
+            --exclude=.prettierrc* \
+            --exclude=jest.config.js
+          
+          # Copy production node_modules if they exist
+          if [ -d "node_modules" ]; then
+            echo "Copying production dependencies..."
+            cp -r node_modules "$package_dir/"
+          else
+            echo "⚠️  No node_modules found - package may not include dependencies"
+          fi
+          
+          # Create ZIP package
+          cd "$package_dir"
+          zip -r "../$package_file" . -q
+          cd ..
+          
+          # Move package to workspace
+          mv "$package_file" "$GITHUB_WORKSPACE/"
+          
+          # Get package information
+          package_size=$(du -h "$GITHUB_WORKSPACE/$package_file" | cut -f1)
+          package_size_bytes=$(stat -f%z "$GITHUB_WORKSPACE/$package_file" 2>/dev/null || stat -c%s "$GITHUB_WORKSPACE/$package_file")
+          
+          echo "size=$package_size" >> $GITHUB_OUTPUT
+          echo "file=$package_file" >> $GITHUB_OUTPUT
+          echo "size_bytes=$package_size_bytes" >> $GITHUB_OUTPUT
+          
+          echo "Package created: $package_file ($package_size)"
+          
+          # Clean up temporary directory
+          rm -rf "$package_dir"
         fi
-        
-        # Create ZIP package
-        cd "$package_dir"
-        zip -r "../$package_file" . -q
-        cd ..
-        
-        # Move package to workspace
-        mv "$package_file" "$GITHUB_WORKSPACE/"
-        
-        # Get package information
-        package_size=$(du -h "$GITHUB_WORKSPACE/$package_file" | cut -f1)
-        package_size_bytes=$(stat -f%z "$GITHUB_WORKSPACE/$package_file" 2>/dev/null || stat -c%s "$GITHUB_WORKSPACE/$package_file")
-        
-        echo "size=$package_size" >> $GITHUB_OUTPUT
-        echo "file=$package_file" >> $GITHUB_OUTPUT
-        echo "size_bytes=$package_size_bytes" >> $GITHUB_OUTPUT
-        
-        echo "Package created: $package_file ($package_size)"
-        
+
         # Validate package size (AWS Lambda limit is 50MB for direct upload)
         if [ "$package_size_bytes" -gt 52428800 ]; then
           echo "::warning::Package size ($package_size) exceeds 50MB. Consider using S3 for deployment."
         fi
-        
-        # Clean up temporary directory
-        rm -rf "$package_dir"
 
     - name: Validate Lambda function exists
       id: validate
@@ -200,7 +233,7 @@ runs:
       shell: bash
       run: |
         package_file="${{ steps.package.outputs.file }}"
-        
+
         if [ "${{ inputs.dry-run }}" = "true" ]; then
           echo "DRY RUN: Would publish new version for Lambda function ${{ inputs.function-name }}"
           echo "new-version=dry-run" >> $GITHUB_OUTPUT
@@ -297,15 +330,15 @@ runs:
       shell: bash
       run: |
         echo "Verifying Lambda function deployment..."
-        
+
         # Get function status
         function_status=$(aws lambda get-function \
           --function-name "${{ inputs.function-name }}" \
           --region "${{ inputs.aws-region }}" \
           --query 'Configuration.State' --output text)
-        
+
         echo "Function state: $function_status"
-        
+
         if [ "$function_status" = "Active" ]; then
           echo "✅ Lambda function is active and ready"
           
@@ -339,9 +372,9 @@ runs:
       shell: bash
       run: |
         echo "🔄 Initiating rollback due to verification failure..."
-        
+
         current_version="${{ steps.current-alias.outputs.current-version }}"
-        
+
         if [ "$current_version" != "1" ] && [ "${{ steps.current-alias.outputs.alias-exists }}" = "true" ]; then
           echo "Rolling back alias 'live' to version $current_version..."
           
@@ -356,7 +389,7 @@ runs:
         else
           echo "⚠️  No previous version available for rollback"
         fi
-        
+
         echo "Rollback process completed"
         exit 1
 
@@ -411,7 +444,7 @@ runs:
         echo "| Memory Size | ${{ inputs.memory-size }} MB |" >> $GITHUB_STEP_SUMMARY
         echo "| Timeout | ${{ inputs.timeout }} seconds |" >> $GITHUB_STEP_SUMMARY
         echo "| Package Size | ${{ steps.package.outputs.size }} |" >> $GITHUB_STEP_SUMMARY
-        
+
         if [ "${{ inputs.dry-run }}" != "true" ]; then
           if [ -n "${{ steps.function-info.outputs.function-arn }}" ]; then
             echo "| Function ARN | ${{ steps.function-info.outputs.function-arn }} |" >> $GITHUB_STEP_SUMMARY
@@ -425,6 +458,6 @@ runs:
         else
           echo "| Mode | Dry Run |" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "Backend deployment completed successfully! 🎉" >> $GITHUB_STEP_SUMMARY

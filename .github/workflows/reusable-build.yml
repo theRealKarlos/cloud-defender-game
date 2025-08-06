@@ -94,12 +94,18 @@ jobs:
           export NODE_ENV=${{ inputs.environment }}
           export ENVIRONMENT=${{ inputs.environment }}
 
-          # Run build command
-          if npm run ${{ inputs.build-command }} 2>/dev/null; then
-            echo "✅ Build completed successfully"
+          # For backend, we skip the build command since we want source-based artifacts
+          # The deployment action will handle the packaging
+          if [ "${{ inputs.component }}" = "backend" ]; then
+            echo "✅ Backend build skipped - will create source-based artifact"
           else
-            echo "❌ Build failed"
-            exit 1
+            # Run build command for other components
+            if npm run ${{ inputs.build-command }} 2>/dev/null; then
+              echo "✅ Build completed successfully"
+            else
+              echo "❌ Build failed"
+              exit 1
+            fi
           fi
 
       - name: Create build artefact
@@ -139,21 +145,26 @@ jobs:
             echo "artefact-path=dist/$artefact_name.tar.gz" >> $GITHUB_OUTPUT
             echo "✅ Frontend artefact created: dist/$artefact_name.tar.gz"
           else
-            # Backend: Use the existing build output from the build script
+            # Backend: Create source-based artifact for deployment action
             cd ${{ inputs.working-directory }}
             
-            # Check if the build script created the expected artifact
-            if [ -f "../dist/score_api.zip" ]; then
-              # Rename the existing artifact to match workflow expectations
-              mv "../dist/score_api.zip" "../dist/$artefact_name.zip"
-              echo "artefact-name=$artefact_name.zip" >> $GITHUB_OUTPUT
-              echo "artefact-path=dist/$artefact_name.zip" >> $GITHUB_OUTPUT
-              echo "✅ Backend artefact created: dist/$artefact_name.zip"
-            else
-              echo "❌ Backend build artifact not found at ../dist/score_api.zip"
-              echo "Expected the build script to create the deployment package"
-              exit 1
-            fi
+            # Create a source package that includes package.json and node_modules
+            # This allows the deployment action to package it properly
+            tar -czf "../dist/$artefact_name.tar.gz" \
+              --exclude="__tests__" \
+              --exclude="coverage" \
+              --exclude=".nyc_output" \
+              --exclude=".eslintrc*" \
+              --exclude=".prettierrc*" \
+              --exclude="jest.config.js" \
+              --exclude=".git" \
+              --exclude=".github" \
+              --exclude=".env*" \
+              .
+            
+            echo "artefact-name=$artefact_name.tar.gz" >> $GITHUB_OUTPUT
+            echo "artefact-path=dist/$artefact_name.tar.gz" >> $GITHUB_OUTPUT
+            echo "✅ Backend source artefact created: dist/$artefact_name.tar.gz"
           fi
 
       - name: Generate build checksum

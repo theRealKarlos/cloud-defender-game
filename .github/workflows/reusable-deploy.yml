@@ -395,24 +395,42 @@ jobs:
       - name: Stage Deployment Artifacts
         if: steps.plan.outputs.plan_status != 'failed'
         run: |
-          echo "Staging deployment artifacts..."
-          mkdir -p ../tf-artifacts
+          set -e
+          echo "=== STAGING DEBUG INFO ==="
+          echo "Current working directory: $(pwd)"
+          echo "Repository root: ${{ github.workspace }}"
+          echo "Staging directory will be: ${{ github.workspace }}/tf-artifacts"
 
-          echo "Copying tfplan to staging directory..."
-          cp tfplan ../tf-artifacts/
+          echo "Creating staging directory for artifacts..."
+          mkdir -p ${{ github.workspace }}/tf-artifacts
 
-          echo "Copying .terraform.lock.hcl to staging directory..."
-          cp .terraform.lock.hcl ../tf-artifacts/
+          echo "---"
+          echo "Source files check:"
+          echo "tfplan exists: $(test -f tfplan && echo 'YES' || echo 'NO')"
+          echo "tfplan size: $(ls -la tfplan 2>/dev/null || echo 'File not found')"
+          echo ".terraform.lock.hcl exists: $(test -f .terraform.lock.hcl && echo 'YES' || echo 'NO')"
+          echo ".terraform.lock.hcl size: $(ls -la .terraform.lock.hcl 2>/dev/null || echo 'File not found')"
 
-          echo "Verifying staged artifacts:"
-          ls -la ../tf-artifacts/
+          echo "---"
+          echo "Copying required files to staging directory..."
+          cp tfplan ${{ github.workspace }}/tf-artifacts/
+          cp .terraform.lock.hcl ${{ github.workspace }}/tf-artifacts/
 
-          # Verify both files exist in staging
-          if [ ! -f "../tf-artifacts/tfplan" ] || [ ! -f "../tf-artifacts/.terraform.lock.hcl" ]; then
-            echo "❌ ERROR: Required artifact files missing from staging directory"
+          echo "---"
+          echo "Verifying contents of staging directory:"
+          ls -la ${{ github.workspace }}/tf-artifacts/
+
+          echo "---"
+          echo "Final verification:"
+          if [ ! -f "${{ github.workspace }}/tf-artifacts/tfplan" ]; then
+            echo "❌ ERROR: tfplan file not found in staging directory"
             exit 1
           fi
-          echo "✅ All required artifacts staged successfully"
+          if [ ! -f "${{ github.workspace }}/tf-artifacts/.terraform.lock.hcl" ]; then
+            echo "❌ ERROR: .terraform.lock.hcl file not found in staging directory"
+            exit 1
+          fi
+          echo "✅ Both required files successfully copied to staging directory"
 
       - name: Debug File Locations After Plan
         if: always()

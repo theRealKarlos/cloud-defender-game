@@ -519,6 +519,14 @@ jobs:
           terraform_version: ${{ inputs.terraform-version }}
           terraform_wrapper: false
 
+      # =================================================================
+      # 🔄 TERRAFORM PROVIDER CACHING
+      # =================================================================
+      # The .terraform directory, which contains provider plugins, is cached
+      # to dramatically speed up the subsequent `terraform init` step.
+      # The cache key is based on the hash of the .terraform.lock.hcl file,
+      # ensuring we restore the exact plugins required by the plan.
+      # =================================================================
       - name: Restore Terraform directory cache
         uses: actions/cache@v4
         with:
@@ -538,14 +546,30 @@ jobs:
           echo "--- End of debug ---"
 
       # =================================================================
+      # 🔧 TERRAFORM INITIALIZATION (MANDATORY STEP)
+      # =================================================================
+      # Terraform `init` is always required before `apply`. It configures
+      # the backend and makes Terraform "aware" of the provider plugins.
+      # Crucially, this is the step that leverages the cache. If the cache
+      # was restored successfully, this init will be almost instantaneous
+      # as the plugins are already on disk. If the cache was missed, this
+      # step will download the providers, ensuring the pipeline succeeds.
+      # =================================================================
+      - name: Initialize Terraform for deployment
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Initialising Terraform for environment: ${{ inputs.environment }}..."
+          terraform init \
+            -input=false \
+            -backend-config="key=cloud-defenders/envs/${{ inputs.environment }}/terraform.tfstate"
+
+      # =================================================================
       # 🔧 DEPLOYMENT EXECUTION
       # =================================================================
-      # The deployment job relies on the cached Terraform state from the
-      # plan-and-cost job, which already has the correct environment-specific
-      # backend configuration. No additional initialisation is needed.
-      #
-      # The cached .terraform directory contains all necessary provider plugins
-      # and the correct backend configuration for the target environment.
+      # The deployment job now has guaranteed provider availability through
+      # the terraform init step above. This ensures the apply step will
+      # succeed regardless of cache state, while maintaining optimal speed
+      # when the cache is successfully restored.
       # =================================================================
 
       - name: Apply Terraform infrastructure changes

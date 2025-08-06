@@ -77,7 +77,7 @@ resource "aws_apigatewayv2_stage" "score_api_stage" {
     Name = "${var.project_name}-${var.environment}-api-stage"
   })
 
-  depends_on = [aws_cloudwatch_log_group.api_gw]
+  depends_on = [aws_cloudwatch_log_resource_policy.api_gw_policy]
 }
 
 # CloudWatch Log Group for API Gateway access logs
@@ -89,6 +89,37 @@ resource "aws_cloudwatch_log_group" "api_gw" {
     Name = "${var.project_name}-${var.environment}-api-logs"
   })
 }
+
+# =================================================================
+# RESOURCE POLICY FOR API GATEWAY LOGGING
+# =================================================================
+# This policy is required because the CI/CD role has limited permissions.
+# When deploying locally with admin access, AWS automatically creates
+# this policy behind the scenes. In CI/CD, we must explicitly define it.
+# =================================================================
+data "aws_iam_policy_document" "api_gw_logs" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["apigateway.amazonaws.com"]
+    }
+
+    actions = [
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+    ]
+
+    resources = [aws_cloudwatch_log_group.api_gw.arn]
+  }
+}
+
+resource "aws_cloudwatch_log_resource_policy" "api_gw_policy" {
+  policy_name     = "${var.project_name}-${var.environment}-api-gw-logs-policy"
+  policy_document = data.aws_iam_policy_document.api_gw_logs.json
+}
+# =================================================================
 
 # Lambda permissions for API Gateway v2
 resource "aws_lambda_permission" "api_gateway_lambda" {

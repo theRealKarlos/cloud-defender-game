@@ -24,6 +24,7 @@ variable "aws_region" {
 variable "aws_profile" {
   description = "AWS profile for deployment"
   type        = string
+  default     = null
 }
 
 # Custom domain variables removed - using AWS-generated URLs only

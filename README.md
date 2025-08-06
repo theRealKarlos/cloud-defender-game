@@ -231,12 +231,51 @@ npm test
 
 ### Infrastructure Deployment
 
+#### Prerequisites
+
+Before deploying infrastructure, ensure you have:
+
+1. **AWS CLI configured with SSO** (recommended) or access keys
+2. **Terraform installed** (v1.12 or later)
+3. **S3 bucket with Object Lock enabled** for Terraform state storage
+
+#### Local Development Deployment
+
+For local development, you can use AWS SSO or a named profile:
+
 ```bash
 cd infra
+
+# Set your AWS profile (if using SSO or named profiles)
+$env:AWS_PROFILE = "your-profile-name"
+
+# Login to AWS SSO (if using SSO)
+aws sso login
+
+# Initialize Terraform
 terraform init
-terraform plan
-terraform apply
+
+# Plan the deployment
+terraform plan -var="aws_profile=your-profile-name" -var="environment=development"
+
+# Apply the changes
+terraform apply -var="aws_profile=your-profile-name" -var="environment=development"
 ```
+
+#### CI/CD Deployment
+
+The GitHub Actions pipeline automatically handles authentication using OIDC:
+
+- **Authentication**: Uses AWS OIDC with temporary credentials
+- **State Locking**: S3 Object Lock prevents concurrent modifications
+- **Environment Variables**: Automatically configured by the `configure-aws-credentials` action
+
+The pipeline will automatically:
+
+1. Authenticate using the configured IAM role
+2. Initialize Terraform with the S3 backend
+3. Plan and apply changes with proper state locking
+4. Deploy both infrastructure and application components
 
 ## Game Features
 
@@ -354,6 +393,60 @@ These actions are designed to be lightweight and expect pre-built artefacts rath
 3. Run the frontend locally: `cd frontend && npm run dev`
 4. Open `http://localhost:3000` in your browser
 5. Click "Start Game" to begin defending your cloud infrastructure!
+
+## Troubleshooting
+
+### Common Authentication Issues
+
+#### AWS SSO Authentication Errors
+
+If you encounter authentication errors with Terraform when using AWS SSO:
+
+```powershell
+# Set the AWS profile environment variable
+$env:AWS_PROFILE = "your-profile-name"
+
+# Login to AWS SSO
+aws sso login
+
+# Then run Terraform commands
+terraform init
+terraform plan
+```
+
+#### State Lock Errors
+
+If you encounter state lock errors in CI/CD:
+
+1. **Check S3 Object Lock**: Ensure your S3 bucket has Object Lock enabled
+2. **Force Unlock**: If a stale lock exists, use `terraform force-unlock <lock-id>` locally
+3. **Verify Permissions**: Ensure the IAM role has proper S3 permissions
+
+#### GitHub Actions Authentication Failures
+
+If the pipeline fails with "Could not load credentials":
+
+1. **Check Secret Configuration**: Ensure `AWS_ROLE_TO_ASSUME` is set as a repository secret
+2. **Verify IAM Trust Policy**: Confirm the role's trust policy allows GitHub Actions
+3. **Check OIDC Provider**: Ensure the GitHub OIDC provider is configured in AWS
+
+### Local Development Issues
+
+#### PowerShell Environment Variables
+
+When using PowerShell, set environment variables with:
+
+```powershell
+$env:AWS_PROFILE = "your-profile-name"
+```
+
+#### Terraform Variable Passing
+
+For local development, pass the AWS profile variable:
+
+```powershell
+terraform plan -var="aws_profile=your-profile-name" -var="environment=development"
+```
 
 ## License
 

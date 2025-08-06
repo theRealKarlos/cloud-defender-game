@@ -561,6 +561,14 @@ jobs:
           path: ./backend-artefact
         continue-on-error: true
 
+      - name: Stage backend artefact for Terraform
+        if: inputs.backend-artefact != ''
+        run: |
+          echo "Staging backend artefact for Terraform..."
+          mkdir -p ./dist
+          mv ./backend-artefact/score_api.zip ./dist/score_api.zip
+          echo "✅ Backend artefact moved to ./dist/score_api.zip"
+
       - name: Download Terraform plan
         uses: actions/download-artifact@v4
         with:

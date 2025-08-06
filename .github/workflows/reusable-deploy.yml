@@ -379,55 +379,24 @@ jobs:
             echo "Error details:"
             cat plan-output.txt
             exit 1
-          fi
-
-      # The 'Locate Terraform lock file' and 'Prepare artifacts for upload' steps
-      # are now replaced by a single, more robust step that uses a staging directory
-      # to prepare a minimal artifact for upload.
-      - name: Prepare minimal artifact for deployment
-        if: steps.plan.outputs.plan_status != 'failed'
-        run: |
-          set -e
-          echo "Creating staging directory for artifacts..."
-          mkdir -p staging
-
-          echo "Copying required files to staging directory..."
-          # The diagnostic output proved both tfplan and the lock file are created
-          # in the project root, regardless of the 'working-directory' on the plan step.
-          cp tfplan staging/
-          cp .terraform.lock.hcl staging/
-
-          echo "---"
-          echo "Verifying contents of staging directory:"
-          ls -la staging/
-          # Final check to ensure both files were copied successfully
-          if [ ! -f "staging/tfplan" ] || [ ! -f "staging/.terraform.lock.hcl" ]; then
-            echo "❌ ERROR: A required artifact file was not copied to the staging directory."
-            exit 1
-          fi
-          echo "✅ All required files are present in staging directory."
-          echo "---"
+                    fi
 
       - name: Generate cost estimate with Infracost
         uses: infracost/actions/comment@v1
         if: steps.plan.outputs.plan_status == 'changes'
         with:
-          path: staging/tfplan
+          path: tfplan
           behavior: new
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # =================================================================
-      # 📦 UPLOAD TERRAFORM PLAN ARTIFACTS
-      # =================================================================
-      # Upload the Terraform plan and lock file for the deploy job.
-      # Only the staging directory with the essential files is uploaded.
-      # =================================================================
       - name: Upload Terraform plan artefacts
         if: steps.plan.outputs.plan_status != 'failed'
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan-artefacts
-          path: staging/
+          path: |
+            tfplan
+            .terraform.lock.hcl
           retention-days: 30
           if-no-files-found: error
 
@@ -484,7 +453,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: terraform-plan-artefacts
-          path: ./terraform-artefacts
+          path: ${{ inputs.working-directory }}
 
       - name: Setup Terraform for infrastructure deployment
         uses: hashicorp/setup-terraform@v3
@@ -512,39 +481,10 @@ jobs:
       # and the correct backend configuration for the target environment.
       # =================================================================
 
-      # =================================================================
-      # 🔧 RESTORE DEPENDENCY LOCK FILE
-      # =================================================================
-      # Restore the .terraform.lock.hcl file from the plan job to ensure
-      # consistency between plan and apply operations. This prevents the
-      # "Inconsistent dependency lock file" error by using the exact same
-      # provider versions that were used during planning.
-      # =================================================================
-      - name: Restore Terraform lock file
-        working-directory: ${{ inputs.working-directory }}
-        run: |
-          echo "Restoring Terraform lock file from plan artifacts..."
-          echo "Available files in artifacts:"
-          ls -la ../terraform-artefacts/
-
-          # The artifact now contains only the staging directory contents (tfplan and .terraform.lock.hcl)
-          # These files are at the root of the downloaded artifact path.
-          if [ -f "../terraform-artefacts/.terraform.lock.hcl" ]; then
-            cp ../terraform-artefacts/.terraform.lock.hcl .
-            echo "✅ Terraform lock file restored to working directory"
-          else
-            echo "❌ Terraform lock file not found in artifacts"
-            exit 1
-          fi
-
       - name: Apply Terraform infrastructure changes
         working-directory: ${{ inputs.working-directory }}
         run: |
           echo "Applying Terraform infrastructure changes for ${{ inputs.environment }}..."
-          # Copy the plan from the root of the artifact path
-          cp ../terraform-artefacts/tfplan .
-
-          # Apply the plan (no init needed as cache is restored)
           if terraform apply -input=false tfplan; then
             echo "✅ Infrastructure deployment completed successfully"
           else

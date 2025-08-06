@@ -440,6 +440,50 @@ These actions are designed to be lightweight and expect pre-built artefacts rath
 4. Open `http://localhost:3000` in your browser
 5. Click "Start Game" to begin defending your cloud infrastructure!
 
+## Cost Estimation Setup
+
+The CI/CD pipeline includes automated cost estimation using Infracost. This provides cost estimates for infrastructure changes before they are deployed.
+
+### Setting Up Infracost API Key
+
+To enable cost estimation in pull requests, you need to configure an Infracost API key:
+
+#### Step 1: Install and Register with Infracost
+
+1. **Install Infracost on Windows:**
+
+   ```powershell
+   winget install --id Infracost.Infracost
+   ```
+
+   _(Alternative: Download from [infracost.io](https://www.infracost.io/docs/installation/) if winget is unavailable)_
+
+2. **Authenticate with Infracost Cloud:**
+   ```powershell
+   infracost auth login
+   ```
+   This will open a browser window to create a free account or log in.
+
+#### Step 2: Retrieve Your API Key
+
+After authentication, get your API key:
+
+```powershell
+infracost configure get api_key
+```
+
+#### Step 3: Add to GitHub Secrets
+
+1. Go to your GitHub repository
+2. Navigate to **Settings** > **Secrets and variables** > **Actions**
+3. Click **New repository secret**
+4. Enter:
+   - **Name:** `INFRACOST_API_KEY`
+   - **Secret:** Paste your API key from Step 2
+5. Click **Add secret**
+
+Once configured, cost estimates will appear as comments on pull requests that include infrastructure changes.
+
 ## Troubleshooting
 
 ### Common Authentication Issues

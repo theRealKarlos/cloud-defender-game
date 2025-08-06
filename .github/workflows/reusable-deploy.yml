@@ -354,21 +354,14 @@ jobs:
             ${{ runner.os }}-terraform-plugins-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-
             ${{ runner.os }}-terraform-plugins-${{ inputs.terraform-version }}-
 
-      # =================================================================
-      # 🔧 TERRAFORM INITIALIZATION (MANDATORY STEP)
-      # =================================================================
-      # Terraform `init` is always required before `plan`. It configures
-      # the backend and makes Terraform "aware" of the provider plugins.
-      # Crucially, this is the step that leverages the cache. If the cache
-      # was restored successfully, this init will be almost instantaneous
-      # as the plugins are already on disk. If the cache was missed, this
-      # step will download the providers, ensuring the pipeline succeeds.
-      # =================================================================
-      - name: Terraform Init
-        working-directory: ${{ inputs.working-directory }}
-        run: |
-          echo "Initialising Terraform for environment: ${{ inputs.environment }}..."
-          terraform init -input=false -backend-config="key=cloud-defenders/envs/${{ inputs.environment }}/terraform.tfstate"
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: GitHubActions-TerraformPlan
+          aws-region: ${{ inputs.aws-region }}
+          mask-aws-account-id: false
+
       # =================================================================
       # 🎭 DUMMY ARTIFACT CREATION
       # =================================================================
@@ -396,31 +389,21 @@ jobs:
           touch ../dist/score_api.zip
           echo "✅ Dummy artifact created: ../dist/score_api.zip"
 
-      - name: Configure AWS credentials using OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          role-session-name: GitHubActions-TerraformPlan
-          aws-region: ${{ inputs.aws-region }}
-          mask-aws-account-id: false
-
       # =================================================================
-      # 🔧 DYNAMIC BACKEND INITIALIZATION
+      # 🔧 TERRAFORM INITIALIZATION (MANDATORY STEP)
       # =================================================================
-      # Initialise Terraform with environment-specific backend configuration.
-      # This ensures each environment (development, production) uses its own
-      # isolated state file, preventing state corruption and lock conflicts.
-      #
-      # The -backend-config flag overrides the generic key in backend.tf with
-      # the environment-specific path, ensuring proper state isolation.
+      # Terraform `init` is always required before `plan`. It configures
+      # the backend and makes Terraform "aware" of the provider plugins.
+      # Crucially, this is the step that leverages the cache. If the cache
+      # was restored successfully, this init will be almost instantaneous
+      # as the plugins are already on disk. If the cache was missed, this
+      # step will download the providers, ensuring the pipeline succeeds.
       # =================================================================
       - name: Terraform Init
         working-directory: ${{ inputs.working-directory }}
         run: |
           echo "Initialising Terraform for environment: ${{ inputs.environment }}..."
-          backend_key="cloud-defenders/envs/${{ inputs.environment }}/terraform.tfstate"
-          echo "Using backend key: $backend_key"
-          terraform init -input=false -backend-config="key=$backend_key"
+          terraform init -input=false -backend-config="key=cloud-defenders/envs/${{ inputs.environment }}/terraform.tfstate"
           echo "✅ Terraform initialisation with backend completed"
 
       - name: Generate Terraform plan

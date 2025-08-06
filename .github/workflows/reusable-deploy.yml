@@ -356,6 +356,9 @@ jobs:
         id: plan
         run: |
           echo "Creating Terraform plan..."
+          echo "Current working directory: $(pwd)"
+          echo "Plan will be saved to: $(pwd)/tfplan"
+
           set +e  # Disable immediate exit on error
           terraform plan \
             -input=false \
@@ -366,6 +369,14 @@ jobs:
 
           PLAN_EXIT_CODE=$?
           set -e  # Re-enable immediate exit on error
+
+          echo "Plan file created at: $(pwd)/tfplan"
+          echo "Plan file exists: $(test -f tfplan && echo 'YES' || echo 'NO')"
+          echo "Plan file size: $(ls -la tfplan 2>/dev/null || echo 'File not found')"
+
+          echo "Plan file created at: $(pwd)/.terraform.lock.hcl"
+          echo "Plan file exists: $(test -f .terraform.lock.hcl && echo 'YES' || echo 'NO')"
+          echo "Plan file size: $(ls -la .terraform.lock.hcl 2>/dev/null || echo 'File not found')"
 
           if [ $PLAN_EXIT_CODE -eq 0 ]; then
             echo "✅ No changes detected in Terraform plan"
@@ -379,13 +390,21 @@ jobs:
             echo "Error details:"
             cat plan-output.txt
             exit 1
-                    fi
+          fi
+
+      - name: Debug File Locations After Plan
+        if: always()
+        run: |
+          echo "--- Debugging file locations ---"
+          echo "Listing all files recursively from the workspace root..."
+          ls -R ${{ github.workspace }}
+          echo "--- End of recursive list ---"
 
       - name: Generate cost estimate with Infracost
         uses: infracost/actions/comment@v1
         if: steps.plan.outputs.plan_status == 'changes'
         with:
-          path: tfplan
+          path: ${{ inputs.working-directory }}/tfplan
           behavior: new
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -395,8 +414,8 @@ jobs:
         with:
           name: terraform-plan-artefacts
           path: |
-            tfplan
-            .terraform.lock.hcl
+            ${{ inputs.working-directory }}/tfplan
+            ${{ inputs.working-directory }}/.terraform.lock.hcl
           retention-days: 30
           if-no-files-found: error
 

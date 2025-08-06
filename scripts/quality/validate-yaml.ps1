@@ -100,11 +100,13 @@ function Test-YamlWithPython {
     param([string]$FilePath)
     
     try {
-        $result = python -c "
+        # Create a temporary Python script file to avoid path escaping issues
+        $tempScript = [System.IO.Path]::GetTempFileName() + ".py"
+        $pythonCode = @"
 import yaml
 import sys
 try:
-    with open('$FilePath', 'r', encoding='utf-8') as f:
+    with open(sys.argv[1], 'r', encoding='utf-8') as f:
         yaml.safe_load(f)
     print('VALID')
     sys.exit(0)
@@ -114,10 +116,18 @@ except yaml.YAMLError as e:
 except Exception as e:
     print(f'Error: {e}')
     sys.exit(1)
-" 2>&1
+"@
+        Set-Content -Path $tempScript -Value $pythonCode -Encoding UTF8
+        
+        # Execute Python with the file path as an argument
+        $result = python $tempScript "$FilePath" 2>&1
+        $exitCode = $LASTEXITCODE
+        
+        # Clean up temporary file
+        Remove-Item $tempScript -ErrorAction SilentlyContinue
         
         return @{
-            Valid   = ($LASTEXITCODE -eq 0)
+            Valid   = ($exitCode -eq 0)
             Message = $result
         }
     }

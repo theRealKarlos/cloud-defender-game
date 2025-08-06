@@ -419,9 +419,12 @@ jobs:
         run: |
           echo "Preparing artifacts for upload..."
 
-          # Copy the lock file to the working directory if it's in the project root
+          # Copy the lock file to the working directory if it''s in the project root
           if [ -f ".terraform.lock.hcl" ] && [ ! -f "${{ inputs.working-directory }}/.terraform.lock.hcl" ]; then
             echo "Copying .terraform.lock.hcl from project root to working directory..."
+            # Ensure the destination directory exists before copying.
+            # This is a defensive measure to prevent errors if the directory is missing.
+            mkdir -p "${{ inputs.working-directory }}"
             cp .terraform.lock.hcl "${{ inputs.working-directory }}/"
             echo "✅ Lock file copied to working directory"
           else

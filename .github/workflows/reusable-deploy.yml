@@ -418,21 +418,32 @@ jobs:
         if: steps.plan.outputs.plan_status != 'failed'
         run: |
           echo "Preparing artifacts for upload..."
+          echo "---"
+          echo "Listing project root before copy:"
+          ls -la
+          echo "---"
+          echo "Listing working directory ('${{ inputs.working-directory }}') before copy:"
+          ls -la "${{ inputs.working-directory }}"
+          echo "---"
 
           # Copy the lock file to the working directory if it''s in the project root
           if [ -f ".terraform.lock.hcl" ] && [ ! -f "${{ inputs.working-directory }}/.terraform.lock.hcl" ]; then
+            echo "Condition met: Lock file exists in root and not in working directory."
             echo "Copying .terraform.lock.hcl from project root to working directory..."
-            # Ensure the destination directory exists before copying.
-            # This is a defensive measure to prevent errors if the directory is missing.
             mkdir -p "${{ inputs.working-directory }}"
             cp .terraform.lock.hcl "${{ inputs.working-directory }}/"
             echo "✅ Lock file copied to working directory"
           else
-            echo "✅ Lock file already in working directory or not found in root"
+            echo "Condition not met. Either lock file is not in root, or it is already in the working directory."
           fi
 
+          echo "---"
+          echo "Listing working directory ('${{ inputs.working-directory }}') after copy:"
+          ls -la "${{ inputs.working-directory }}"
+          echo "---"
+
           # Verify all required files are present in the working directory
-          echo "Verifying required files in working directory:"
+          echo "Verifying required files are present for upload:"
           ls -la "${{ inputs.working-directory }}/" | grep -E "(tfplan|plan-output.txt|.terraform.lock.hcl)" || true
 
       - name: Generate cost estimate with Infracost
@@ -551,13 +562,16 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         run: |
           echo "Restoring Terraform lock file from plan artifacts..."
-          if [ -f "../terraform-artefacts/infra/.terraform.lock.hcl" ]; then
-            cp ../terraform-artefacts/infra/.terraform.lock.hcl .
+          echo "Available files in artifacts:"
+          ls -la ../terraform-artefacts/
+
+          # The artifact uploads the contents of the `infra` directory, not the directory itself.
+          # Therefore, the lock file should be at the root of the downloaded artifact path.
+          if [ -f "../terraform-artefacts/.terraform.lock.hcl" ]; then
+            cp ../terraform-artefacts/.terraform.lock.hcl .
             echo "✅ Terraform lock file restored to working directory"
           else
             echo "❌ Terraform lock file not found in artifacts"
-            echo "Available files in artifacts:"
-            ls -la ../terraform-artefacts/ || true
             exit 1
           fi
 
@@ -565,9 +579,8 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         run: |
           echo "Applying Terraform infrastructure changes for ${{ inputs.environment }}..."
-
-          # Copy the plan from artefacts
-          cp ../terraform-artefacts/infra/tfplan .
+          # Copy the plan from the root of the artifact path
+          cp ../terraform-artefacts/tfplan .
 
           # Apply the plan (no init needed as cache is restored)
           if terraform apply -input=false tfplan; then

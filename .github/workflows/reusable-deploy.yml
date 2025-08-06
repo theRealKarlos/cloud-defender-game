@@ -683,9 +683,18 @@ jobs:
       - name: Extract frontend artefacts
         if: inputs.frontend-artefact != ''
         run: |
+          echo "Extracting frontend artifacts..."
           cd frontend-artefact
+
+          # Stage 1: Extract the outer zip container
+          echo "Stage 1: Extracting outer zip container..."
+          unzip -q *.zip
+
+          # Stage 2: Extract the inner tar.gz archive
+          echo "Stage 2: Extracting inner tar.gz archive..."
           tar -xzf *.tar.gz -C ../frontend/
-          echo "Frontend artefacts extracted to frontend/dist/"
+
+          echo "✅ Frontend artifacts extracted to frontend/dist/"
 
       - name: Deploy frontend
         id: deploy-frontend

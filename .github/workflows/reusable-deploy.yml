@@ -374,9 +374,9 @@ jobs:
           echo "Plan file exists: $(test -f tfplan && echo 'YES' || echo 'NO')"
           echo "Plan file size: $(ls -la tfplan 2>/dev/null || echo 'File not found')"
 
-          echo "Plan file created at: $(pwd)/.terraform.lock.hcl"
-          echo "Plan file exists: $(test -f .terraform.lock.hcl && echo 'YES' || echo 'NO')"
-          echo "Plan file size: $(ls -la .terraform.lock.hcl 2>/dev/null || echo 'File not found')"
+          echo "Lock file created at: $(pwd)/.terraform.lock.hcl"
+          echo "Lock file exists: $(test -f .terraform.lock.hcl && echo 'YES' || echo 'NO')"
+          echo "Lock file size: $(ls -la .terraform.lock.hcl 2>/dev/null || echo 'File not found')"
 
           if [ $PLAN_EXIT_CODE -eq 0 ]; then
             echo "✅ No changes detected in Terraform plan"
@@ -453,7 +453,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan-artefacts
-          path: tf-artifacts/
+          path: |
+            ${{ github.workspace }}/tf-artifacts/tfplan
+            ${{ github.workspace }}/tf-artifacts/.terraform.lock.hcl
           retention-days: 30
           if-no-files-found: error
 

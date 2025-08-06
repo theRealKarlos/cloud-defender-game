@@ -255,7 +255,7 @@ jobs:
             else
               echo "All CI checks passed. Ready for deployment."
             fi
-          else
-            echo "❌ CI/CD Pipeline failed. Please check the failed jobs above."
-            exit 1
-          fi
+            else
+              echo "❌ CI/CD Pipeline failed. Please check the failed jobs above."
+              exit 1
+            fi

@@ -381,23 +381,24 @@ jobs:
             exit 1
           fi
 
-      - name: Generate cost estimate with Infracost
-        uses: infracost/actions/comment@v1
-        if: steps.plan.outputs.plan_status == 'changes'
-        with:
-          path: ${{ inputs.working-directory }}/tfplan
-          behavior: new
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          - name: Generate cost estimate with Infracost
+          uses: infracost/actions/comment@v1
+          if: steps.plan.outputs.plan_status == 'changes'
+          with:
+           path: ${{ inputs.working-directory }}/tfplan
+           behavior: new
+           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Terraform plan artefacts
-        if: steps.plan.outputs.plan_status != 'failed'
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan-artefacts
-          path: |
-            ${{ inputs.working-directory }}/tfplan
-            ${{ inputs.working-directory }}/plan-output.txt
-          retention-days: 30
+          - name: Upload Terraform plan artefacts
+          if: steps.plan.outputs.plan_status != 'failed'
+          uses: actions/upload-artifact@v4
+          with:
+           name: terraform-plan-artefacts
+           path: |
+             ${{ inputs.working-directory }}/tfplan
+             ${{ inputs.working-directory }}/plan-output.txt
+             ${{ inputs.working-directory }}/.terraform.lock.hcl
+           retention-days: 30
 
   deploy:
     name: Deploy Infrastructure & Applications
@@ -469,7 +470,7 @@ jobs:
             ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-
             ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-
 
-             # =================================================================
+                    # =================================================================
         # 🔧 DEPLOYMENT EXECUTION
         # =================================================================
         # The deployment job relies on the cached Terraform state from the
@@ -479,6 +480,21 @@ jobs:
         # The cached .terraform directory contains all necessary provider plugins
         # and the correct backend configuration for the target environment.
         # =================================================================
+
+        # =================================================================
+        # 🔧 RESTORE DEPENDENCY LOCK FILE
+        # =================================================================
+        # Restore the .terraform.lock.hcl file from the plan job to ensure
+        # consistency between plan and apply operations. This prevents the
+        # "Inconsistent dependency lock file" error by using the exact same
+        # provider versions that were used during planning.
+        # =================================================================
+      - name: Restore Terraform lock file
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Restoring Terraform lock file from plan artifacts..."
+          cp ../terraform-artefacts/.terraform.lock.hcl .
+          echo "✅ Terraform lock file restored"
 
       - name: Apply Terraform infrastructure changes
         working-directory: ${{ inputs.working-directory }}

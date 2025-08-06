@@ -391,6 +391,11 @@ jobs:
           echo "Creating staging directory for artifacts..."
           mkdir -p staging
 
+          echo "---"
+          echo "DIAGNOSTIC: Listing all files from project root to find tfplan..."
+          ls -laR
+          echo "---"
+
           echo "Copying terraform plan to staging directory..."
           cp ${{ inputs.working-directory }}/tfplan staging/
 

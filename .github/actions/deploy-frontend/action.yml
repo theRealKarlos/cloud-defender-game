@@ -78,7 +78,7 @@ runs:
           echo "::error::Build directory ${{ inputs.build-directory }} does not exist"
           exit 1
         fi
-        
+
         echo "✅ Build directory validated: ${{ inputs.build-directory }}"
 
     - name: Generate version path
@@ -89,7 +89,7 @@ runs:
         timestamp=$(date +%Y%m%d-%H%M%S)
         commit_sha=$(echo ${{ github.sha }} | cut -c1-8)
         version_path="v$timestamp-$commit_sha"
-        
+
         echo "version-path=$version_path" >> $GITHUB_OUTPUT
         echo "Generated version path: $version_path"
 
@@ -195,30 +195,32 @@ runs:
         elif [ -n "${{ inputs.cloudfront-distribution-id }}" ]; then
           echo "Updating CloudFront origin path to /${{ steps.version-path.outputs.version-path }}..."
           
-          # Get current distribution configuration
+          # Get the full distribution configuration
           aws cloudfront get-distribution-config \
             --id "${{ inputs.cloudfront-distribution-id }}" \
-            --region "${{ inputs.aws-region }}" > dist-config.json
+            --region "${{ inputs.aws-region }}" > dist-config-full.json
           
-          # Update the origin path in the configuration
+          # Extract only the DistributionConfig object, which is what the update-distribution command expects.
+          # Then, update the OriginPath within that object. This avoids sending invalid top-level
+          # keys like 'ETag' that the get-distribution-config command returns but the update command rejects.
           jq --arg new_path "/${{ steps.version-path.outputs.version-path }}" \
-            '.DistributionConfig.Origins.Items[0].OriginPath = $new_path' \
-            dist-config.json > dist-config-updated.json
+            '.DistributionConfig | .Origins.Items[0].OriginPath = $new_path' \
+            dist-config-full.json > dist-config-for-update.json
           
-          # Get the ETag for the update
-          etag=$(jq -r '.ETag' dist-config.json)
+          # Get the ETag, which is required for the --if-match parameter to prevent race conditions.
+          etag=$(jq -r '.ETag' dist-config-full.json)
           
-          # Update the distribution
+          # Update the distribution using the correctly formatted config file and the ETag.
           aws cloudfront update-distribution \
             --id "${{ inputs.cloudfront-distribution-id }}" \
-            --distribution-config file://dist-config-updated.json \
+            --distribution-config file://dist-config-for-update.json \
             --if-match "$etag" \
             --region "${{ inputs.aws-region }}"
           
           echo "✅ CloudFront origin path updated to /${{ steps.version-path.outputs.version-path }}"
           
           # Clean up temporary files
-          rm -f dist-config.json dist-config-updated.json
+          rm -f dist-config-full.json dist-config-for-update.json
         else
           echo "⚠️  No CloudFront distribution ID provided, skipping origin path update"
         fi
@@ -304,9 +306,9 @@ runs:
       shell: bash
       run: |
         echo "🔄 Initiating rollback due to verification failure..."
-        
+
         current_path="${{ steps.current-origin.outputs.current-origin-path }}"
-        
+
         if [ -n "$current_path" ] && [ "${{ steps.current-origin.outputs.origin-exists }}" = "true" ]; then
           echo "Rolling back CloudFront origin path to $current_path..."
           
@@ -337,7 +339,7 @@ runs:
         else
           echo "⚠️  No previous origin path available for rollback"
         fi
-        
+
         echo "Rollback process completed"
         exit 1
 

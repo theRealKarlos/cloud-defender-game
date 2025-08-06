@@ -76,6 +76,8 @@ resource "aws_apigatewayv2_stage" "score_api_stage" {
   tags = merge(var.common_tags, {
     Name = "${var.project_name}-${var.environment}-api-stage"
   })
+
+  depends_on = [aws_cloudwatch_log_group.api_gw]
 }
 
 # CloudWatch Log Group for API Gateway access logs

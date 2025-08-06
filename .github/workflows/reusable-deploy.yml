@@ -381,6 +381,31 @@ jobs:
             exit 1
           fi
 
+      - name: Locate Terraform lock file
+        if: steps.plan.outputs.plan_status != 'failed'
+        id: locate-lock-file
+        run: |
+          echo "Locating Terraform lock file..."
+
+          # Check in the working directory first (expected location)
+          if [ -f "${{ inputs.working-directory }}/.terraform.lock.hcl" ]; then
+            echo "✅ Terraform lock file found in working directory: ${{ inputs.working-directory }}/.terraform.lock.hcl"
+            echo "lock_file_path=${{ inputs.working-directory }}/.terraform.lock.hcl" >> $GITHUB_OUTPUT
+            ls -la "${{ inputs.working-directory }}/.terraform.lock.hcl"
+          # Check in project root (alternative location)
+          elif [ -f ".terraform.lock.hcl" ]; then
+            echo "✅ Terraform lock file found in project root: .terraform.lock.hcl"
+            echo "lock_file_path=.terraform.lock.hcl" >> $GITHUB_OUTPUT
+            ls -la ".terraform.lock.hcl"
+          else
+            echo "❌ Terraform lock file not found in either location"
+            echo "Checking working directory: ${{ inputs.working-directory }}/"
+            ls -la "${{ inputs.working-directory }}/" || true
+            echo "Checking project root:"
+            ls -la ".terraform.lock.hcl" || true
+            exit 1
+          fi
+
       - name: Generate cost estimate with Infracost
         uses: infracost/actions/comment@v1
         if: steps.plan.outputs.plan_status == 'changes'
@@ -389,6 +414,12 @@ jobs:
           behavior: new
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # =================================================================
+      # 📦 UPLOAD TERRAFORM PLAN ARTIFACTS
+      # =================================================================
+      # Upload the Terraform plan and related files for the deploy job.
+      # The lock file path is dynamically determined by the locate-lock-file step.
+      # =================================================================
       - name: Upload Terraform plan artefacts
         if: steps.plan.outputs.plan_status != 'failed'
         uses: actions/upload-artifact@v4
@@ -397,8 +428,9 @@ jobs:
           path: |
             ${{ inputs.working-directory }}/tfplan
             ${{ inputs.working-directory }}/plan-output.txt
-            ${{ inputs.working-directory }}/.terraform.lock.hcl
+            ${{ steps.locate-lock-file.outputs.lock_file_path }}
           retention-days: 30
+          if-no-files-found: error
 
   deploy:
     name: Deploy Infrastructure & Applications
@@ -493,8 +525,15 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         run: |
           echo "Restoring Terraform lock file from plan artifacts..."
-          cp ../terraform-artefacts/.terraform.lock.hcl .
-          echo "✅ Terraform lock file restored"
+          if [ -f "../terraform-artefacts/.terraform.lock.hcl" ]; then
+            cp ../terraform-artefacts/.terraform.lock.hcl .
+            echo "✅ Terraform lock file restored to working directory"
+          else
+            echo "❌ Terraform lock file not found in artifacts"
+            echo "Available files in artifacts:"
+            ls -la ../terraform-artefacts/ || true
+            exit 1
+          fi
 
       - name: Apply Terraform infrastructure changes
         working-directory: ${{ inputs.working-directory }}

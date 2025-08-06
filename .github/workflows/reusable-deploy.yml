@@ -391,29 +391,21 @@ jobs:
           echo "Creating staging directory for artifacts..."
           mkdir -p staging
 
-          echo "---"
-          echo "DIAGNOSTIC: Listing all files from project root to find tfplan..."
-          ls -laR
-          echo "---"
+          echo "Copying required files to staging directory..."
+          # The diagnostic output proved both tfplan and the lock file are created
+          # in the project root, regardless of the 'working-directory' on the plan step.
+          cp tfplan staging/
+          cp .terraform.lock.hcl staging/
 
-          echo "Copying terraform plan to staging directory..."
-          cp ${{ inputs.working-directory }}/tfplan staging/
-
-          echo "Locating and copying terraform lock file to staging directory..."
-          if [ -f ".terraform.lock.hcl" ]; then
-            echo "Lock file found in project root. Copying..."
-            cp .terraform.lock.hcl staging/
-          elif [ -f "${{ inputs.working-directory }}/.terraform.lock.hcl" ]; then
-            echo "Lock file found in working directory. Copying..."
-            cp ${{ inputs.working-directory }}/.terraform.lock.hcl staging/
-          else
-            echo "❌ ERROR: .terraform.lock.hcl not found in project root or working directory."
+          echo "---"
+          echo "Verifying contents of staging directory:"
+          ls -la staging/
+          # Final check to ensure both files were copied successfully
+          if [ ! -f "staging/tfplan" ] || [ ! -f "staging/.terraform.lock.hcl" ]; then
+            echo "❌ ERROR: A required artifact file was not copied to the staging directory."
             exit 1
           fi
-
-          echo "---"
-          echo "Final contents of staging directory to be uploaded:"
-          ls -la staging/
+          echo "✅ All required files are present in staging directory."
           echo "---"
 
       - name: Generate cost estimate with Infracost

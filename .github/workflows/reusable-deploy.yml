@@ -75,19 +75,39 @@ jobs:
           terraform_version: ${{ inputs.terraform-version }}
           terraform_wrapper: false
 
-      - name: Configure Terraform plugin cache
+      # =================================================================
+      # 🔄 TERRAFORM SHARED PLUGIN CACHE (INDUSTRY STANDARD)
+      # =================================================================
+      # This implements the official HashiCorp-recommended approach for
+      # speeding up terraform init in CI/CD pipelines.
+      #
+      # PROBLEM SOLVED: Caching the project's .terraform directory directly
+      # causes "file exists" errors because terraform init expects exclusive
+      # control over its working directory.
+      #
+      # SOLUTION: Use a shared plugin cache directory with TF_PLUGIN_CACHE_DIR.
+      # This allows terraform init to create symbolic links to cached plugins,
+      # avoiding conflicts while maintaining speed.
+      #
+      # HOW IT WORKS:
+      # 1. Create a shared cache directory at workspace root
+      # 2. Set TF_PLUGIN_CACHE_DIR environment variable
+      # 3. Cache the shared directory between jobs
+      # 4. terraform init creates symlinks to cached plugins
+      # =================================================================
+      - name: Setup Terraform Plugin Cache
         run: |
-          mkdir -p ~/.terraform.d/plugin-cache
-          echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
+          mkdir -p ${{ github.workspace }}/.tf-cache
+          echo "TF_PLUGIN_CACHE_DIR=${{ github.workspace }}/.tf-cache" >> $GITHUB_ENV
 
-      - name: Cache Terraform providers
+      - name: Cache Terraform Plugin Cache
         uses: actions/cache@v4
         with:
-          path: ~/.terraform.d/plugin-cache
-          key: ${{ runner.os }}-terraform-v1-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}
+          path: ${{ github.workspace }}/.tf-cache
+          key: ${{ runner.os }}-terraform-plugins-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-terraform-v1-${{ inputs.terraform-version }}-
-            ${{ runner.os }}-terraform-v1-
+            ${{ runner.os }}-terraform-plugins-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-
+            ${{ runner.os }}-terraform-plugins-${{ inputs.terraform-version }}-
 
       - name: Terraform Init
         working-directory: ${{ inputs.working-directory }}
@@ -185,19 +205,39 @@ jobs:
           terraform_version: ${{ inputs.terraform-version }}
           terraform_wrapper: false
 
-      - name: Configure Terraform plugin cache
+      # =================================================================
+      # 🔄 TERRAFORM SHARED PLUGIN CACHE (INDUSTRY STANDARD)
+      # =================================================================
+      # This implements the official HashiCorp-recommended approach for
+      # speeding up terraform init in CI/CD pipelines.
+      #
+      # PROBLEM SOLVED: Caching the project's .terraform directory directly
+      # causes "file exists" errors because terraform init expects exclusive
+      # control over its working directory.
+      #
+      # SOLUTION: Use a shared plugin cache directory with TF_PLUGIN_CACHE_DIR.
+      # This allows terraform init to create symbolic links to cached plugins,
+      # avoiding conflicts while maintaining speed.
+      #
+      # HOW IT WORKS:
+      # 1. Create a shared cache directory at workspace root
+      # 2. Set TF_PLUGIN_CACHE_DIR environment variable
+      # 3. Cache the shared directory between jobs
+      # 4. terraform init creates symlinks to cached plugins
+      # =================================================================
+      - name: Setup Terraform Plugin Cache
         run: |
-          mkdir -p ~/.terraform.d/plugin-cache
-          echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
+          mkdir -p ${{ github.workspace }}/.tf-cache
+          echo "TF_PLUGIN_CACHE_DIR=${{ github.workspace }}/.tf-cache" >> $GITHUB_ENV
 
-      - name: Cache Terraform providers
+      - name: Cache Terraform Plugin Cache
         uses: actions/cache@v4
         with:
-          path: ~/.terraform.d/plugin-cache
-          key: ${{ runner.os }}-terraform-v1-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}
+          path: ${{ github.workspace }}/.tf-cache
+          key: ${{ runner.os }}-terraform-plugins-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-terraform-v1-${{ inputs.terraform-version }}-
-            ${{ runner.os }}-terraform-v1-
+            ${{ runner.os }}-terraform-plugins-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-
+            ${{ runner.os }}-terraform-plugins-${{ inputs.terraform-version }}-
 
       - name: Terraform Init
         working-directory: ${{ inputs.working-directory }}
@@ -315,6 +355,21 @@ jobs:
             ${{ runner.os }}-terraform-plugins-${{ inputs.terraform-version }}-
 
       # =================================================================
+      # 🔧 TERRAFORM INITIALIZATION (MANDATORY STEP)
+      # =================================================================
+      # Terraform `init` is always required before `plan`. It configures
+      # the backend and makes Terraform "aware" of the provider plugins.
+      # Crucially, this is the step that leverages the cache. If the cache
+      # was restored successfully, this init will be almost instantaneous
+      # as the plugins are already on disk. If the cache was missed, this
+      # step will download the providers, ensuring the pipeline succeeds.
+      # =================================================================
+      - name: Terraform Init
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Initialising Terraform for environment: ${{ inputs.environment }}..."
+          terraform init -input=false -backend-config="key=cloud-defenders/envs/${{ inputs.environment }}/terraform.tfstate"
+      # =================================================================
       # 🎭 DUMMY ARTIFACT CREATION
       # =================================================================
       # This step creates a temporary, empty placeholder file that satisfies
@@ -367,15 +422,6 @@ jobs:
           echo "Using backend key: $backend_key"
           terraform init -input=false -backend-config="key=$backend_key"
           echo "✅ Terraform initialisation with backend completed"
-
-      - name: Cache Terraform directory
-        uses: actions/cache@v4
-        with:
-          path: ${{ inputs.working-directory }}/.terraform
-          key: ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-
-            ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-
 
       - name: Generate Terraform plan
         id: plan

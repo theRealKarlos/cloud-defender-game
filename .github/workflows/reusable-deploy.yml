@@ -469,23 +469,16 @@ jobs:
             ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working-directory)) }}-
             ${{ runner.os }}-terraform-dir-${{ inputs.terraform-version }}-
 
-      # =================================================================
-      # 🔧 DEPLOYMENT BACKEND INITIALIZATION
-      # =================================================================
-      # Initialise Terraform for the deployment job to ensure it operates
-      # on the correct environment-specific state file before applying changes.
-      #
-      # This step is critical because the deployment job relies on cached
-      # Terraform state, but must ensure it targets the correct environment.
-      # =================================================================
-      - name: Terraform Init for Deployment
-        working-directory: ${{ inputs.working-directory }}
-        run: |
-          echo "Initialising Terraform for deployment to environment: ${{ inputs.environment }}..."
-          backend_key="cloud-defenders/envs/${{ inputs.environment }}/terraform.tfstate"
-          echo "Using backend key: $backend_key"
-          terraform init -input=false -backend-config="key=$backend_key"
-          echo "✅ Terraform initialisation for deployment completed"
+             # =================================================================
+        # 🔧 DEPLOYMENT EXECUTION
+        # =================================================================
+        # The deployment job relies on the cached Terraform state from the
+        # plan-and-cost job, which already has the correct environment-specific
+        # backend configuration. No additional initialisation is needed.
+        #
+        # The cached .terraform directory contains all necessary provider plugins
+        # and the correct backend configuration for the target environment.
+        # =================================================================
 
       - name: Apply Terraform infrastructure changes
         working-directory: ${{ inputs.working-directory }}

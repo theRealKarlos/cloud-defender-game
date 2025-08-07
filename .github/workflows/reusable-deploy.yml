@@ -386,12 +386,13 @@ jobs:
         run: |
           echo "Staging backend artifact for Terraform planning..."
           mkdir -p ../dist
-          # Extract the tar.gz backend artifact
-          tar -xzf ./backend-artefact-temp/backend-build.tar.gz -C ./backend-artefact-temp/
+          # Extract the tar.gz backend artifact to a subdirectory
+          mkdir -p ./backend-artefact-temp/extracted
+          tar -xzf ./backend-artefact-temp/backend-build.tar.gz -C ./backend-artefact-temp/extracted/
           # Create the expected score_api.zip for Terraform
-          cd ./backend-artefact-temp
-          zip -r ../dist/score_api.zip . -q
-          cd ..
+          cd ./backend-artefact-temp/extracted
+          zip -r ../../dist/score_api.zip . -q
+          cd ../..
           echo "✅ Backend artifact extracted and packaged as ../dist/score_api.zip"
 
       # =================================================================
@@ -571,12 +572,13 @@ jobs:
         run: |
           echo "Staging backend artefact for Terraform..."
           mkdir -p ./dist
-          # Extract the tar.gz backend artifact
-          tar -xzf ./backend-artefact/backend-build.tar.gz -C ./backend-artefact/
+          # Extract the tar.gz backend artifact to a subdirectory
+          mkdir -p ./backend-artefact/extracted
+          tar -xzf ./backend-artefact/backend-build.tar.gz -C ./backend-artefact/extracted/
           # Create the expected score_api.zip for Terraform
-          cd ./backend-artefact
-          zip -r ../dist/score_api.zip . -q
-          cd ..
+          cd ./backend-artefact/extracted
+          zip -r ../../dist/score_api.zip . -q
+          cd ../..
           echo "✅ Backend artefact extracted and packaged as ./dist/score_api.zip"
 
       - name: Download Terraform plan

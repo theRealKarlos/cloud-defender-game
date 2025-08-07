@@ -381,10 +381,42 @@ jobs:
           path: ./backend-artefact-temp/
         continue-on-error: true
 
+      - name: Debug backend artifact download
+        if: inputs.backend-artefact != ''
+        run: |
+          echo "=== DEBUG: Backend artifact download status ==="
+          echo "Artifact name requested: ${{ inputs.backend-artefact }}"
+          echo "Download path: ./backend-artefact-temp/"
+          echo "Current directory: $(pwd)"
+          echo "Contents of ./backend-artefact-temp/:"
+          ls -la ./backend-artefact-temp/ || echo "Directory doesn't exist"
+          echo "=== END DEBUG ==="
+
       - name: Stage backend artifact for planning
         if: inputs.backend-artefact != ''
         run: |
           echo "Staging backend artifact for Terraform planning..."
+
+          # Debug: Check what files are actually downloaded
+          echo "=== DEBUG: Checking downloaded files ==="
+          echo "Current directory: $(pwd)"
+          echo "Contents of ./backend-artefact-temp/:"
+          ls -la ./backend-artefact-temp/ || echo "Directory doesn't exist"
+
+          # Check if the expected tar.gz file exists
+          if [ -f "./backend-artefact-temp/backend-build.tar.gz" ]; then
+            echo "✅ Found backend-build.tar.gz"
+            echo "File size: $(ls -la ./backend-artefact-temp/backend-build.tar.gz)"
+          else
+            echo "❌ backend-build.tar.gz not found"
+            echo "Available files in ./backend-artefact-temp/:"
+            ls -la ./backend-artefact-temp/ || echo "No files found"
+            echo "=== END DEBUG ==="
+            echo "❌ Backend artifact not available for staging"
+            exit 1
+          fi
+          echo "=== END DEBUG ==="
+
           mkdir -p ../dist
           # Extract the tar.gz backend artifact to a subdirectory
           mkdir -p ./backend-artefact-temp/extracted
@@ -567,10 +599,42 @@ jobs:
           path: ./backend-artefact
         continue-on-error: true
 
+      - name: Debug backend artifact download
+        if: inputs.backend-artefact != ''
+        run: |
+          echo "=== DEBUG: Backend artifact download status ==="
+          echo "Artifact name requested: ${{ inputs.backend-artefact }}"
+          echo "Download path: ./backend-artefact"
+          echo "Current directory: $(pwd)"
+          echo "Contents of ./backend-artefact/:"
+          ls -la ./backend-artefact/ || echo "Directory doesn't exist"
+          echo "=== END DEBUG ==="
+
       - name: Stage backend artefact for Terraform
         if: inputs.backend-artefact != ''
         run: |
           echo "Staging backend artefact for Terraform..."
+
+          # Debug: Check what files are actually downloaded
+          echo "=== DEBUG: Checking downloaded files ==="
+          echo "Current directory: $(pwd)"
+          echo "Contents of ./backend-artefact/:"
+          ls -la ./backend-artefact/ || echo "Directory doesn't exist"
+
+          # Check if the expected tar.gz file exists
+          if [ -f "./backend-artefact/backend-build.tar.gz" ]; then
+            echo "✅ Found backend-build.tar.gz"
+            echo "File size: $(ls -la ./backend-artefact/backend-build.tar.gz)"
+          else
+            echo "❌ backend-build.tar.gz not found"
+            echo "Available files in ./backend-artefact/:"
+            ls -la ./backend-artefact/ || echo "No files found"
+            echo "=== END DEBUG ==="
+            echo "❌ Backend artifact not available for staging"
+            exit 1
+          fi
+          echo "=== END DEBUG ==="
+
           mkdir -p ./dist
           # Extract the tar.gz backend artifact to a subdirectory
           mkdir -p ./backend-artefact/extracted

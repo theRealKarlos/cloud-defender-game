@@ -699,30 +699,6 @@ jobs:
           build-directory: ./frontend/dist
           source-directory: ./frontend
 
-      - name: Extract backend source for deployment
-        if: inputs.backend-artefact != ''
-        run: |
-          echo "Extracting backend source for deployment..."
-          # Extract the backend source from the tar.gz artifact
-          tar -xzf ./backend-artefact/backend-build.tar.gz -C ./backend-artefact/
-          echo "✅ Backend source extracted for deployment"
-
-      - name: Deploy backend
-        id: deploy-backend
-        if: inputs.backend-artefact != ''
-        uses: ./.github/actions/deploy-backend
-        with:
-          aws-region: ${{ inputs.aws-region }}
-          function-name: ${{ steps.terraform-outputs.outputs.lambda_function }}
-          environment: ${{ inputs.environment }}
-          source-directory: ./backend-artefact
-          environment-variables: |
-            {
-              "NODE_ENV": "${{ inputs.environment }}",
-              "ENVIRONMENT": "${{ inputs.environment }}",
-              "LOG_LEVEL": "${{ inputs.environment == 'production' && 'info' || 'debug' }}"
-            }
-
       - name: Run post-deployment health checks
         run: |
           echo "Running post-deployment health checks for ${{ inputs.environment }} environment..."
@@ -730,7 +706,7 @@ jobs:
           # Use the dedicated health check script
           bash scripts/health-check.sh \
             --frontend-url "${{ steps.deploy-frontend.outputs.deployment-url }}" \
-            --backend-url "${{ steps.deploy-backend.outputs.function-url }}" \
+            --backend-url "${{ steps.terraform-outputs.outputs.api_gateway_url }}" \
             --timeout 30
 
       - name: Generate deployment summary
@@ -759,15 +735,9 @@ jobs:
 
           if [ "${{ inputs.backend-artefact }}" != "" ]; then
             echo "### Backend Deployment" >> $GITHUB_STEP_SUMMARY
-            if [ "${{ steps.deploy-backend.outcome }}" == "success" ]; then
-              echo "✅ **Status:** Successful" >> $GITHUB_STEP_SUMMARY
-              echo "🔗 **Function ARN:** ${{ steps.deploy-backend.outputs.function-arn }}" >> $GITHUB_STEP_SUMMARY
-              if [ -n "${{ steps.deploy-backend.outputs.function-url }}" ]; then
-                echo "🔗 **Function URL:** ${{ steps.deploy-backend.outputs.function-url }}" >> $GITHUB_STEP_SUMMARY
-              fi
-            else
-              echo "❌ **Status:** Failed" >> $GITHUB_STEP_SUMMARY
-            fi
+            echo "✅ **Status:** Deployed via Terraform" >> $GITHUB_STEP_SUMMARY
+            echo "🔗 **Function:** ${{ steps.terraform-outputs.outputs.lambda_function }}" >> $GITHUB_STEP_SUMMARY
+            echo "🔗 **API URL:** ${{ steps.terraform-outputs.outputs.api_gateway_url }}" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
 

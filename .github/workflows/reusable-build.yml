@@ -145,26 +145,26 @@ jobs:
             echo "artefact-path=dist/$artefact_name.tar.gz" >> $GITHUB_OUTPUT
             echo "✅ Frontend artefact created: dist/$artefact_name.tar.gz"
           else
-            # Backend: Create source-based artifact for deployment action
+            # Backend: Create Lambda-ready ZIP artifact directly
             cd ${{ inputs.working-directory }}
             
-            # Create a source package that includes package.json and node_modules
-            # This allows the deployment action to package it properly
-            tar -czf "../dist/$artefact_name.tar.gz" \
-              --exclude="__tests__" \
-              --exclude="coverage" \
-              --exclude=".nyc_output" \
+            # Create score_api.zip directly - this is what Lambda expects
+            zip -r "../dist/score_api.zip" \
+              --exclude="__tests__/*" \
+              --exclude="coverage/*" \
+              --exclude=".nyc_output/*" \
               --exclude=".eslintrc*" \
               --exclude=".prettierrc*" \
               --exclude="jest.config.js" \
-              --exclude=".git" \
-              --exclude=".github" \
+              --exclude=".git/*" \
+              --exclude=".github/*" \
               --exclude=".env*" \
               .
             
-            echo "artefact-name=$artefact_name.tar.gz" >> $GITHUB_OUTPUT
-            echo "artefact-path=dist/$artefact_name.tar.gz" >> $GITHUB_OUTPUT
-            echo "✅ Backend source artefact created: dist/$artefact_name.tar.gz"
+            # The artifact name for GitHub Actions is still the parameter
+            echo "artefact-name=$artefact_name" >> $GITHUB_OUTPUT
+            echo "artefact-path=dist/score_api.zip" >> $GITHUB_OUTPUT
+            echo "✅ Backend Lambda artifact created: dist/score_api.zip"
           fi
 
       - name: Generate build checksum

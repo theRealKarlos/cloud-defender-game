@@ -378,19 +378,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.backend-artefact }}
-          path: ./backend-artefact-temp/
+          path: ../dist/
         continue-on-error: true
-
-      - name: Stage backend artifact for planning
-        if: inputs.backend-artefact != ''
-        run: |
-          echo "Staging backend artifact for Terraform planning..."
-          mkdir -p ../dist
-          tar -xzf ./backend-artefact-temp/backend-build.tar.gz -C ./backend-artefact-temp/
-          cd ./backend-artefact-temp
-          zip -r ../dist/score_api.zip . -q
-          cd ..
-          echo "✅ Backend artifact extracted and packaged as ../dist/score_api.zip"
 
       # =================================================================
       # 🔧 TERRAFORM INITIALIZATION (MANDATORY STEP)
@@ -561,19 +550,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.backend-artefact }}
-          path: ./backend-artefact
+          path: ./dist/
         continue-on-error: true
-
-      - name: Stage backend artefact for Terraform
-        if: inputs.backend-artefact != ''
-        run: |
-          echo "Staging backend artefact for Terraform..."
-          mkdir -p ./dist
-          tar -xzf ./backend-artefact/backend-build.tar.gz -C ./backend-artefact/
-          cd ./backend-artefact
-          zip -r ../dist/score_api.zip . -q
-          cd ..
-          echo "✅ Backend artefact extracted and packaged as ./dist/score_api.zip"
 
       - name: Download Terraform plan
         uses: actions/download-artifact@v4

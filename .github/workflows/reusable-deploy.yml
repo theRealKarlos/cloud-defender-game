@@ -378,7 +378,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.backend-artefact }}
-          path: ./backend-artefact-temp
+          path: ./backend-artefact-temp/
         continue-on-error: true
 
       - name: Stage backend artifact for planning
@@ -550,15 +550,15 @@ jobs:
           aws-region: ${{ inputs.aws-region }}
           mask-aws-account-id: false
 
-      - name: Download build artefacts
-        if: inputs.frontend-artefact != '' || inputs.backend-artefact != ''
+      - name: Download frontend artifact
+        if: inputs.frontend-artefact != ''
         uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.frontend-artefact }}
           path: ./frontend-artefact
         continue-on-error: true
 
-      - name: Download backend artefact
+      - name: Download backend artifact
         if: inputs.backend-artefact != ''
         uses: actions/download-artifact@v4
         with:

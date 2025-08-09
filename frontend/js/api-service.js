@@ -223,5 +223,11 @@ class ApiService {
   }
 }
 
-// Create global instance
-window.apiService = new ApiService();
+// Export for Node.js (testing) and browser
+// Note: Automatic instantiation removed to prevent race conditions.
+// The ApiService is now instantiated by main.js after configuration is loaded.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { ApiService };
+} else {
+  window.ApiService = ApiService;
+}

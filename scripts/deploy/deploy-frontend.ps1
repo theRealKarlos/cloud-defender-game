@@ -110,6 +110,7 @@ $s3SyncArgs = @(
     "--exclude", "eslint.config.js",
     "--exclude", "__tests__/*",
     "--exclude", "debug.html",
+    "--exclude", "config.json",
     "--profile", $Profile
 )
 
@@ -135,10 +136,16 @@ aws @cssArgs
 $jsArgs = @("s3", "cp", "s3://$bucketName", "s3://$bucketName", "--recursive", "--exclude", "*", "--include", "*.js", "--content-type", "application/javascript", "--metadata-directive", "REPLACE", "--profile", $Profile)
 aws @jsArgs
 
-# Upload config.json with no-cache headers and public read access
-Write-Host "Setting cache control for config.json..." -ForegroundColor Blue
-$configArgs = @("s3", "cp", "s3://$bucketName/config.json", "s3://$bucketName/config.json", "--content-type", "application/json", "--cache-control", "no-store", "--acl", "public-read", "--metadata-directive", "REPLACE", "--profile", $Profile)
+# Upload config.json separately with no-cache headers (no public ACL needed with OAC)
+Write-Host "Uploading config.json with no-cache headers..." -ForegroundColor Blue
+$configArgs = @("s3", "cp", "./config.json", "s3://$bucketName/config.json", "--content-type", "application/json", "--cache-control", "no-store", "--metadata-directive", "REPLACE", "--profile", $Profile)
 aws @configArgs
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Failed to upload config.json to S3"
+    exit 1
+}
+Write-Host "config.json uploaded successfully" -ForegroundColor Green
 
 # Get website URL and CloudFront distribution ID
 Set-Location $infraDir

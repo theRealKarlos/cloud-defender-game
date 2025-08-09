@@ -225,6 +225,28 @@ runs:
           echo "⚠️  No CloudFront distribution ID provided, skipping origin path update"
         fi
 
+    - name: Deploy config.json to bucket root
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry-run }}" = "true" ]; then
+          echo "DRY RUN: Would deploy config.json to s3://${{ inputs.s3-bucket }}/config.json"
+        else
+          echo "Deploying config.json to bucket root with no-cache headers..."
+          
+          # Check if config.json exists in source directory
+          if [ -f "${{ inputs.source-directory }}/config.json" ]; then
+            aws s3 cp "${{ inputs.source-directory }}/config.json" "s3://${{ inputs.s3-bucket }}/config.json" \
+              --region "${{ inputs.aws-region }}" \
+              --content-type "application/json" \
+              --cache-control "no-store" \
+              --metadata-directive REPLACE
+            
+            echo "✅ config.json deployed successfully to bucket root"
+          else
+            echo "⚠️  config.json not found in ${{ inputs.source-directory }}, skipping"
+          fi
+        fi
+
     - name: Set S3 bucket website configuration
       shell: bash
       run: |
@@ -246,11 +268,11 @@ runs:
         else
           echo "Invalidating CloudFront cache for distribution: ${{ inputs.cloudfront-distribution-id }}"
           
-          # Create targeted invalidation for HTML files only
+          # Create targeted invalidation for HTML files and config.json
           # This is more efficient than invalidating everything
           invalidation_id=$(aws cloudfront create-invalidation \
             --distribution-id "${{ inputs.cloudfront-distribution-id }}" \
-            --paths "/index.html" "/error.html" "/404.html" \
+            --paths "/index.html" "/error.html" "/404.html" "/config.json" \
             --query 'Invalidation.Id' \
             --output text)
           

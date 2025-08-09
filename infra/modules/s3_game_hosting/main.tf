@@ -277,6 +277,46 @@ resource "aws_cloudfront_distribution" "game_hosting" {
     response_headers_policy_id = aws_cloudfront_response_headers_policy.diagnostics_headers.id
   }
 
+  # =================================================================
+  # RUNTIME CONFIGURATION CACHE BEHAVIOUR
+  # =================================================================
+  # This behaviour handles the `/config.json` file which contains
+  # runtime configuration for the frontend application. Unlike the
+  # versioned application assets, this file must always be served
+  # from the root of the S3 bucket (not from versioned folders).
+  #
+  # Key characteristics:
+  # - Zero caching (TTL=0) to ensure configuration updates are immediate
+  # - Served from bucket root whilst other assets come from versioned paths
+  # - Uses strict security headers (same as main application)
+  # - Essential for the application's runtime configuration system
+  #
+  # This solves the architectural challenge where versioned deployments
+  # live in subfolders but configuration must remain at a consistent URL.
+  # =================================================================
+
+  # Runtime configuration file - no caching, served from bucket root
+  ordered_cache_behavior {
+    path_pattern     = "config.json"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "S3-${aws_s3_bucket.game_hosting.bucket}"
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy     = "redirect-to-https"
+    min_ttl                    = 0
+    default_ttl                = 0 # Never cache - always fetch fresh
+    max_ttl                    = 0 # Prevent any caching at edge locations
+    compress                   = true
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers.id
+  }
+
   # Cache behavior for SPA routing (main game and other pages)
   default_cache_behavior {
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]

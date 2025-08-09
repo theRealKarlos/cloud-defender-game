@@ -65,6 +65,36 @@ resource "aws_apigatewayv2_stage" "score_api_stage" {
   name        = var.environment
   auto_deploy = true
 
+  # =================================================================
+  # BASIC THROTTLING CONFIGURATION
+  # =================================================================
+  # HTTP API throttling provides coarse-grained rate limiting across
+  # all clients. Unlike WAF, this is not IP-aware and cannot distinguish
+  # between legitimate users and attackers from the same source.
+  #
+  # Limitations compared to WAF:
+  # - No per-IP rate limiting (all traffic shares the same bucket)
+  # - No geographic blocking or bot detection
+  # - No custom rules based on headers, user agents, or request patterns
+  # - Cannot block specific attack signatures or malicious payloads
+  #
+  # For production workloads, consider WAFv2 for more sophisticated
+  # protection including IP-based rate limiting and managed rule sets.
+  # =================================================================
+
+  # Default throttling for all routes
+  default_route_settings {
+    throttling_burst_limit = 100 # Maximum burst requests across all clients
+    throttling_rate_limit  = 50  # Steady-state RPS limit across all clients
+  }
+
+  # Stricter throttling for score submission endpoint
+  route_settings {
+    route_key              = "POST /api/scores"
+    throttling_burst_limit = 20 # Lower burst limit for write operations
+    throttling_rate_limit  = 10 # Lower steady-state limit for write operations
+  }
+
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gw.arn
 

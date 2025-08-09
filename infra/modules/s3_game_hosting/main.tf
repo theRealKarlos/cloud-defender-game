@@ -48,6 +48,84 @@ resource "aws_cloudfront_origin_access_control" "game_hosting" {
   signing_protocol                  = "sigv4"
 }
 
+# =================================================================
+# CLOUDFRONT SECURITY HEADERS POLICY
+# =================================================================
+# This policy adds essential security headers to all responses served
+# through CloudFront. These headers help protect against common web
+# vulnerabilities and provide defense-in-depth for the browser.
+#
+# Headers included:
+# - X-Content-Type-Options: Prevents MIME type sniffing attacks
+# - X-Frame-Options: Prevents clickjacking by blocking iframe embedding
+# - Referrer-Policy: Controls how much referrer information is shared
+# - Strict-Transport-Security: Enforces HTTPS connections
+# - X-XSS-Protection: Enables browser XSS filtering (legacy browsers)
+# - Content-Security-Policy: Restricts resource loading to prevent XSS
+# - Permissions-Policy: Controls browser feature access
+#
+# The CSP is configured for this specific game application and may need
+# adjustment if you add third-party scripts, fonts, or API endpoints.
+# =================================================================
+resource "aws_cloudfront_response_headers_policy" "security_headers" {
+  name = "${var.project_name}-${var.environment}-security-headers"
+
+  security_headers_config {
+    # Prevent MIME type sniffing attacks
+    content_type_options {
+      override = true
+    }
+
+    # Prevent clickjacking by blocking iframe embedding
+    frame_options {
+      frame_option = "DENY"
+      override     = true
+    }
+
+    # Control referrer information sharing
+    referrer_policy {
+      referrer_policy = "strict-origin-when-cross-origin"
+      override        = true
+    }
+
+    # Enforce HTTPS connections (HSTS)
+    strict_transport_security {
+      access_control_max_age_sec = 31536000 # 1 year
+      include_subdomains         = true
+      preload                    = false # Set to true if you want HSTS preload
+      override                   = true
+    }
+
+    # Enable XSS protection for legacy browsers
+    xss_protection {
+      mode_block = true
+      protection = true
+      override   = true
+    }
+
+    # Content Security Policy - restricts resource loading
+    # Configured for the game's specific requirements:
+    # - 'self': Allow resources from the same origin
+    # - 'unsafe-inline' for style-src: Required for inline CSS in the game
+    # - data: for img-src: Allows data URLs for images/icons
+    # - API endpoint: Allows connections to the game's API
+    content_security_policy {
+      content_security_policy = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://*.execute-api.eu-west-2.amazonaws.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+      override                = true
+    }
+  }
+
+  # Additional security-related headers
+  custom_headers_config {
+    items {
+      header   = "Permissions-Policy"
+      override = true
+      # Disable potentially sensitive browser features
+      value = "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), speaker=()"
+    }
+  }
+}
+
 # CloudFront Distribution
 resource "aws_cloudfront_distribution" "game_hosting" {
   origin {
@@ -74,11 +152,12 @@ resource "aws_cloudfront_distribution" "game_hosting" {
       }
     }
 
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 3600
-    max_ttl                = 86400
-    compress               = true
+    viewer_protocol_policy     = "redirect-to-https"
+    min_ttl                    = 0
+    default_ttl                = 3600
+    max_ttl                    = 86400
+    compress                   = true
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers.id
   }
 
   # Custom error page for SPA routing

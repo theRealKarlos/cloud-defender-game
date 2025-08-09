@@ -2,7 +2,7 @@
 # TERRAFORM BACKEND CONFIGURATION
 # ============================================================================
 # Modern S3 backend configuration without deprecated DynamoDB locking
-# Terraform 1.6+ uses native state locking mechanisms
+# Terraform 1.10+ uses native state locking mechanisms
 #
 # IMPORTANT: This backend configuration uses a generic key that is dynamically
 # overridden during initialisation. The actual environment-specific state file

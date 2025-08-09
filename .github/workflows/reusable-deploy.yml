@@ -81,7 +81,7 @@ jobs:
       # This implements the official HashiCorp-recommended approach for
       # speeding up terraform init in CI/CD pipelines.
       #
-      # PROBLEM SOLVED: Caching the project's .terraform directory directly
+      # PROBLEM SOLVED: Caching the project''s .terraform directory directly
       # causes "file exists" errors because terraform init expects exclusive
       # control over its working directory.
       #
@@ -211,7 +211,7 @@ jobs:
       # This implements the official HashiCorp-recommended approach for
       # speeding up terraform init in CI/CD pipelines.
       #
-      # PROBLEM SOLVED: Caching the project's .terraform directory directly
+      # PROBLEM SOLVED: Caching the project''s .terraform directory directly
       # causes "file exists" errors because terraform init expects exclusive
       # control over its working directory.
       #
@@ -326,7 +326,7 @@ jobs:
       # This implements the official HashiCorp-recommended approach for
       # speeding up terraform init in CI/CD pipelines.
       #
-      # PROBLEM SOLVED: Caching the project's .terraform directory directly
+      # PROBLEM SOLVED: Caching the project''s .terraform directory directly
       # causes "file exists" errors because terraform init expects exclusive
       # control over its working directory.
       #
@@ -571,7 +571,7 @@ jobs:
       # This implements the official HashiCorp-recommended approach for
       # speeding up terraform init in CI/CD pipelines.
       #
-      # PROBLEM SOLVED: Caching the project's .terraform directory directly
+      # PROBLEM SOLVED: Caching the project''s .terraform directory directly
       # causes "file exists" errors because terraform init expects exclusive
       # control over its working directory.
       #
@@ -669,32 +669,7 @@ jobs:
 
       - name: Update Frontend API Configuration
         if: inputs.frontend-artefact != ''
-        run: |
-          echo "Updating frontend API configuration with production URL..."
-
-          # Verify the API URL was retrieved
-          if [ -z "${{ steps.terraform-outputs.outputs.api_gateway_url }}" ]; then
-            echo "❌ ERROR: API Gateway URL not found in Terraform outputs"
-            exit 1
-          fi
-
-          # Verify config.js exists
-          if [ ! -f "frontend/js/config.js" ]; then
-            echo "❌ ERROR: frontend/js/config.js not found"
-            exit 1
-          fi
-
-          echo "Current baseUrl in config.js:"
-          grep -n "baseUrl:" frontend/js/config.js || echo "baseUrl not found"
-
-          # Update the baseUrl using sed (same approach as update-api-config.sh)
-          # We use '#' as a delimiter to avoid conflicts with '/' in the URL.
-          sed -i -E "s#baseUrl:\s*['\"][^'\"]*['\"]#baseUrl: '${{ steps.terraform-outputs.outputs.api_gateway_url }}'#" frontend/js/config.js
-
-          echo "Updated baseUrl in config.js:"
-          grep -n "baseUrl:" frontend/js/config.js
-
-          echo "✅ Frontend API configuration updated successfully"
+        run: bash scripts/utils/update-api-config.sh
 
       - name: Extract frontend artefacts
         if: inputs.frontend-artefact != ''
@@ -705,7 +680,7 @@ jobs:
           # a robust way to handle archives that may not contain the root folder.
           mkdir -p ./frontend/dist
 
-          # Debug: Show what's in the artifact directory.
+          # Debug: Show what''s in the artifact directory.
           echo "Contents of frontend-artefact directory:"
           ls -la ./frontend-artefact
 

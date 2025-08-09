@@ -3,7 +3,7 @@
  * Simple endpoint to verify backend service is operational
  */
 
-exports.handler = async (event, context) => {
+exports.handler = async (_event, _context) => {
     console.log('Health check requested');
     
     const response = {

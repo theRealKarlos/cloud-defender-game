@@ -14,9 +14,10 @@
  * Called by main.js after all dependencies are ready and configuration is loaded.
  * This approach prevents race conditions and ensures proper initialisation order.
  *
+ * @param {UIManager} uiManager - The UIManager instance to use (supports dependency injection)
  * @returns {boolean} True if initialisation succeeded, false otherwise
  */
-function initializeGame() {
+function initializeGame(uiManager = null) {
   try {
     // Check for Canvas support before proceeding
     // This prevents the game from attempting to run on unsupported browsers
@@ -28,9 +29,10 @@ function initializeGame() {
       return false;
     }
 
-    // Initialise the game engine with the canvas element
+    // Initialise the game engine with the canvas element and UIManager
     // This creates all the core game systems and prepares them for use
-    window.gameEngine = new GameEngine('game-canvas');
+    // The UIManager is injected to ensure proper API service connectivity
+    window.gameEngine = new GameEngine('game-canvas', uiManager);
 
     // Start the render loop (but not the game logic)
     // This begins the visual updates but waits for user input to start gameplay

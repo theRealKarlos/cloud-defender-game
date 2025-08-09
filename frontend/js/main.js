@@ -136,9 +136,10 @@ class ConfigLoader {
       }
 
       // Initialise game engine last as it coordinates all other systems
+      // Pass the UIManager instance to ensure proper dependency injection
       console.log('Initialising game engine...');
       if (typeof initializeGame !== 'undefined') {
-        const gameInitialised = initializeGame();
+        const gameInitialised = initializeGame(window.uiManager);
         if (gameInitialised) {
           console.log('Game engine initialised successfully');
         } else {

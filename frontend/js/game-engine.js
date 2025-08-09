@@ -4,7 +4,7 @@
  */
 
 class GameEngine {
-  constructor(canvasId) {
+  constructor(canvasId, uiManager = null) {
     // Get canvas element
     this.canvas = document.getElementById(canvasId);
     if (!this.canvas) {
@@ -15,7 +15,11 @@ class GameEngine {
     this.stateManager = new GameStateManager();
     this.renderer = new Renderer(this.canvas);
     this.inputManager = new InputManager();
-    this.uiManager = new UIManager();
+
+    // Use provided UIManager instance or create a new one as fallback
+    // This supports dependency injection whilst maintaining backwards compatibility
+    this.uiManager = uiManager || new UIManager();
+
     this.gameLoop = new GameLoop();
     this.entityManager = new EntityManager();
 

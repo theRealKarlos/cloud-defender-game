@@ -13,6 +13,17 @@ $hasErrors = $false
 
 # Step 1: Code Quality & Security
 Write-Host "Step 1: Code Quality & Security Checks..." -ForegroundColor Cyan
+
+# Run formatting checks
+Write-Host "Running formatting checks..." -ForegroundColor Yellow
+& "$PSScriptRoot/run-format-check.ps1"
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Formatting checks failed" -ForegroundColor Red
+    $hasErrors = $true
+}
+
+# Run linting and security checks
 & "$PSScriptRoot/run-lint.ps1"
 
 if ($LASTEXITCODE -ne 0) {
@@ -111,7 +122,8 @@ if ($hasErrors) {
     Write-Host "Please fix the issues above before deploying." -ForegroundColor Red
     Write-Host ""
     Write-Host "Quick fixes:" -ForegroundColor Yellow
-    Write-Host "  • Run .\scripts\lint-and-security.ps1 -Fix to auto-fix linting" -ForegroundColor White
+    Write-Host "  • Run .\scripts\quality\run-format-check.ps1 -Fix to auto-fix formatting" -ForegroundColor White
+    Write-Host "  • Run .\scripts\quality\run-lint.ps1 -Fix to auto-fix linting" -ForegroundColor White
     Write-Host "  • Check test output for specific test failures" -ForegroundColor White
     Write-Host "  • Verify all required files are present" -ForegroundColor White
     exit 1

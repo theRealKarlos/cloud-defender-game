@@ -17,17 +17,19 @@ class ConfigLoader {
   async loadConfig() {
     try {
       console.log('Loading application configuration...');
-      
+
       const response = await fetch('/config.json', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
-        }
+          'Cache-Control': 'no-cache',
+        },
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to load config: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Failed to load config: ${response.status} ${response.statusText}`
+        );
       }
 
       this.config = await response.json();
@@ -38,18 +40,20 @@ class ConfigLoader {
         baseUrl: this.config.apiBaseUrl,
         timeout: this.config.timeout,
         version: this.config.version,
-        features: this.config.features
+        features: this.config.features,
       };
 
       return this.config;
     } catch (error) {
       console.error('Error loading configuration:', error);
-      
+
       if (this.retryCount < this.maxRetries) {
         this.retryCount++;
-        console.log(`Retrying configuration load (${this.retryCount}/${this.maxRetries}) in ${this.retryDelay}ms...`);
-        
-        await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+        console.log(
+          `Retrying configuration load (${this.retryCount}/${this.maxRetries}) in ${this.retryDelay}ms...`
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, this.retryDelay));
         return this.loadConfig();
       } else {
         // Fallback to default configuration
@@ -61,15 +65,15 @@ class ConfigLoader {
           features: {
             scoreValidation: true,
             leaderboard: true,
-            realTimeUpdates: false
-          }
+            realTimeUpdates: false,
+          },
         };
 
         window.API_CONFIG = {
           baseUrl: this.config.apiBaseUrl,
           timeout: this.config.timeout,
           version: this.config.version,
-          features: this.config.features
+          features: this.config.features,
         };
 
         return this.config;
@@ -86,7 +90,7 @@ class ConfigLoader {
 
       // Wait for DOM to be ready
       if (document.readyState === 'loading') {
-        await new Promise(resolve => {
+        await new Promise((resolve) => {
           document.addEventListener('DOMContentLoaded', resolve);
         });
       }
@@ -102,7 +106,9 @@ class ConfigLoader {
       console.log('Application initialized successfully');
     } catch (error) {
       console.error('Error initializing application:', error);
-      this.showErrorMessage('Failed to initialize game. Please refresh the page.');
+      this.showErrorMessage(
+        'Failed to initialize game. Please refresh the page.'
+      );
     }
   }
 
@@ -142,13 +148,14 @@ class ConfigLoader {
     try {
       // Load configuration first
       await this.loadConfig();
-      
+
       // Then initialize the application
       await this.initializeApp();
-      
     } catch (error) {
       console.error('Fatal error during application startup:', error);
-      this.showErrorMessage('Failed to start Cloud Defenders. Please check your connection and refresh.');
+      this.showErrorMessage(
+        'Failed to start Cloud Defenders. Please check your connection and refresh.'
+      );
     }
   }
 }

@@ -716,6 +716,28 @@ jobs:
             --backend-url "${{ steps.terraform-outputs.outputs.api_gateway_url }}" \
             --timeout 30
 
+            # =================================================================
+      # S3 VERSION CLEANUP
+      # =================================================================
+      # Automatically removes old versioned deployment folders to optimise
+      # storage costs while preserving rollback capability.
+      #
+      # WHEN: Only after successful deployment and health checks
+      # WHAT: Removes all but the 2 most recent deployment versions
+      # WHY:  Prevents unlimited S3 storage cost growth
+      # SAFETY: Only runs for frontend deployments, preserves rollback versions
+      - name: Cleanup Old Frontend Versions
+        if: success() && inputs.frontend-artefact != ''
+        run: |
+          echo "🧹 Cleaning up old frontend versions from S3 bucket..."
+          echo "📦 Bucket: ${{ steps.terraform-outputs.outputs.s3_bucket }}"
+          echo "💾 Preserving 2 most recent versions for rollback capability"
+          echo "💰 This prevents unlimited S3 storage cost accumulation"
+
+          # Execute cleanup script with bucket name and retention policy
+          # Parameters: <bucket-name> <versions-to-keep>
+          bash scripts/utils/cleanup-s3-versions.sh "${{ steps.terraform-outputs.outputs.s3_bucket }}" 2
+
       - name: Generate deployment summary
         run: |
           echo "## 🚀 Deployment Summary for ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
@@ -747,5 +769,13 @@ jobs:
             echo "🔗 **API URL:** ${{ steps.terraform-outputs.outputs.api_gateway_url }}" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
+
+          echo "### S3 Version Management" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.frontend-artefact }}" != "" ]; then
+            echo "🧹 **Cleanup:** Old versions removed (keeping 2 most recent)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ **Cleanup:** Skipped (no frontend deployment)" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "Deployment completed successfully! 🎉" >> $GITHUB_STEP_SUMMARY

@@ -40,6 +40,17 @@
 
     <div id="debug-output"></div>
 
+    <!-- Mock UI elements for UIManager validation (hidden) -->
+    <div style="display: none;">
+      <div id="score">0</div>
+      <div id="wave">1</div>
+      <div id="lives">3</div>
+      <div id="game-modal"></div>
+      <button id="start-btn">Start</button>
+      <button id="pause-btn">Pause</button>
+      <button id="restart-btn">Restart</button>
+    </div>
+
     <!-- Load scripts in order -->
     <script>
       console.log('=== LOADING SCRIPTS ===');
@@ -170,6 +181,16 @@
     <script src="js/game-conditions.js"></script>
 
     <script>
+      logScript('explosive-bomb.js');
+    </script>
+    <script src="js/explosive-bomb.js"></script>
+
+    <script>
+      logScript('game-security.js');
+    </script>
+    <script src="js/game-security.js"></script>
+
+    <script>
       logScript('game-engine.js');
     </script>
     <script src="js/game-engine.js"></script>
@@ -181,6 +202,8 @@
         EntityManager: typeof EntityManager,
         Target: typeof Target,
         Missile: typeof Missile,
+        ExplosiveBomb: typeof ExplosiveBomb,
+        GameSecurity: typeof GameSecurity,
         GameEngine: typeof GameEngine,
         WaveManager: typeof WaveManager,
         GameConditions: typeof GameConditions,

@@ -104,6 +104,8 @@ cloud-defenders-game/
 │   ├── deploy/                 # Deployment scripts
 │   ├── quality/                # Code quality scripts
 │   ├── utils/                  # Utility scripts
+│   │   ├── update-api-config.sh # Updates frontend API configuration
+│   │   └── cleanup-s3-versions.sh # S3 version cleanup automation
 │   ├── health-check.ps1        # PowerShell health check (Windows)
 │   ├── health-check.sh         # Bash health check (Linux CI)
 │   ├── rollback-manager.ps1    # Rollback management script
@@ -428,7 +430,8 @@ The pipeline implements a robust rollback strategy for both frontend and backend
 - **Versioned Deployments**: Each deployment creates a timestamped folder in S3 (e.g., `/v20231201-12345678/`)
 - **Origin Path Updates**: CloudFront origin path is updated to point to the new version folder
 - **Instant Rollback**: If deployment fails, origin path is reverted to the previous version
-- **No Data Loss**: Previous versions remain available in S3
+- **Version Retention**: Automated cleanup preserves the 2 most recent versions for rollback capability
+- **Cost Optimisation**: Old versions are automatically removed to prevent storage cost accumulation
 
 #### Manual Rollback
 
@@ -444,6 +447,44 @@ Use the rollback manager script for manual rollbacks:
 # Rollback both components
 .\scripts\rollback-manager.ps1 -Component "both" -Environment "production" -FunctionName "my-function" -PreviousVersion "5" -CloudFrontDistributionId "E123456789" -PreviousOriginPath "/v20231201-12345678"
 ```
+
+### S3 Version Management
+
+The deployment pipeline includes intelligent S3 version cleanup to balance cost optimisation with rollback capability:
+
+#### Automated Cleanup Process
+
+- **Trigger**: Runs automatically after successful frontend deployments
+- **Retention Policy**: Preserves the 2 most recent deployment versions
+- **Safety Checks**: Only runs when there are more than 2 versions present
+- **Detailed Logging**: Shows exactly what versions are preserved vs. deleted
+
+#### Version Naming Convention
+
+Versions follow the pattern: `v{YYYYMMDD}-{HHMMSSSS}/`
+
+Example:
+- `v20240115-14302145/` (current deployment)
+- `v20240115-12150832/` (rollback version - preserved)
+- `v20240114-16453021/` (old version - deleted)
+
+#### Manual S3 Cleanup
+
+For manual cleanup or different retention policies:
+
+```bash
+# Clean up keeping 3 versions instead of 2
+bash scripts/utils/cleanup-s3-versions.sh my-frontend-bucket 3
+
+# Clean up keeping only current version (removes rollback capability)
+bash scripts/utils/cleanup-s3-versions.sh my-frontend-bucket 1
+```
+
+#### Cost Impact
+
+- **Without Cleanup**: Storage costs grow indefinitely with each deployment
+- **With Cleanup**: Storage costs remain constant (2 versions × deployment size)
+- **Typical Savings**: 80-90% reduction in S3 storage costs for active projects
 
 ### Best Practices for Production
 
@@ -462,7 +503,9 @@ Example of pinning actions to commit SHAs:
 1. **CI Phase**: Parallel execution of linting, testing, and security scanning
 2. **Build Phase**: Creation of deployment artefacts with checksums
 3. **Deploy Phase**: Infrastructure validation, cost analysis, and application deployment
-4. **Verification**: Health checks and automated rollback on failure
+4. **Configuration**: Dynamic frontend API configuration update for environment-specific endpoints
+5. **Verification**: Health checks and automated rollback on failure
+6. **Cleanup**: Automated S3 version cleanup (preserves 2 most recent versions for rollback)
 
 ### Custom Actions
 

@@ -382,6 +382,26 @@ The pipeline is built using **reusable workflows** for modularity and maintainab
 - **Security Scanning**: CodeQL, dependency review, and npm audit
 - **Infrastructure Security**: tfsec and Checkov for IaC security scanning
 - **Cost Analysis**: Infracost integration for cost estimation on pull requests
+- **API throttling**: Stage-level defaults and stricter per-route limits (e.g., tighter limits for `POST /api/scores`) to reduce abuse and smooth bursts (HTTP API)
+- **CloudFront security headers**: Response headers policy adds HSTS, X-Frame-Options, X-Content-Type-Options (nosniff), Referrer-Policy, Permissions-Policy, and a minimal CSP for defense-in-depth
+
+#### Security baseline (lab)
+
+This lab includes a pragmatic baseline to improve security with low complexity:
+
+- **API Gateway throttling (HTTP API)**
+
+  - Stage defaults limit overall request rate and bursts across all clients
+  - Stricter throttling on sensitive endpoints like `POST /api/scores`
+  - Note: This is coarse-grained (not per-IP). For production, prefer AWS WAFv2 for IP-aware rate limiting and managed rules
+
+- **CloudFront response headers policy**
+  - Adds standard security headers: `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, and `X-XSS-Protection` (legacy browsers)
+  - **Minimal CSP** tailored for the game:
+    - `default-src 'self'`; `img-src 'self' data:`; `style-src 'self' 'unsafe-inline'`; `script-src 'self'`
+    - `connect-src 'self' https://*.execute-api.eu-west-2.amazonaws.com` to allow API calls
+    - `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`
+  - Adjust CSP if you add third‑party scripts, fonts, or change API endpoints. For production, narrow `connect-src` to the exact API host
 
 ### Deployment Strategy
 

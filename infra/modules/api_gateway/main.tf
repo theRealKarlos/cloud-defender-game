@@ -115,7 +115,12 @@ resource "aws_apigatewayv2_stage" "score_api_stage" {
     Name = "${var.project_name}-${var.environment}-api-stage"
   })
 
-  depends_on = [aws_cloudwatch_log_resource_policy.api_gw_policy]
+  depends_on = [
+    aws_cloudwatch_log_resource_policy.api_gw_policy,
+    aws_apigatewayv2_route.scores_post,
+    aws_apigatewayv2_route.leaderboard_get,
+    aws_apigatewayv2_route.health_get
+  ]
 }
 
 # CloudWatch Log Group for API Gateway access logs

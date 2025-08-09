@@ -30,7 +30,8 @@ popd >/dev/null
 echo "Found API URL: $API_URL"
 
 # Replace baseUrl in config.js using sed (GNU sed on Ubuntu runners)
-sed -i -E "s/baseUrl:\s*['\"][^'\"]*['\"]/baseUrl: '$API_URL'/" "$FRONTEND_CONFIG"
+# We use '#' as a delimiter to avoid conflicts with '/' in the URL.
+sed -i -E "s#baseUrl:\s*['\"][^'\"]*['\"]#baseUrl: '$API_URL'#" "$FRONTEND_CONFIG"
 
 echo "Updated baseUrl in $FRONTEND_CONFIG"
 echo "API configuration updated successfully."

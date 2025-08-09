@@ -1,0 +1,10 @@
+{
+  "apiBaseUrl": "http://localhost:3001",
+  "timeout": 10000,
+  "version": "1.0.0",
+  "features": {
+    "scoreValidation": true,
+    "leaderboard": true,
+    "realTimeUpdates": false
+  }
+}

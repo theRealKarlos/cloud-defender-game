@@ -60,7 +60,7 @@ Write-Host "Step 3: Configuration Validation..." -ForegroundColor Cyan
 
 # Check if required files exist
 $requiredFiles = @(
-    "frontend/js/config.js",
+    "frontend/config.json",
     "frontend/js/api-service.js",
     "backend/index.js",
     "infra/main.tf"

@@ -22,22 +22,23 @@ async function updateApiConfig() {
         
         console.log('Found API URL:', apiUrl);
         
-        // Read and update the config file
-        const configPath = path.join(__dirname, '..', 'frontend', 'js', 'config.js');
-        let configContent = fs.readFileSync(configPath, 'utf8');
+        // Generate new config.json file
+        const configPath = path.join(__dirname, '..', '..', 'frontend', 'config.json');
         
-        // Update the baseUrl in config.js
-        const configUrlRegex = /baseUrl:\s*['"`][^'"`]*['"`]/;
-        const newConfigUrl = `baseUrl: '${apiUrl}'`;
+        const configData = {
+            apiBaseUrl: apiUrl,
+            timeout: 10000,
+            version: '1.0.0',
+            features: {
+                scoreValidation: true,
+                leaderboard: true,
+                realTimeUpdates: false
+            }
+        };
         
-        if (configUrlRegex.test(configContent)) {
-            configContent = configContent.replace(configUrlRegex, newConfigUrl);
-            console.log('Updated baseUrl in config.js');
-            fs.writeFileSync(configPath, configContent);
-        } else {
-            console.error('Could not find baseUrl pattern in config.js');
-            return false;
-        }
+        console.log('Generating config.json with API URL:', apiUrl);
+        fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
+        console.log('Updated config.json successfully');
         
         console.log('API configuration updated successfully!');
         console.log('New API URL:', apiUrl);

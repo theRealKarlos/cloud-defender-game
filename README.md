@@ -40,13 +40,14 @@ In essence this project is an experiment in AI driven development.
 cloud-defenders-game/
 ├── frontend/                    # Frontend game code
 │   ├── index.html              # Main HTML5 Canvas game page
+│   ├── config.json             # Runtime configuration (API URLs, features)
 │   ├── api-diagnostics.html    # API testing and diagnostics page
 │   ├── debug.html              # Debug interface for development
 │   ├── icon-test.html          # AWS icon testing interface
 │   ├── js/                     # Modular game engine
+│   │   ├── main.js             # Configuration loader and app initialiser
 │   │   ├── api-service.js      # API communication layer
 │   │   ├── aws-icons.js        # AWS service icon management
-│   │   ├── config.js           # Game configuration
 │   │   ├── defense.js          # Tower defence mechanics
 │   │   ├── entities.js         # Entity system (core game objects)
 │   │   ├── event-handler.js    # Event listener management
@@ -350,8 +351,8 @@ The pipeline will automatically:
 1. Authenticate using the configured IAM role
 2. Initialize Terraform with the S3 backend
 3. Plan and apply changes with proper state locking
-4. Update frontend configuration with the correct API Gateway URL for the target environment
-5. Deploy both infrastructure and application components
+4. Generate environment-specific `config.json` with the correct API Gateway URL and feature flags
+5. Deploy both infrastructure and application components with proper cache control headers
 6. Perform health checks on both frontend and backend services
 
 ## Game Features
@@ -408,7 +409,7 @@ This lab includes a pragmatic baseline to improve security with low complexity:
 ### Deployment Strategy
 
 - **Environment Separation**: Development and production environments with proper isolation
-- **Dynamic Configuration**: Frontend API configuration is automatically updated during deployment to target the correct environment's API Gateway URL
+- **Runtime Configuration**: Frontend uses a runtime-loaded `config.json` file that is generated during deployment with environment-specific API URLs and feature flags
 - **Automated Rollback**: Lambda deployment includes automatic rollback on verification failure
 - **Targeted Cache Invalidation**: CloudFront invalidation only for HTML files, not all assets
 - **Health Checks**: Post-deployment verification for both frontend and backend using the `/health` endpoint
@@ -464,6 +465,7 @@ The deployment pipeline includes intelligent S3 version cleanup to balance cost 
 Versions follow the pattern: `v{YYYYMMDD}-{HHMMSSSS}/`
 
 Example:
+
 - `v20240115-14302145/` (current deployment)
 - `v20240115-12150832/` (rollback version - preserved)
 - `v20240114-16453021/` (old version - deleted)
@@ -503,7 +505,7 @@ Example of pinning actions to commit SHAs:
 1. **CI Phase**: Parallel execution of linting, testing, and security scanning
 2. **Build Phase**: Creation of deployment artefacts with checksums
 3. **Deploy Phase**: Infrastructure validation, cost analysis, and application deployment
-4. **Configuration**: Dynamic frontend API configuration update for environment-specific endpoints
+4. **Configuration**: Runtime configuration generation with environment-specific API endpoints and feature flags
 5. **Verification**: Health checks and automated rollback on failure
 6. **Cleanup**: Automated S3 version cleanup (preserves 2 most recent versions for rollback)
 
@@ -617,14 +619,46 @@ If the pipeline fails with "Could not load credentials":
 
 #### Frontend Configuration
 
-The frontend configuration (`frontend/js/config.js`) is automatically updated during CI/CD deployment to use the correct API Gateway URL for each environment. For local development:
+The frontend uses a runtime configuration system that loads settings from `config.json` at application startup. This approach provides several benefits:
 
-1. **Development Environment**: The default configuration points to the development API
-2. **Manual Updates**: Use the update scripts in `scripts/utils/` to update the configuration locally:
+**Why Runtime Configuration?**
+
+- **Build Once, Deploy Many**: The same static assets work across all environments
+- **Safer Deployments**: No risky JavaScript file editing during deployment
+- **Instant Updates**: Configuration changes propagate immediately without cache invalidation
+- **Precise Caching**: Long cache for static assets, no cache for configuration
+- **Operational Simplicity**: Easy rollbacks by updating a single JSON file
+
+**How It Works:**
+
+1. **Startup**: `main.js` loads and fetches `/config.json` before initialising the game
+2. **Configuration**: Sets `window.API_CONFIG` for backward compatibility with existing code
+3. **Deployment**: Scripts generate `config.json` with environment-specific API URLs and feature flags
+4. **Caching**: `config.json` served with `Cache-Control: no-store`, other assets cached normally
+
+**Local Development:**
+
+1. **Development Environment**: Default `config.json` points to localhost for local API development
+2. **Manual Updates**: Use the update scripts to generate configuration from Terraform outputs:
    ```bash
-   # Update configuration from Terraform outputs
+   # Generate config.json from Terraform outputs
    bash scripts/utils/update-api-config.sh
    ```
+
+**Configuration Format:**
+
+```json
+{
+  "apiBaseUrl": "https://api.example.com",
+  "timeout": 10000,
+  "version": "1.0.0",
+  "features": {
+    "scoreValidation": true,
+    "leaderboard": true,
+    "realTimeUpdates": false
+  }
+}
+```
 
 #### PowerShell Environment Variables
 

@@ -28,27 +28,28 @@ try {
     # Return to root directory
     Set-Location -Path ".."
     
-    # Update config.js file
-    $configPath = "frontend/js/config.js"
+    # Generate config.json file
+    $configPath = "frontend/config.json"
     
-    if (Test-Path $configPath) {
-        Write-Host "Updating config.js..." -ForegroundColor Yellow
-        
-        # Read the current config file
-        $configContent = Get-Content $configPath -Raw
-        
-        # Update the baseUrl
-        $updatedContent = $configContent -replace "baseUrl:\s*['""`][^'""`]*['""`]", "baseUrl: '$apiUrl'"
-        
-        # Write the updated content back
-        Set-Content -Path $configPath -Value $updatedContent
-        
-        Write-Host "Updated baseUrl in config.js" -ForegroundColor Green
+    Write-Host "Generating config.json..." -ForegroundColor Yellow
+    
+    # Create configuration object
+    $configData = @{
+        apiBaseUrl = $apiUrl
+        timeout = 10000
+        version = "1.0.0"
+        features = @{
+            scoreValidation = $true
+            leaderboard = $true
+            realTimeUpdates = $false
+        }
     }
-    else {
-        Write-Host "config.js file not found at $configPath" -ForegroundColor Red
-        exit 1
-    }
+    
+    # Convert to JSON and write to file
+    $configJson = $configData | ConvertTo-Json -Depth 5
+    Set-Content -Path $configPath -Value $configJson
+    
+    Write-Host "Generated config.json with API URL: $apiUrl" -ForegroundColor Green
     
     Write-Host ""
     Write-Host "API configuration updated successfully!" -ForegroundColor Green

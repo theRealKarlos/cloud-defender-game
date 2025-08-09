@@ -90,8 +90,7 @@ The automated deployment pipeline uses the `GitHubActionsDeployRole-cloud-defend
         "logs:PutRetentionPolicy",
         "logs:PutResourcePolicy",
         "logs:DeleteResourcePolicy",
-        "logs:DescribeResourcePolicies",
-        "logs:UpdateLogDelivery"
+        "logs:DescribeResourcePolicies"
       ],
       "Resource": "arn:aws:logs:*:*:*"
     },
@@ -102,7 +101,8 @@ The automated deployment pipeline uses the `GitHubActionsDeployRole-cloud-defend
         "logs:CreateLogDelivery",
         "logs:DeleteLogDelivery",
         "logs:GetLogDelivery",
-        "logs:ListLogDeliveries"
+        "logs:ListLogDeliveries",
+        "logs:UpdateLogDelivery"
       ],
       "Resource": "*"
     },

@@ -29,10 +29,10 @@
     "@aws-sdk/lib-dynamodb": "^3.716.0"
   },
   "devDependencies": {
-    "jest": "^30.0.0",
     "@eslint/js": "^9.32.0",
     "eslint": "^9.32.0",
-    "prettier": "^3.0.0"
+    "jest": "^30.0.0",
+    "prettier": "^3.6.2"
   },
   "jest": {
     "testMatch": [
@@ -41,7 +41,11 @@
     "testEnvironment": "node",
     "collectCoverage": true,
     "coverageDirectory": "coverage",
-    "coverageReporters": ["text", "lcov", "html"],
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ],
     "collectCoverageFrom": [
       "src/**/*.js",
       "*.js",

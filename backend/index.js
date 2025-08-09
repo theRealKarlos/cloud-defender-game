@@ -65,7 +65,11 @@ exports.handler = async (event) => {
           'No route matched. Available routes: POST /api/scores, GET /api/leaderboard, GET /health'
         );
         return apiResponses.notFound(`Route not found: ${routeKey}`, {
-          availableRoutes: ['POST /api/scores', 'GET /api/leaderboard', 'GET /health'],
+          availableRoutes: [
+            'POST /api/scores',
+            'GET /api/leaderboard',
+            'GET /health',
+          ],
         });
     }
   } catch (error) {

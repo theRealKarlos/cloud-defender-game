@@ -654,15 +654,46 @@ jobs:
           s3_bucket=$(terraform output -raw s3_bucket_name 2>/dev/null || echo "")
           cloudfront_id=$(terraform output -raw cloudfront_distribution_id 2>/dev/null || echo "")
           lambda_function=$(terraform output -raw lambda_function_name 2>/dev/null || echo "")
+          api_gateway_url=$(terraform output -raw api_gateway_url 2>/dev/null || echo "")
 
           echo "s3_bucket=$s3_bucket" >> $GITHUB_OUTPUT
           echo "cloudfront_id=$cloudfront_id" >> $GITHUB_OUTPUT
           echo "lambda_function=$lambda_function" >> $GITHUB_OUTPUT
+          echo "api_gateway_url=$api_gateway_url" >> $GITHUB_OUTPUT
 
           echo "Infrastructure outputs retrieved:"
           echo "- S3 Bucket: $s3_bucket"
           echo "- CloudFront Distribution: $cloudfront_id"
           echo "- Lambda Function: $lambda_function"
+          echo "- API Gateway URL: $api_gateway_url"
+
+      - name: Update Frontend API Configuration
+        if: inputs.frontend-artefact != ''
+        run: |
+          echo "Updating frontend API configuration with production URL..."
+
+          # Verify the API URL was retrieved
+          if [ -z "${{ steps.terraform-outputs.outputs.api_gateway_url }}" ]; then
+            echo "❌ ERROR: API Gateway URL not found in Terraform outputs"
+            exit 1
+          fi
+
+          # Verify config.js exists
+          if [ ! -f "frontend/js/config.js" ]; then
+            echo "❌ ERROR: frontend/js/config.js not found"
+            exit 1
+          fi
+
+          echo "Current baseUrl in config.js:"
+          grep -n "baseUrl:" frontend/js/config.js || echo "baseUrl not found"
+
+          # Update the baseUrl using sed (same approach as update-api-config.sh)
+          sed -i -E "s/baseUrl:\s*['\"][^'\"]*['\"]/baseUrl: '${{ steps.terraform-outputs.outputs.api_gateway_url }}'/" frontend/js/config.js
+
+          echo "Updated baseUrl in config.js:"
+          grep -n "baseUrl:" frontend/js/config.js
+
+          echo "✅ Frontend API configuration updated successfully"
 
       - name: Extract frontend artefacts
         if: inputs.frontend-artefact != ''

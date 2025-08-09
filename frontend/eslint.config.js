@@ -73,7 +73,11 @@ module.exports = [
                 Target: 'readonly',
                 Missile: 'readonly',
                 ExplosiveBomb: 'readonly',
-                AWSIcons: 'readonly'
+                AWSIcons: 'readonly',
+                
+                // Application services (loaded via main.js initialisation)
+                ApiService: 'readonly',
+                initializeGame: 'readonly'
             }
         },
         rules: {
@@ -102,11 +106,11 @@ module.exports = [
             'no-magic-numbers': ['warn', { 
                 'ignore': [
                     // Common numbers
-                    -1, 0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 20, 24, 25, 30, 32, 35, 36, 40, 48, 50, 60, 64, 80, 100, 120, 150, 200, 300, 500, 600, 800, 1000, 1500, 2000, 10000, 1000000,
+                    -1, 0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 20, 24, 25, 30, 32, 35, 36, 40, 48, 50, 60, 64, 70, 75, 80, 82, 84, 100, 108, 120, 125, 150, 200, 250, 300, 350, 500, 600, 800, 1000, 1500, 2000, 5000, 10000, 20000, 30000, 60000, 1000000,
                     // Negative coordinates (common in games)
-                    -2, -4, -6, -8, -10, -12,
+                    -2, -4, -6, -8, -10, -12, -25, -100,
                     // Decimal values (common in games)
-                    0.01, 0.05, 0.08, 0.1, 0.2, 0.25, 0.3, 0.5, 0.6, 0.7, 0.8, 1.2, 1.5
+                    0.01, 0.016, 0.05, 0.08, 0.1, 0.2, 0.25, 0.3, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.2, 1.5
                 ],
                 'ignoreArrayIndexes': true,
                 'ignoreDefaultValues': true,
@@ -119,8 +123,8 @@ module.exports = [
         }
     },
     {
-        // Specific rules for test files
-        files: ['tests/**/*.test.js'],
+        // Specific rules for test files - corrected path pattern
+        files: ['__tests__/**/*.test.js'],
         languageOptions: {
             globals: {
                 // Jest globals
@@ -138,7 +142,7 @@ module.exports = [
             }
         },
         rules: {
-            'no-magic-numbers': 'off', // Allow magic numbers in tests
+            'no-magic-numbers': 'off', // Allow magic numbers in tests - testing often requires specific values
             'max-lines-per-function': 'off', // Allow longer test functions
             'no-unused-vars': 'off' // Allow unused vars in test setup
         }

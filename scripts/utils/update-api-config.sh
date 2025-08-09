@@ -7,7 +7,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR") )"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 INFRA_DIR="$PROJECT_ROOT/infra"
 FRONTEND_CONFIG="$PROJECT_ROOT/frontend/js/config.js"
 

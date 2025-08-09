@@ -186,66 +186,46 @@ runs:
 
         echo "result=success" >> $GITHUB_OUTPUT
 
-    - name: Update CloudFront origin path
-      id: update-origin
-      shell: bash
-      run: |
-        if [ "${{ inputs.dry-run }}" = "true" ]; then
-          echo "DRY RUN: Would update CloudFront origin path to /${{ steps.version-path.outputs.version-path }}"
-        elif [ -n "${{ inputs.cloudfront-distribution-id }}" ]; then
-          echo "Updating CloudFront origin path to /${{ steps.version-path.outputs.version-path }}..."
-          
-          # Get the full distribution configuration
-          aws cloudfront get-distribution-config \
-            --id "${{ inputs.cloudfront-distribution-id }}" \
-            --region "${{ inputs.aws-region }}" > dist-config-full.json
-          
-          # Extract only the DistributionConfig object, which is what the update-distribution command expects.
-          # Then, update the OriginPath within that object. This avoids sending invalid top-level
-          # keys like 'ETag' that the get-distribution-config command returns but the update command rejects.
-          jq --arg new_path "/${{ steps.version-path.outputs.version-path }}" \
-            '.DistributionConfig | .Origins.Items[0].OriginPath = $new_path' \
-            dist-config-full.json > dist-config-for-update.json
-          
-          # Get the ETag, which is required for the --if-match parameter to prevent race conditions.
-          etag=$(jq -r '.ETag' dist-config-full.json)
-          
-          # Update the distribution using the correctly formatted config file and the ETag.
-          aws cloudfront update-distribution \
-            --id "${{ inputs.cloudfront-distribution-id }}" \
-            --distribution-config file://dist-config-for-update.json \
-            --if-match "$etag" \
-            --region "${{ inputs.aws-region }}"
-          
-          echo "✅ CloudFront origin path updated to /${{ steps.version-path.outputs.version-path }}"
-          
-          # Clean up temporary files
-          rm -f dist-config-full.json dist-config-for-update.json
-        else
-          echo "⚠️  No CloudFront distribution ID provided, skipping origin path update"
-        fi
-
-    - name: Deploy config.json to bucket root
-      shell: bash
-      run: |
-        if [ "${{ inputs.dry-run }}" = "true" ]; then
-          echo "DRY RUN: Would deploy config.json to s3://${{ inputs.s3-bucket }}/config.json"
-        else
-          echo "Deploying config.json to bucket root with no-cache headers..."
-          
-          # Check if config.json exists in source directory
-          if [ -f "${{ inputs.source-directory }}/config.json" ]; then
-            aws s3 cp "${{ inputs.source-directory }}/config.json" "s3://${{ inputs.s3-bucket }}/config.json" \
+      - name: Create and deploy manifest.json
+        shell: bash
+        run: |
+          if [ "${{ inputs.dry-run }}" = "true" ]; then
+            echo "DRY RUN: Would create and deploy manifest.json with version ${{ inputs.version-folder }}"
+          else
+            echo "Creating manifest.json for version: ${{ inputs.version-folder }}"
+            echo "{\"version\": \"${{ inputs.version-folder }}\"}" > manifest.json
+            
+            echo "Deploying manifest.json to bucket root with no-cache headers..."
+            aws s3 cp manifest.json "s3://${{ inputs.s3-bucket }}/manifest.json" \
               --region "${{ inputs.aws-region }}" \
               --content-type "application/json" \
-              --cache-control "no-store" \
+              --cache-control "no-store, max-age=0" \
               --metadata-directive REPLACE
-            
-            echo "✅ config.json deployed successfully to bucket root"
-          else
-            echo "⚠️  config.json not found in ${{ inputs.source-directory }}, skipping"
+              
+            echo "✅ manifest.json deployed successfully"
           fi
-        fi
+
+      - name: Deploy config.json to bucket root
+        shell: bash
+        run: |
+          if [ "${{ inputs.dry-run }}" = "true" ]; then
+            echo "DRY RUN: Would deploy config.json to s3://${{ inputs.s3-bucket }}/config.json"
+          else
+            echo "Deploying config.json to bucket root with no-cache headers..."
+            
+            # Check if config.json exists in source directory
+            if [ -f "${{ inputs.source-directory }}/config.json" ]; then
+              aws s3 cp "${{ inputs.source-directory }}/config.json" "s3://${{ inputs.s3-bucket }}/config.json" \
+                --region "${{ inputs.aws-region }}" \
+                --content-type "application/json" \
+                --cache-control "no-store, max-age=0" \
+                --metadata-directive REPLACE
+              
+              echo "✅ config.json deployed successfully to bucket root"
+            else
+              echo "⚠️  config.json not found in ${{ inputs.source-directory }}, skipping"
+            fi
+          fi
 
     - name: Set S3 bucket website configuration
       shell: bash
@@ -272,7 +252,7 @@ runs:
           # This is more efficient than invalidating everything
           invalidation_id=$(aws cloudfront create-invalidation \
             --distribution-id "${{ inputs.cloudfront-distribution-id }}" \
-            --paths "/index.html" "/error.html" "/404.html" "/config.json" \
+            --paths "/index.html" "/error.html" "/404.html" "/config.json" "/manifest.json" \
             --query 'Invalidation.Id' \
             --output text)
           

@@ -3,140 +3,93 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cloud Defenders - Missile Mayhem on AWS</title>
-    <link rel="stylesheet" href="styles/game.css" />
+    <title>Cloud Defenders</title>
+    <link
+      id="favicon"
+      rel="icon"
+      href="assets/images/favicon.ico"
+      type="image/x-icon"
+    />
+
+    <!-- Bootstrap Loader Script -->
+    <!-- This inline script acts as a bootstrap loader that dynamically loads all application assets -->
+    <!-- It fetches manifest.json and config.json, then dynamically injects scripts and stylesheets -->
+    <script>
+      // Self-executing async function to act as a bootstrap loader
+      (async () => {
+        try {
+          // 1. Fetch manifest and configuration files in parallel
+          // We use cache-busting parameters to ensure fresh content
+          const [manifestResponse, configResponse] = await Promise.all([
+            fetch('/manifest.json?v=' + Date.now()), // Cache-bust manifest
+            fetch('/config.json?v=' + Date.now()), // Cache-bust config
+          ]);
+
+          if (!manifestResponse.ok)
+            throw new Error('Failed to load manifest.json');
+          if (!configResponse.ok) throw new Error('Failed to load config.json');
+
+          const manifest = await manifestResponse.json();
+          const config = await configResponse.json();
+
+          // Make configuration globally available for other scripts
+          window.APP_CONFIG = config;
+          const versionPath = manifest.version;
+
+          // 2. Define all application assets with the correct versioned path
+          // This ensures assets are loaded from the correct deployment version
+          const assets = {
+            styles: [`/${versionPath}/css/style.css`],
+            scripts: [
+              `/${versionPath}/js/main.js`,
+              `/${versionPath}/js/utils/helpers.js`,
+              `/${versionPath}/js/components/particle.js`,
+              `/${versionPath}/js/components/explosion.js`,
+              `/${versionPath}/js/game/player.js`,
+              `/${versionPath}/js/game/enemy.js`,
+              `/${versionPath}/js/game/projectile.js`,
+              `/${versionPath}/js/managers/enemy-manager.js`,
+              `/${versionPath}/js/managers/power-up-manager.js`,
+              `/${versionPath}/js/core/game-loop.js`,
+              `/${versionPath}/js/core/game-engine.js`,
+              `/${versionPath}/js/core/api-service.js`,
+              `/${versionPath}/js/managers/ui-manager.js`,
+              `/${versionPath}/js/game.js`,
+              `/${versionPath}/js/security/game-security.js`,
+              `/${versionPath}/js/utils/error-overlay.js`,
+            ],
+          };
+
+          // 3. Dynamically create and append stylesheet tags
+          // This loads the main application styles
+          assets.styles.forEach((href) => {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = href;
+            document.head.appendChild(link);
+          });
+
+          // 4. Use a document fragment for efficient script injection
+          // This loads all application scripts in the correct order
+          const fragment = document.createDocumentFragment();
+          assets.scripts.forEach((src) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.defer = true; // Ensure scripts execute in order
+            fragment.appendChild(script);
+          });
+          document.body.appendChild(fragment);
+        } catch (error) {
+          console.error('Critical application bootstrap failed:', error);
+          // Display a user-friendly error message
+          document.body.innerHTML =
+            '<div style="color:white;text-align:center;padding-top:50px;font-family:Arial,sans-serif;"><h1>Error</h1><p>Could not load game files. Please try refreshing the page.</p></div>';
+        }
+      })();
+    </script>
   </head>
   <body>
-    <div id="game-container">
-      <header class="game-header">
-        <h1>Cloud Defenders</h1>
-        <div class="game-stats">
-          <span id="score">Score: 0</span>
-          <span id="wave">Wave: 1</span>
-          <span id="lives">Lives: 3</span>
-        </div>
-      </header>
-
-      <main class="game-main">
-        <canvas id="game-canvas" width="800" height="600">
-          Your browser does not support the HTML5 Canvas element. Please upgrade
-          to a modern browser to play Cloud Defenders.
-        </canvas>
-
-        <div id="game-ui">
-          <div class="control-panel">
-            <button id="start-btn" class="game-btn">Start Game</button>
-            <button id="pause-btn" class="game-btn" disabled>Pause</button>
-            <button id="restart-btn" class="game-btn">Restart</button>
-            <div class="keyboard-hints">
-              <small
-                >Shortcuts: <kbd>Space</kbd> Pause • <kbd>R</kbd> Restart •
-                <kbd>Esc</kbd> Close</small
-              >
-            </div>
-          </div>
-
-          <div class="power-ups">
-            <h3>Active Power-ups</h3>
-            <div id="active-powerups"></div>
-          </div>
-        </div>
-      </main>
-
-      <div id="game-modal" class="modal hidden">
-        <div class="modal-content">
-          <h2 id="modal-title">Game Over</h2>
-          <p id="modal-message">
-            Your final score: <span id="final-score">0</span>
-          </p>
-
-          <!-- Score Submission Form -->
-          <div id="score-submission" class="score-submission">
-            <h3>Submit to Leaderboard</h3>
-            <form id="score-form">
-              <div class="form-group">
-                <label for="player-name">Player Name:</label>
-                <input
-                  type="text"
-                  id="player-name"
-                  name="playerName"
-                  maxlength="50"
-                  placeholder="Enter your name"
-                  required
-                />
-                <small class="input-hint"
-                  >Keyboard shortcuts (R, Space) are disabled while
-                  typing</small
-                >
-              </div>
-              <div class="form-actions">
-                <button
-                  type="submit"
-                  id="submit-score-btn"
-                  class="game-btn primary"
-                >
-                  Submit Score
-                </button>
-                <button
-                  type="button"
-                  id="skip-submission-btn"
-                  class="game-btn secondary"
-                >
-                  Skip
-                </button>
-              </div>
-            </form>
-            <div id="submission-status" class="submission-status hidden"></div>
-          </div>
-
-          <!-- Leaderboard Display -->
-          <div id="leaderboard-display" class="leaderboard-display hidden">
-            <h3>Top Scores</h3>
-            <div id="leaderboard-list"></div>
-          </div>
-
-          <div class="modal-actions">
-            <button id="modal-close" class="game-btn">Close</button>
-            <button id="modal-restart" class="game-btn">Play Again</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Main application entry point - loads config first -->
-    <!-- This script runs immediately and manages the asynchronous initialisation sequence -->
-    <script src="js/main.js"></script>
-
-    <!-- All subsequent scripts use 'defer' to prevent race conditions -->
-    <!-- Defer ensures scripts are parsed but not executed until DOM is complete -->
-    <!-- and maintains script order whilst allowing asynchronous loading -->
-
-    <!-- API Service -->
-    <script src="js/api-service.js" defer></script>
-
-    <!-- AWS Icons -->
-    <script src="js/aws-icons.js" defer></script>
-
-    <!-- Game Security -->
-    <script src="js/game-security.js" defer></script>
-
-    <!-- Core game systems -->
-    <script src="js/entities.js" defer></script>
-    <script src="js/target.js" defer></script>
-    <script src="js/missile.js" defer></script>
-    <script src="js/explosive-bomb.js" defer></script>
-    <script src="js/input-manager.js" defer></script>
-    <script src="js/game-state.js" defer></script>
-    <script src="js/renderer.js" defer></script>
-    <script src="js/ui-manager.js" defer></script>
-    <script src="js/game-loop.js" defer></script>
-    <script src="js/event-handler.js" defer></script>
-    <script src="js/wave-manager.js" defer></script>
-    <script src="js/game-conditions.js" defer></script>
-    <script src="js/game-engine.js" defer></script>
-
-    <!-- Game initialisation -->
-    <!-- This script provides the initializeGame() function called by main.js -->
-    <script src="js/game.js" defer></script>
+    <!-- The game canvas will be populated by ui-manager.js -->
+    <canvas id="game-canvas"></canvas>
   </body>
 </html>

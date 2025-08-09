@@ -127,13 +127,14 @@ resource "aws_cloudfront_response_headers_policy" "security_headers" {
 }
 
 # =================================================================
-# RELAXED SECURITY HEADERS POLICY FOR DIAGNOSTICS
+# RELAXED SECURITY HEADERS POLICY FOR DIAGNOSTICS & BOOTSTRAP
 # =================================================================
-# This policy is specifically for development/diagnostics pages that
-# require inline scripts to function properly. It maintains most security
-# protections but relaxes CSP to allow inline scripts and styles.
+# This policy is specifically for development/diagnostics pages and the
+# bootstrap loader that require inline scripts to function properly.
+# It maintains most security protections but relaxes CSP to allow
+# inline scripts and styles.
 #
-# Applied only to: api-diagnostics.html, debug.html, icon-test.html
+# Applied to: api-diagnostics.html, debug.html, icon-test.html, index.html
 # =================================================================
 resource "aws_cloudfront_response_headers_policy" "diagnostics_headers" {
   name = "${var.project_name}-${var.environment}-diagnostics-headers"
@@ -190,12 +191,14 @@ resource "aws_cloudfront_response_headers_policy" "diagnostics_headers" {
   }
 }
 
-# CloudFront Distribution
 resource "aws_cloudfront_distribution" "game_hosting" {
+  // We revert to a single S3 origin pointing to the bucket root.
+  // The origin_path is removed, making the origin configuration completely static.
+  // This eliminates the need to update CloudFront on every deployment.
   origin {
     domain_name              = aws_s3_bucket.game_hosting.bucket_regional_domain_name
     origin_access_control_id = aws_cloudfront_origin_access_control.game_hosting.id
-    origin_id                = "S3-${aws_s3_bucket.game_hosting.bucket}"
+    origin_id                = "S3-Bucket-Root" // Simplified static ID
   }
 
   enabled             = true
@@ -203,104 +206,13 @@ resource "aws_cloudfront_distribution" "game_hosting" {
   comment             = "Cloud Defenders Game CDN"
   default_root_object = "index.html"
 
-  # =================================================================
-  # ORDERED CACHE BEHAVIORS FOR DIAGNOSTICS PAGES
-  # =================================================================
-  # These behaviors have higher precedence (lower numbers) than the
-  # default behavior and apply relaxed security headers to development
-  # and diagnostics pages that require inline scripts to function.
-  # =================================================================
-
-  # API diagnostics page - relaxed CSP for inline scripts
-  ordered_cache_behavior {
-    path_pattern     = "api-diagnostics.html"
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-${aws_s3_bucket.game_hosting.bucket}"
-
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
-
-    viewer_protocol_policy     = "redirect-to-https"
-    min_ttl                    = 0
-    default_ttl                = 300 # Shorter cache for dev tools
-    max_ttl                    = 3600
-    compress                   = true
-    response_headers_policy_id = aws_cloudfront_response_headers_policy.diagnostics_headers.id
-  }
-
-  # Debug page - relaxed CSP for inline scripts
-  ordered_cache_behavior {
-    path_pattern     = "debug.html"
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-${aws_s3_bucket.game_hosting.bucket}"
-
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
-
-    viewer_protocol_policy     = "redirect-to-https"
-    min_ttl                    = 0
-    default_ttl                = 300 # Shorter cache for dev tools
-    max_ttl                    = 3600
-    compress                   = true
-    response_headers_policy_id = aws_cloudfront_response_headers_policy.diagnostics_headers.id
-  }
-
-  # Icon test page - relaxed CSP for inline scripts
-  ordered_cache_behavior {
-    path_pattern     = "icon-test.html"
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-${aws_s3_bucket.game_hosting.bucket}"
-
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
-
-    viewer_protocol_policy     = "redirect-to-https"
-    min_ttl                    = 0
-    default_ttl                = 300 # Shorter cache for dev tools
-    max_ttl                    = 3600
-    compress                   = true
-    response_headers_policy_id = aws_cloudfront_response_headers_policy.diagnostics_headers.id
-  }
-
-  # =================================================================
-  # RUNTIME CONFIGURATION CACHE BEHAVIOUR
-  # =================================================================
-  # This behaviour handles the `/config.json` file which contains
-  # runtime configuration for the frontend application. Unlike the
-  # versioned application assets, this file must always be served
-  # from the root of the S3 bucket (not from versioned folders).
-  #
-  # Key characteristics:
-  # - Zero caching (TTL=0) to ensure configuration updates are immediate
-  # - Served from bucket root whilst other assets come from versioned paths
-  # - Uses strict security headers (same as main application)
-  # - Essential for the application's runtime configuration system
-  #
-  # This solves the architectural challenge where versioned deployments
-  # live in subfolders but configuration must remain at a consistent URL.
-  # =================================================================
-
-  # Runtime configuration file - no caching, served from bucket root
+  // This ordered_cache_behavior ensures config.json is never cached
+  // and is served directly from the S3 bucket root
   ordered_cache_behavior {
     path_pattern     = "config.json"
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-${aws_s3_bucket.game_hosting.bucket}"
+    target_origin_id = "S3-Bucket-Root"
 
     forwarded_values {
       query_string = false
@@ -311,17 +223,19 @@ resource "aws_cloudfront_distribution" "game_hosting" {
 
     viewer_protocol_policy     = "redirect-to-https"
     min_ttl                    = 0
-    default_ttl                = 0 # Never cache - always fetch fresh
-    max_ttl                    = 0 # Prevent any caching at edge locations
+    default_ttl                = 0 // Never cache - always fetch fresh
+    max_ttl                    = 0 // Prevent any caching at edge locations
     compress                   = true
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers.id
   }
 
-  # Cache behavior for SPA routing (main game and other pages)
-  default_cache_behavior {
-    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+  // We add a new cache behaviour for our manifest file, also with no caching.
+  // This allows the frontend to always fetch the latest version information.
+  ordered_cache_behavior {
+    path_pattern     = "manifest.json"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-${aws_s3_bucket.game_hosting.bucket}"
+    target_origin_id = "S3-Bucket-Root"
 
     forwarded_values {
       query_string = false
@@ -332,6 +246,129 @@ resource "aws_cloudfront_distribution" "game_hosting" {
 
     viewer_protocol_policy     = "redirect-to-https"
     min_ttl                    = 0
+    default_ttl                = 0 // Never cache manifest
+    max_ttl                    = 0
+    compress                   = true
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers.id
+  }
+
+  // Bootstrap loader page - requires relaxed CSP for inline script
+  // This allows the inline bootstrap script in index.html to function
+  // while maintaining security for all other assets
+  ordered_cache_behavior {
+    path_pattern     = "index.html"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "S3-Bucket-Root"
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy     = "redirect-to-https"
+    min_ttl                    = 0
+    default_ttl                = 0 // Never cache - always fetch fresh bootstrap
+    max_ttl                    = 0
+    compress                   = true
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.diagnostics_headers.id
+  }
+
+  // =================================================================
+  // ORDERED CACHE BEHAVIOURS FOR DIAGNOSTICS PAGES
+  // =================================================================
+  // These behaviours have higher precedence (lower numbers) than the
+  // default behaviour and apply relaxed security headers to development
+  // and diagnostics pages that require inline scripts to function.
+  // 
+  // All diagnostics pages are served from the bucket root origin.
+  // =================================================================
+
+  // API diagnostics page - relaxed CSP for inline scripts
+  ordered_cache_behavior {
+    path_pattern     = "api-diagnostics.html"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "S3-Bucket-Root" // Serve from bucket root
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy     = "redirect-to-https"
+    min_ttl                    = 0
+    default_ttl                = 300 // Shorter cache for dev tools
+    max_ttl                    = 3600
+    compress                   = true
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.diagnostics_headers.id
+  }
+
+  // Debug page - relaxed CSP for inline scripts
+  ordered_cache_behavior {
+    path_pattern     = "debug.html"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "S3-Bucket-Root" // Serve from bucket root
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy     = "redirect-to-https"
+    min_ttl                    = 0
+    default_ttl                = 300 // Shorter cache for dev tools
+    max_ttl                    = 3600
+    compress                   = true
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.diagnostics_headers.id
+  }
+
+  // Icon test page - relaxed CSP for inline scripts
+  ordered_cache_behavior {
+    path_pattern     = "icon-test.html"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "S3-Bucket-Root" // Serve from bucket root
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy     = "redirect-to-https"
+    min_ttl                    = 0
+    default_ttl                = 300 // Shorter cache for dev tools
+    max_ttl                    = 3600
+    compress                   = true
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.diagnostics_headers.id
+  }
+
+  // The default cache behaviour now points to the single, static origin.
+  // CloudFront will pass the full request path (e.g., /v2025.../js/main.js) to S3.
+  // S3 will serve the file if it exists at that path, or return a 404.
+  default_cache_behavior {
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "S3-Bucket-Root"
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy     = "redirect-to-https"
+    min_ttl                    = 3600
     default_ttl                = 3600
     max_ttl                    = 86400
     compress                   = true

@@ -136,16 +136,45 @@ aws @cssArgs
 $jsArgs = @("s3", "cp", "s3://$bucketName", "s3://$bucketName", "--recursive", "--exclude", "*", "--include", "*.js", "--content-type", "application/javascript", "--metadata-directive", "REPLACE", "--profile", $Profile)
 aws @jsArgs
 
-# Upload config.json separately with no-cache headers (no public ACL needed with OAC)
-Write-Host "Uploading config.json with no-cache headers..." -ForegroundColor Blue
-$configArgs = @("s3", "cp", "./config.json", "s3://$bucketName/config.json", "--content-type", "application/json", "--cache-control", "no-store", "--metadata-directive", "REPLACE", "--profile", $Profile)
-aws @configArgs
+# Deploy config.json to bucket root (not in versioned folder)
+Write-Host "Deploying config.json to bucket root..." -ForegroundColor Blue
+aws s3 cp "frontend/config.json" "s3://$bucketName/config.json" `
+    --region $awsRegion `
+    --content-type "application/json" `
+    --cache-control "no-store, max-age=0" `
+    --metadata-directive REPLACE `
+    --profile $Profile
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to upload config.json to S3"
     exit 1
 }
 Write-Host "config.json uploaded successfully" -ForegroundColor Green
+
+# Create and deploy manifest.json
+Write-Host "Creating manifest.json for version: $versionFolder" -ForegroundColor Blue
+$manifestContent = @{"version" = $versionFolder} | ConvertTo-Json -Compress
+Set-Content -Path "manifest.json" -Value $manifestContent
+
+Write-Host "Deploying manifest.json to bucket root with no-cache headers..." -ForegroundColor Blue
+aws s3 cp "manifest.json" "s3://$bucketName/manifest.json" `
+    --region $awsRegion `
+    --content-type "application/json" `
+    --cache-control "no-store, max-age=0" `
+    --metadata-directive REPLACE `
+    --profile $Profile
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Failed to upload manifest.json to S3"
+    exit 1
+}
+Write-Host "manifest.json uploaded successfully" -ForegroundColor Green
+
+# Clean up local manifest.json
+Remove-Item "manifest.json" -ErrorAction SilentlyContinue
+
+# Update S3 bucket website configuration
+Write-Host "Updating S3 bucket website configuration..." -ForegroundColor Blue
 
 # Get website URL and CloudFront distribution ID
 Set-Location $infraDir

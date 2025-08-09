@@ -14,8 +14,9 @@ async function updateApiConfig() {
         console.log('Getting API URL from Terraform...');
         
         // Get the API URL from Terraform outputs
+        const infraDir = path.join(__dirname, '..', '..', 'infra');
         const apiUrl = execSync('terraform output -raw api_gateway_url', { 
-            cwd: path.join(__dirname, '..', 'infra'),
+            cwd: infraDir,
             encoding: 'utf8' 
         }).trim();
         

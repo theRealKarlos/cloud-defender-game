@@ -22,10 +22,17 @@ exports.handler = async (event) => {
     const body = event.body;
     const queryStringParameters = event.queryStringParameters;
 
-    // For API Gateway v2, remove the stage prefix from the path
-    // e.g., '/dev/api/scores' becomes '/api/scores'
-    if (path && path.startsWith('/dev/')) {
-      path = path.substring(4); // Remove '/dev' prefix
+    // For API Gateway v2, remove stage prefix (e.g., '/dev', '/staging', '/prod') from the path
+    // so '/dev/api/scores' becomes '/api/scores'. Handles arbitrary stage names safely.
+    if (path && /^\/[A-Za-z0-9_-]+\//.test(path)) {
+      // Remove only the first segment (stage) if event indicates HTTP API v2
+      const isHttpApiV2 = !!event.requestContext?.http;
+      if (isHttpApiV2) {
+        const firstSlash = path.indexOf('/', 1);
+        if (firstSlash !== -1) {
+          path = path.substring(firstSlash);
+        }
+      }
     }
 
     // Debug logging

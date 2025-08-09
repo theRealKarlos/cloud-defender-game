@@ -40,10 +40,16 @@ Write-Host ""
 Write-Host "Waiting 30 seconds for AWS resources to stabilize..." -ForegroundColor Yellow
 Start-Sleep -Seconds 30
 
-# Step 2: Update API Configuration
+# Step 2: Update API Configuration (Windows uses PS, Linux CI can run Bash helper)
 Write-Host ""
 Write-Host "Step 2: Updating API Configuration..." -ForegroundColor Cyan
-& "$PSScriptRoot/update-api-config.ps1"
+if ($IsWindows) {
+    & "$PSScriptRoot/update-api-config.ps1" -Profile $Profile
+}
+else {
+    pwsh -c "Write-Host 'Using Bash updater on Linux runners' -ForegroundColor Yellow" | Out-Null
+    bash "$PSScriptRoot/../utils/update-api-config.sh"
+}
 
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "API configuration update failed, but continuing with deployment"

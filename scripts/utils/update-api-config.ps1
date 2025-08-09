@@ -44,7 +44,8 @@ try {
         Set-Content -Path $configPath -Value $updatedContent
         
         Write-Host "Updated baseUrl in config.js" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "config.js file not found at $configPath" -ForegroundColor Red
         exit 1
     }
@@ -57,7 +58,8 @@ try {
     Write-Host "  • Local development (file:// or localhost)" -ForegroundColor White
     Write-Host "  • Production deployment (CloudFront)" -ForegroundColor White
     
-} catch {
+}
+catch {
     Write-Host "Error updating API configuration: $($_.Exception.Message)" -ForegroundColor Red
     
     if ($_.Exception.Message -like "*terraform output*") {
@@ -68,7 +70,8 @@ try {
     }
     
     exit 1
-} finally {
+}
+finally {
     # Return to original directory
     Set-Location -Path ".."
 }

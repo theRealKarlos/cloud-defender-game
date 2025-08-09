@@ -1,6 +1,7 @@
 /**
  * Game Loop Management
  * Handles frame timing, FPS calculation, and game loop control
+ * Uses fixed timestep for consistent gameplay across all frame rates
  */
 
 class GameLoop {
@@ -11,6 +12,11 @@ class GameLoop {
     this.fps = 0;
     this.frameCount = 0;
     this.lastFpsUpdate = 0;
+
+    // Fixed timestep variables
+    this.tickRate = 1 / 60; // 60 FPS fixed timestep (16.67ms per tick)
+    this.accumulator = 0;
+    this.maxAccumulator = this.tickRate * 5; // Prevent spiral of death
 
     // Game loop control
     this.isRunning = false;
@@ -32,6 +38,7 @@ class GameLoop {
       this.lastFrameTime = performance.now();
       this.lastFpsUpdate = this.lastFrameTime;
       this.frameCount = 0;
+      this.accumulator = 0; // Reset accumulator on start
       this.loop(this.lastFrameTime);
     }
   }
@@ -54,9 +61,28 @@ class GameLoop {
     this.lastFrameTime = timestamp;
 
     // Cap delta time to prevent large jumps (e.g., when tab becomes inactive)
-    this.deltaTime = Math.min(this.deltaTime, 1 / 30); // Max 30 FPS minimum
+    // This prevents the "spiral of death" where the game tries to catch up
+    this.deltaTime = Math.min(this.deltaTime, this.maxAccumulator);
 
-    // Calculate FPS
+    // Add real time to accumulator
+    this.accumulator += this.deltaTime;
+
+    // Run fixed timestep updates
+    // This ensures consistent game logic regardless of frame rate
+    while (this.accumulator >= this.tickRate) {
+      if (this.updateCallback) {
+        // Always pass the fixed timestep, not the variable deltaTime
+        this.updateCallback(this.tickRate);
+      }
+      this.accumulator -= this.tickRate;
+    }
+
+    // Render once per frame (independent of update frequency)
+    if (this.renderCallback) {
+      this.renderCallback();
+    }
+
+    // Calculate FPS based on actual rendering frames
     this.frameCount++;
     if (timestamp - this.lastFpsUpdate >= 1000) {
       this.fps = Math.round(
@@ -64,15 +90,6 @@ class GameLoop {
       );
       this.frameCount = 0;
       this.lastFpsUpdate = timestamp;
-    }
-
-    // Execute callbacks
-    if (this.updateCallback) {
-      this.updateCallback(this.deltaTime);
-    }
-
-    if (this.renderCallback) {
-      this.renderCallback();
     }
 
     // Schedule next frame
@@ -88,11 +105,27 @@ class GameLoop {
   }
 
   getDeltaTime() {
+    // Return the fixed timestep for consistency
+    return this.tickRate;
+  }
+
+  getVariableDeltaTime() {
+    // Return the actual variable delta time if needed for rendering interpolation
     return this.deltaTime;
+  }
+
+  getTickRate() {
+    return this.tickRate;
+  }
+
+  setTickRate(tickRate) {
+    this.tickRate = tickRate;
+    this.maxAccumulator = tickRate * 5;
   }
 
   resetFrameTiming() {
     this.lastFrameTime = performance.now();
+    this.accumulator = 0; // Also reset accumulator
   }
 }
 

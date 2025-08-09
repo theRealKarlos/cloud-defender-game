@@ -688,7 +688,8 @@ jobs:
           grep -n "baseUrl:" frontend/js/config.js || echo "baseUrl not found"
 
           # Update the baseUrl using sed (same approach as update-api-config.sh)
-          sed -i -E "s/baseUrl:\s*['\"][^'\"]*['\"]/baseUrl: '${{ steps.terraform-outputs.outputs.api_gateway_url }}'/" frontend/js/config.js
+          # We use '#' as a delimiter to avoid conflicts with '/' in the URL.
+          sed -i -E "s#baseUrl:\s*['\"][^'\"]*['\"]#baseUrl: '${{ steps.terraform-outputs.outputs.api_gateway_url }}'#" frontend/js/config.js
 
           echo "Updated baseUrl in config.js:"
           grep -n "baseUrl:" frontend/js/config.js

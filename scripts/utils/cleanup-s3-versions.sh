@@ -22,8 +22,8 @@
 #   - Designed to work with versioned S3 deployment structure
 #
 # VERSIONING CONVENTION:
-#   Expects folders named: v{YYYYMMDD}-{HHMMSSSS}/
-#   Example: v20240115-14302145/
+#   Expects folders named: v{YYYYMMDD}-{HHMMSS}-{HASH}/
+#   Example: v20250809-140955-9229e076/
 #
 # SAFETY FEATURES:
 #   - Only runs when there are more versions than specified to keep
@@ -82,19 +82,19 @@ fi
 # =============================================================================
 # VERSION DISCOVERY PHASE
 # =============================================================================
-# List all versioned directories (folders starting with 'v' followed by timestamp)
-# Expected format: v{YYYYMMDD}-{HHMMSSSS}/
-# Example: v20240115-14302145/
+# List all versioned directories (folders starting with 'v' followed by timestamp and hash)
+# Expected format: v{YYYYMMDD}-{HHMMSS}-{HASH}/
+# Example: v20250809-140955-9229e076/
 echo "🔍 Scanning for versioned deployment folders..."
 
 # Use AWS CLI to list directories, filter for version pattern, and sort
 # Pipeline explanation:
 # 1. aws s3 ls - Lists all objects/prefixes in bucket
-# 2. grep - Filters for directories matching version pattern
+# 2. grep - Filters for directories matching version pattern (v{YYYYMMDD}-{HHMMSS}-{HASH}/)
 # 3. awk - Extracts just the directory name (column 2)
 # 4. sort -r - Sorts in reverse chronological order (newest first)
 VERSION_DIRS=$(aws s3 ls "s3://$BUCKET_NAME/" | \
-    grep "PRE v[0-9]\{8\}-[0-9]\{8\}/" | \
+    grep "PRE v[0-9]\{8\}-[0-9]\{6\}-[a-f0-9]\{8\}/" | \
     awk '{print $2}' | \
     sort -r) || true
 

@@ -120,6 +120,8 @@ class ConfigLoader {
       console.log('Initialising API service...');
       if (typeof ApiService !== 'undefined') {
         window.apiService = new ApiService();
+        // Initialize the service with the loaded configuration
+        window.apiService.init(this.config);
         console.log('API service initialised successfully');
       } else {
         throw new Error('ApiService class not found');

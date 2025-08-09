@@ -5,32 +5,50 @@
 
 class ApiService {
   constructor() {
-    // Configure API base URL from config.js
-    this.API_BASE_URL = this.getApiBaseUrl();
-    // Use timeout from config, with fallback
-    this.timeout = (window.API_CONFIG && window.API_CONFIG.timeout) || 10000;
+    // Initialize with safe defaults - no configuration dependency
+    // Configuration will be set via init() method after config is loaded
+    this.API_BASE_URL = null;
+    this.timeout = 10000; // Default timeout
+    this.isInitialized = false;
   }
 
   /**
-   * Get the API base URL from configuration
-   * Reads from window.API_CONFIG.baseUrl as single source of truth
+   * Initialize the API service with configuration
+   * Must be called after configuration is loaded and before using any API methods
+   *
+   * @param {Object} config - Configuration object containing apiBaseUrl, timeout, etc.
    */
-  getApiBaseUrl() {
-    // Always use the configured API URL from config.js as single source of truth
-    if (window.API_CONFIG && window.API_CONFIG.baseUrl) {
-      return window.API_CONFIG.baseUrl;
+  init(config) {
+    if (!config || !config.apiBaseUrl) {
+      throw new Error('Invalid configuration provided to ApiService.init()');
     }
 
-    // If config is not available, throw an error rather than using a hardcoded fallback
-    throw new Error(
-      'API configuration not found. Make sure config.js is loaded before api-service.js'
-    );
+    this.API_BASE_URL = config.apiBaseUrl;
+    this.timeout = config.timeout || 10000;
+    this.isInitialized = true;
+
+    console.log('ApiService initialized with config:', {
+      baseUrl: this.API_BASE_URL,
+      timeout: this.timeout,
+    });
+  }
+
+  /**
+   * Check if the service is properly initialized
+   * @private
+   */
+  _ensureInitialized() {
+    if (!this.isInitialized || !this.API_BASE_URL) {
+      throw new Error('ApiService not initialized. Call init(config) first.');
+    }
   }
 
   /**
    * Submit a score to the leaderboard with security validation
    */
   async submitScore(scoreData, validationData = null) {
+    this._ensureInitialized();
+
     try {
       // Prepare secure payload
       const securePayload = {
@@ -139,6 +157,8 @@ class ApiService {
    * Get leaderboard data
    */
   async getLeaderboard(options = {}) {
+    this._ensureInitialized();
+
     try {
       const params = new URLSearchParams();
 
@@ -213,6 +233,8 @@ class ApiService {
    * Test API connectivity
    */
   async testConnection() {
+    this._ensureInitialized();
+
     try {
       await this.getLeaderboard({ limit: 1 });
       return true;

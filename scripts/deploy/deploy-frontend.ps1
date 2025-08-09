@@ -135,9 +135,9 @@ aws @cssArgs
 $jsArgs = @("s3", "cp", "s3://$bucketName", "s3://$bucketName", "--recursive", "--exclude", "*", "--include", "*.js", "--content-type", "application/javascript", "--metadata-directive", "REPLACE", "--profile", $Profile)
 aws @jsArgs
 
-# Upload config.json with no-cache headers
+# Upload config.json with no-cache headers and public read access
 Write-Host "Setting cache control for config.json..." -ForegroundColor Blue
-$configArgs = @("s3", "cp", "s3://$bucketName/config.json", "s3://$bucketName/config.json", "--content-type", "application/json", "--cache-control", "no-store", "--metadata-directive", "REPLACE", "--profile", $Profile)
+$configArgs = @("s3", "cp", "s3://$bucketName/config.json", "s3://$bucketName/config.json", "--content-type", "application/json", "--cache-control", "no-store", "--acl", "public-read", "--metadata-directive", "REPLACE", "--profile", $Profile)
 aws @configArgs
 
 # Get website URL and CloudFront distribution ID

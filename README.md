@@ -397,10 +397,10 @@ This lab includes a pragmatic baseline to improve security with low complexity:
 
 - **CloudFront response headers policy**
   - Adds standard security headers: `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, and `X-XSS-Protection` (legacy browsers)
-  - **Minimal CSP** tailored for the game:
-    - `default-src 'self'`; `img-src 'self' data:`; `style-src 'self' 'unsafe-inline'`; `script-src 'self'`
-    - `connect-src 'self' https://*.execute-api.eu-west-2.amazonaws.com` to allow API calls
-    - `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`
+  - **Dual security approach** with path-specific policies:
+    - **Main game (`index.html` and default paths)**: Strict CSP with `script-src 'self'` (no inline scripts allowed)
+    - **Development/diagnostics pages** (`api-diagnostics.html`, `debug.html`, `icon-test.html`): Relaxed CSP with `script-src 'self' 'unsafe-inline'` to allow inline scripts required for these tools
+  - **Main game CSP**: `default-src 'self'`; `img-src 'self' data:`; `style-src 'self' 'unsafe-inline'`; `script-src 'self'`; `connect-src 'self' https://*.execute-api.eu-west-2.amazonaws.com`; `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`
   - Adjust CSP if you add third‑party scripts, fonts, or change API endpoints. For production, narrow `connect-src` to the exact API host
 
 ### Deployment Strategy

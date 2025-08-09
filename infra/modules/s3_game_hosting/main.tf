@@ -126,6 +126,70 @@ resource "aws_cloudfront_response_headers_policy" "security_headers" {
   }
 }
 
+# =================================================================
+# RELAXED SECURITY HEADERS POLICY FOR DIAGNOSTICS
+# =================================================================
+# This policy is specifically for development/diagnostics pages that
+# require inline scripts to function properly. It maintains most security
+# protections but relaxes CSP to allow inline scripts and styles.
+#
+# Applied only to: api-diagnostics.html, debug.html, icon-test.html
+# =================================================================
+resource "aws_cloudfront_response_headers_policy" "diagnostics_headers" {
+  name = "${var.project_name}-${var.environment}-diagnostics-headers"
+
+  security_headers_config {
+    # Prevent MIME type sniffing attacks
+    content_type_options {
+      override = true
+    }
+
+    # Prevent clickjacking by blocking iframe embedding
+    frame_options {
+      frame_option = "DENY"
+      override     = true
+    }
+
+    # Control referrer information sharing
+    referrer_policy {
+      referrer_policy = "strict-origin-when-cross-origin"
+      override        = true
+    }
+
+    # Enforce HTTPS connections (HSTS)
+    strict_transport_security {
+      access_control_max_age_sec = 31536000 # 1 year
+      include_subdomains         = true
+      preload                    = false
+      override                   = true
+    }
+
+    # Enable XSS protection for legacy browsers
+    xss_protection {
+      mode_block = true
+      protection = true
+      override   = true
+    }
+
+    # Relaxed CSP for diagnostics pages - allows inline scripts and styles
+    # This is less secure but necessary for development/diagnostics tools
+    content_security_policy {
+      content_security_policy = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://*.execute-api.eu-west-2.amazonaws.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+      override                = true
+    }
+  }
+
+  # Additional security-related headers
+  custom_headers_config {
+    items {
+      header   = "Permissions-Policy"
+      override = true
+      # Disable potentially sensitive browser features
+      value = "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), speaker=()"
+    }
+  }
+}
+
 # CloudFront Distribution
 resource "aws_cloudfront_distribution" "game_hosting" {
   origin {
@@ -139,7 +203,81 @@ resource "aws_cloudfront_distribution" "game_hosting" {
   comment             = "Cloud Defenders Game CDN"
   default_root_object = "index.html"
 
-  # Cache behavior for SPA routing
+  # =================================================================
+  # ORDERED CACHE BEHAVIORS FOR DIAGNOSTICS PAGES
+  # =================================================================
+  # These behaviors have higher precedence (lower numbers) than the
+  # default behavior and apply relaxed security headers to development
+  # and diagnostics pages that require inline scripts to function.
+  # =================================================================
+
+  # API diagnostics page - relaxed CSP for inline scripts
+  ordered_cache_behavior {
+    path_pattern     = "api-diagnostics.html"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "S3-${aws_s3_bucket.game_hosting.bucket}"
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy     = "redirect-to-https"
+    min_ttl                    = 0
+    default_ttl                = 300 # Shorter cache for dev tools
+    max_ttl                    = 3600
+    compress                   = true
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.diagnostics_headers.id
+  }
+
+  # Debug page - relaxed CSP for inline scripts
+  ordered_cache_behavior {
+    path_pattern     = "debug.html"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "S3-${aws_s3_bucket.game_hosting.bucket}"
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy     = "redirect-to-https"
+    min_ttl                    = 0
+    default_ttl                = 300 # Shorter cache for dev tools
+    max_ttl                    = 3600
+    compress                   = true
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.diagnostics_headers.id
+  }
+
+  # Icon test page - relaxed CSP for inline scripts
+  ordered_cache_behavior {
+    path_pattern     = "icon-test.html"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "S3-${aws_s3_bucket.game_hosting.bucket}"
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy     = "redirect-to-https"
+    min_ttl                    = 0
+    default_ttl                = 300 # Shorter cache for dev tools
+    max_ttl                    = 3600
+    compress                   = true
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.diagnostics_headers.id
+  }
+
+  # Cache behavior for SPA routing (main game and other pages)
   default_cache_behavior {
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods   = ["GET", "HEAD"]

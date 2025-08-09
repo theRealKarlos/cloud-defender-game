@@ -7,6 +7,7 @@
  */
 
 const scoreHandler = require('./src/handlers/scoreHandler');
+const healthHandler = require('./src/handlers/healthHandler');
 const apiResponses = require('./src/utils/apiResponses');
 
 /**
@@ -57,12 +58,14 @@ exports.handler = async (event) => {
         return await scoreHandler.submitScore(JSON.parse(body || '{}'));
       case 'GET /api/leaderboard':
         return await scoreHandler.getLeaderboard(queryStringParameters || {});
+      case 'GET /health':
+        return await healthHandler.handler(event);
       default:
         console.log(
-          'No route matched. Available routes: POST /api/scores, GET /api/leaderboard'
+          'No route matched. Available routes: POST /api/scores, GET /api/leaderboard, GET /health'
         );
         return apiResponses.notFound(`Route not found: ${routeKey}`, {
-          availableRoutes: ['POST /api/scores', 'GET /api/leaderboard'],
+          availableRoutes: ['POST /api/scores', 'GET /api/leaderboard', 'GET /health'],
         });
     }
   } catch (error) {

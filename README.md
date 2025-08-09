@@ -73,6 +73,8 @@ cloud-defenders-game/
 │   ├── index.js                # Lambda function entry point
 │   ├── src/                    # Source code organization
 │   │   ├── handlers/           # Request handlers
+│   │   │   ├── scoreHandler.js # Score submission and leaderboard
+│   │   │   └── healthHandler.js # Health check endpoint
 │   │   ├── services/           # Business logic services
 │   │   └── utils/              # Utility functions
 │   ├── __tests__/              # Test suite
@@ -124,6 +126,31 @@ cloud-defenders-game/
 ├── .gitignore                  # Git ignore rules
 ├── SECURITY.md                 # Security policy
 └── README.md                   # Project documentation
+```
+
+## API Endpoints
+
+The backend API provides the following endpoints:
+
+| Method | Endpoint           | Description          | Purpose                                                                   |
+| ------ | ------------------ | -------------------- | ------------------------------------------------------------------------- |
+| `POST` | `/api/scores`      | Submit game score    | Allows players to submit their scores to the leaderboard                  |
+| `GET`  | `/api/leaderboard` | Retrieve leaderboard | Returns top scores for display in the game                                |
+| `GET`  | `/health`          | Health check         | Provides service health status for monitoring and deployment verification |
+
+### API Response Format
+
+All API endpoints return JSON responses with appropriate HTTP status codes and CORS headers for browser compatibility.
+
+**Health Check Response Example:**
+
+```json
+{
+  "status": "healthy",
+  "message": "Backend is operational",
+  "timestamp": "2024-01-01T12:00:00.000Z",
+  "version": "1.0.0"
+}
 ```
 
 ## Development Environment Setup
@@ -321,7 +348,9 @@ The pipeline will automatically:
 1. Authenticate using the configured IAM role
 2. Initialize Terraform with the S3 backend
 3. Plan and apply changes with proper state locking
-4. Deploy both infrastructure and application components
+4. Update frontend configuration with the correct API Gateway URL for the target environment
+5. Deploy both infrastructure and application components
+6. Perform health checks on both frontend and backend services
 
 ## Game Features
 
@@ -357,9 +386,10 @@ The pipeline is built using **reusable workflows** for modularity and maintainab
 ### Deployment Strategy
 
 - **Environment Separation**: Development and production environments with proper isolation
+- **Dynamic Configuration**: Frontend API configuration is automatically updated during deployment to target the correct environment's API Gateway URL
 - **Automated Rollback**: Lambda deployment includes automatic rollback on verification failure
 - **Targeted Cache Invalidation**: CloudFront invalidation only for HTML files, not all assets
-- **Health Checks**: Post-deployment verification for both frontend and backend
+- **Health Checks**: Post-deployment verification for both frontend and backend using the `/health` endpoint
 
 ### Rollback Strategy
 
@@ -521,6 +551,17 @@ If the pipeline fails with "Could not load credentials":
 3. **Check OIDC Provider**: Ensure the GitHub OIDC provider is configured in AWS
 
 ### Local Development Issues
+
+#### Frontend Configuration
+
+The frontend configuration (`frontend/js/config.js`) is automatically updated during CI/CD deployment to use the correct API Gateway URL for each environment. For local development:
+
+1. **Development Environment**: The default configuration points to the development API
+2. **Manual Updates**: Use the update scripts in `scripts/utils/` to update the configuration locally:
+   ```bash
+   # Update configuration from Terraform outputs
+   bash scripts/utils/update-api-config.sh
+   ```
 
 #### PowerShell Environment Variables
 

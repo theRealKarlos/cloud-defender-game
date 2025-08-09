@@ -50,6 +50,14 @@ resource "aws_apigatewayv2_route" "leaderboard_get" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
 }
 
+# Route for GET /health
+resource "aws_apigatewayv2_route" "health_get" {
+  api_id = aws_apigatewayv2_api.score_api.id
+
+  route_key = "GET /health"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+}
+
 # API Gateway v2 Stage
 resource "aws_apigatewayv2_stage" "score_api_stage" {
   api_id = aws_apigatewayv2_api.score_api.id

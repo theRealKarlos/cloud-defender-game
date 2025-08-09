@@ -16,6 +16,166 @@ The infrastructure is configured to use:
 3. Existing Route53 hosted zone for your domain
 4. Copy `terraform.tfvars.example` to `terraform.tfvars` and configure your values
 
+## CI/CD IAM Role Permissions
+
+The automated deployment pipeline uses the `GitHubActionsDeployRole-cloud-defenders-game` IAM role for all infrastructure and application deployments. This role requires the following permissions policy to successfully deploy all components:
+
+<details>
+<summary>Click to view the complete IAM policy JSON</summary>
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowTerraformStateAccess",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:ListBucket",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::terraform-state-karl-hitchcock",
+        "arn:aws:s3:::terraform-state-karl-hitchcock/*"
+      ]
+    },
+    {
+      "Sid": "AllowFrontendBucketManagement",
+      "Effect": "Allow",
+      "Action": "s3:*",
+      "Resource": "arn:aws:s3:::cloud-defenders-*-*"
+    },
+    {
+      "Sid": "AllowCloudFrontManagement",
+      "Effect": "Allow",
+      "Action": "cloudfront:*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowApiGatewayManagement",
+      "Effect": "Allow",
+      "Action": "apigateway:*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowLambdaManagement",
+      "Effect": "Allow",
+      "Action": "lambda:*",
+      "Resource": "arn:aws:lambda:*:*:function:cloud-defenders-*-*"
+    },
+    {
+      "Sid": "AllowDynamoDBManagement",
+      "Effect": "Allow",
+      "Action": "dynamodb:*",
+      "Resource": "arn:aws:dynamodb:*:*:table/cloud-defenders-*-*"
+    },
+    {
+      "Sid": "AllowCloudWatchLogsManagement",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:DeleteLogGroup",
+        "logs:DeleteLogStream",
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams",
+        "logs:PutLogEvents",
+        "logs:GetLogEvents",
+        "logs:FilterLogEvents",
+        "logs:ListTagsForResource",
+        "logs:TagResource",
+        "logs:UntagResource",
+        "logs:PutRetentionPolicy",
+        "logs:PutResourcePolicy",
+        "logs:DeleteResourcePolicy",
+        "logs:DescribeResourcePolicies",
+        "logs:UpdateLogDelivery"
+      ],
+      "Resource": "arn:aws:logs:*:*:*"
+    },
+    {
+      "Sid": "AllowLogDeliveryManagement",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogDelivery",
+        "logs:DeleteLogDelivery",
+        "logs:GetLogDelivery",
+        "logs:ListLogDeliveries"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowCreateServiceLinkedRoleForApiGateway",
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/apigateway.amazonaws.com/AWSServiceRoleForAPIGateway",
+      "Condition": {
+        "StringEquals": {
+          "iam:AWSServiceName": "apigateway.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "AllowIAMRoleAndPolicyManagement",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:GetRole",
+        "iam:TagRole",
+        "iam:UntagRole",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:GetRolePolicy",
+        "iam:ListRolePolicies",
+        "iam:CreatePolicy",
+        "iam:DeletePolicy",
+        "iam:GetPolicy",
+        "iam:TagPolicy",
+        "iam:GetPolicyVersion",
+        "iam:ListPolicyVersions",
+        "iam:DeletePolicyVersion",
+        "iam:CreatePolicyVersion"
+      ],
+      "Resource": [
+        "arn:aws:iam::*:role/cloud-defenders-*-*",
+        "arn:aws:iam::*:policy/cloud-defenders-*-*",
+        "arn:aws:iam::*:role/aws-service-role/apigateway.amazonaws.com/AWSServiceRoleForAPIGateway"
+      ]
+    },
+    {
+      "Sid": "AllowIAMPassRoleForLambda",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::*:role/cloud-defenders-*-*",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "lambda.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
+```
+
+</details>
+
+**Key Permission Groups:**
+
+- **Terraform State Management**: Access to the S3 bucket storing Terraform state
+- **Frontend Hosting**: Full S3 and CloudFront management for website hosting
+- **API Management**: Complete API Gateway and Lambda function management
+- **Database Access**: DynamoDB table management for score storage
+- **Logging Infrastructure**: CloudWatch Logs management including API Gateway access logging
+- **IAM Management**: Role and policy management for Lambda execution roles
+
+**Note**: These permissions are scoped to resources with the `cloud-defenders-*-*` naming pattern to limit the blast radius while providing sufficient access for all deployment operations.
+
 ### Configuration Setup
 
 ```bash

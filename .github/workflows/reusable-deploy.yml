@@ -667,10 +667,6 @@ jobs:
           echo "- Lambda Function: $lambda_function"
           echo "- API Gateway URL: $api_gateway_url"
 
-      - name: Update Frontend API Configuration
-        if: inputs.frontend-artefact != ''
-        run: bash scripts/utils/update-api-config.sh
-
       - name: Extract frontend artefacts
         if: inputs.frontend-artefact != ''
         run: |
@@ -693,6 +689,10 @@ jobs:
           # Debug: Verify the files are in the correct location.
           echo "Contents of ./frontend/dist after extraction:"
           ls -la ./frontend/dist
+
+      - name: Update Frontend API Configuration
+        if: inputs.frontend-artefact != ''
+        run: bash scripts/utils/update-api-config.sh
 
       - name: Deploy frontend
         id: deploy-frontend

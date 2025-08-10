@@ -55,6 +55,53 @@ if (-not $ApiOnly) {
         
         if ($LASTEXITCODE -eq 0) {
             Write-Host "Lambda function updated successfully" -ForegroundColor Green
+            
+            # Publish an immutable version and move alias atomically
+            Write-Host "Publishing new Lambda version..." -ForegroundColor Yellow
+            $publishArgs = @(
+                "lambda", "publish-version",
+                "--function-name", $lambdaFunctionName,
+                "--description", "CI $(Get-Date -Format o)",
+                "--region", $Region,
+                "--profile", $Profile
+            )
+            $publishJson = aws @publishArgs
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "Failed to publish Lambda version" -ForegroundColor Red
+                exit 1
+            }
+            $newVersion = ($publishJson | ConvertFrom-Json).Version
+            Write-Host "Published version: $newVersion" -ForegroundColor Green
+
+            # Capture current alias version (for potential rollback)
+            Write-Host "Fetching current 'live' alias version..." -ForegroundColor Yellow
+            $getAliasArgs = @(
+                "lambda", "get-alias",
+                "--function-name", $lambdaFunctionName,
+                "--name", "live",
+                "--region", $Region,
+                "--profile", $Profile
+            )
+            $aliasJson = aws @getAliasArgs 2>$null
+            $prevVersion = if ($LASTEXITCODE -eq 0 -and $aliasJson) { ($aliasJson | ConvertFrom-Json).FunctionVersion } else { "$LATEST" }
+            Write-Host "Previous alias version: $prevVersion" -ForegroundColor Cyan
+
+            # Move alias to the new version
+            Write-Host "Updating 'live' alias to version $newVersion..." -ForegroundColor Yellow
+            $updateAliasArgs = @(
+                "lambda", "update-alias",
+                "--function-name", $lambdaFunctionName,
+                "--name", "live",
+                "--function-version", $newVersion,
+                "--region", $Region,
+                "--profile", $Profile
+            )
+            aws @updateAliasArgs
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "Failed to update alias to version $newVersion" -ForegroundColor Red
+                exit 1
+            }
+            Write-Host "Alias 'live' now points to version $newVersion" -ForegroundColor Green
         }
         else {
             Write-Host "Lambda deployment failed!" -ForegroundColor Red

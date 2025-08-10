@@ -17,3 +17,8 @@ output "alias_name" {
   description = "Lambda alias name"
   value       = aws_lambda_alias.live.name
 }
+
+output "live_alias_version" {
+  description = "Version that the 'live' alias currently points to"
+  value       = aws_lambda_alias.live.function_version
+}

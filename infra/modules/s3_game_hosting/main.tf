@@ -422,6 +422,20 @@ resource "aws_s3_bucket_policy" "game_hosting" {
             "AWS:SourceArn" = aws_cloudfront_distribution.game_hosting.arn
           }
         }
+      },
+      {
+        Sid    = "AllowCloudFrontListBucket"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        }
+        Action   = "s3:ListBucket"
+        Resource = aws_s3_bucket.game_hosting.arn
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = aws_cloudfront_distribution.game_hosting.arn
+          }
+        }
       }
     ]
   })

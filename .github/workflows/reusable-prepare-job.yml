@@ -36,15 +36,6 @@ jobs:
           cache: "npm"
           cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
 
-      - name: Restore node_modules cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ inputs.working-directory }}/node_modules
-          key: ${{ runner.os }}-node-${{ inputs.node-version }}-${{ inputs.component }}-${{ hashFiles(format('{0}/package-lock.json', inputs.working-directory)) }}
-          restore-keys: |
-            ${{ runner.os }}-node-${{ inputs.node-version }}-${{ inputs.component }}-
-            ${{ runner.os }}-node-${{ inputs.node-version }}-
-
       - name: Verify environment preparation
         working-directory: ${{ inputs.working-directory }}
         run: |

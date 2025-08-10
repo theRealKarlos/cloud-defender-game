@@ -102,6 +102,15 @@ Write-Host "Step 4: Terraform Validation..." -ForegroundColor Cyan
 
 Set-Location "infra"
 
+Write-Host "Checking Terraform formatting..." -ForegroundColor Yellow
+terraform fmt -check -recursive
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Terraform formatting check failed" -ForegroundColor Red
+    Write-Host "Run 'terraform fmt -recursive' to fix formatting issues" -ForegroundColor Yellow
+    $hasErrors = $true
+}
+
 Write-Host "Validating Terraform configuration..." -ForegroundColor Yellow
 terraform validate
 
@@ -133,6 +142,7 @@ if ($hasErrors) {
     Write-Host "Quick fixes:" -ForegroundColor Yellow
     Write-Host "  • Run .\scripts\quality\run-format-check.ps1 -Fix to auto-fix formatting" -ForegroundColor White
     Write-Host "  • Run .\scripts\quality\run-lint.ps1 -Fix to auto-fix linting" -ForegroundColor White
+    Write-Host "  • Run 'terraform fmt -recursive' in the infra directory to fix Terraform formatting" -ForegroundColor White
     Write-Host "  • Check test output for specific test failures" -ForegroundColor White
     Write-Host "  • Verify all required files are present" -ForegroundColor White
     exit 1

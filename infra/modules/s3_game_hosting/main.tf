@@ -96,12 +96,6 @@ resource "aws_cloudfront_response_headers_policy" "security_headers" {
       override                   = true
     }
 
-    # Enable XSS protection for legacy browsers
-    xss_protection {
-      mode_block = true
-      protection = true
-      override   = true
-    }
 
     # Content Security Policy - restricts resource loading
     # Configured for the game's specific requirements:
@@ -165,12 +159,6 @@ resource "aws_cloudfront_response_headers_policy" "diagnostics_headers" {
       override                   = true
     }
 
-    # Enable XSS protection for legacy browsers
-    xss_protection {
-      mode_block = true
-      protection = true
-      override   = true
-    }
 
     # Relaxed CSP for diagnostics pages - allows inline scripts and styles
     # This is less secure but necessary for development/diagnostics tools

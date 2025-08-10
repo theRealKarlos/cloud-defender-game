@@ -76,7 +76,7 @@ resource "aws_lambda_function" "score_api" {
 
   # Publish an immutable version on each update so the alias can
   # point to a specific version instead of $LATEST
-  publish       = true
+  publish = true
 
   source_code_hash = filebase64sha256(local.lambda_zip_path)
 
@@ -114,8 +114,8 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
 
 # Lambda alias for deployment management
 resource "aws_lambda_alias" "live" {
-  name             = "live"
-  function_name    = aws_lambda_function.score_api.function_name
+  name          = "live"
+  function_name = aws_lambda_function.score_api.function_name
   # Point alias to the published, immutable version
   function_version = aws_lambda_function.score_api.version
 }

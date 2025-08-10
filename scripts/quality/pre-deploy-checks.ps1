@@ -23,6 +23,15 @@ if ($LASTEXITCODE -ne 0) {
     $hasErrors = $true
 }
 
+# Run YAML validation
+Write-Host "Running YAML validation..." -ForegroundColor Yellow
+& "$PSScriptRoot/validate-yaml.ps1"
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "YAML validation failed" -ForegroundColor Red
+    $hasErrors = $true
+}
+
 # Run linting and security checks
 & "$PSScriptRoot/run-lint.ps1"
 

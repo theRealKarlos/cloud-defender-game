@@ -184,48 +184,48 @@ runs:
             --metadata-directive REPLACE
         fi
 
-        echo "result=success" >> $GITHUB_OUTPUT
+                echo "result=success" >> $GITHUB_OUTPUT
 
-             - name: Create and deploy manifest.json
-         shell: bash
-         run: |
-           if [ "${{ inputs.dry-run }}" = "true" ]; then
-             echo "DRY RUN: Would create and deploy manifest.json with version ${{ steps.version-path.outputs.version-path }}"
-           else
-             echo "Creating manifest.json for version: ${{ steps.version-path.outputs.version-path }}"
-             echo "{\"version\": \"${{ steps.version-path.outputs.version-path }}\"}" > manifest.json
+    - name: Create and deploy manifest.json
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry-run }}" = "true" ]; then
+          echo "DRY RUN: Would create and deploy manifest.json with version ${{ steps.version-path.outputs.version-path }}"
+        else
+          echo "Creating manifest.json for version: ${{ steps.version-path.outputs.version-path }}"
+          echo "{\"version\": \"${{ steps.version-path.outputs.version-path }}\"}" > manifest.json
+          
+          echo "Deploying manifest.json to bucket root with no-cache headers..."
+          aws s3 cp manifest.json "s3://${{ inputs.s3-bucket }}/manifest.json" \
+            --region "${{ inputs.aws-region }}" \
+            --content-type "application/json" \
+            --cache-control "no-store, max-age=0" \
+            --metadata-directive REPLACE
             
-            echo "Deploying manifest.json to bucket root with no-cache headers..."
-            aws s3 cp manifest.json "s3://${{ inputs.s3-bucket }}/manifest.json" \
+          echo "✅ manifest.json deployed successfully"
+        fi
+
+    - name: Deploy config.json to bucket root
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry-run }}" = "true" ]; then
+          echo "DRY RUN: Would deploy config.json to s3://${{ inputs.s3-bucket }}/config.json"
+        else
+          echo "Deploying config.json to bucket root with no-cache headers..."
+          
+          # Check if config.json exists in source directory
+          if [ -f "${{ inputs.source-directory }}/config.json" ]; then
+            aws s3 cp "${{ inputs.source-directory }}/config.json" "s3://${{ inputs.s3-bucket }}/config.json" \
               --region "${{ inputs.aws-region }}" \
               --content-type "application/json" \
               --cache-control "no-store, max-age=0" \
               --metadata-directive REPLACE
-              
-            echo "✅ manifest.json deployed successfully"
-          fi
-
-      - name: Deploy config.json to bucket root
-        shell: bash
-        run: |
-          if [ "${{ inputs.dry-run }}" = "true" ]; then
-            echo "DRY RUN: Would deploy config.json to s3://${{ inputs.s3-bucket }}/config.json"
+          
+            echo "✅ config.json deployed successfully to bucket root"
           else
-            echo "Deploying config.json to bucket root with no-cache headers..."
-            
-            # Check if config.json exists in source directory
-            if [ -f "${{ inputs.source-directory }}/config.json" ]; then
-              aws s3 cp "${{ inputs.source-directory }}/config.json" "s3://${{ inputs.s3-bucket }}/config.json" \
-                --region "${{ inputs.aws-region }}" \
-                --content-type "application/json" \
-                --cache-control "no-store, max-age=0" \
-                --metadata-directive REPLACE
-              
-              echo "✅ config.json deployed successfully to bucket root"
-            else
-              echo "⚠️  config.json not found in ${{ inputs.source-directory }}, skipping"
-            fi
+            echo "⚠️  config.json not found in ${{ inputs.source-directory }}, skipping"
           fi
+        fi
 
     - name: Set S3 bucket website configuration
       shell: bash

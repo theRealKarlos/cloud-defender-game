@@ -10,7 +10,7 @@
       // Dynamically load scripts from versioned folder to avoid path resolution issues
       (async function() {
         try {
-          const manifestResponse = await fetch('/version-manifest.json', { cache: 'no-store' });
+          const manifestResponse = await fetch('/manifest.json', { cache: 'no-store' });
           if (manifestResponse.ok) {
             const manifest = await manifestResponse.json();
             if (manifest.version) {

@@ -21,11 +21,11 @@ function Invoke-FormatCheck {
     try {
         if ($Fix) {
             Write-Host "  Running format with auto-fix..." -ForegroundColor Cyan
-            npm run format
+            npm run format | Out-Null
         }
         else {
             Write-Host "  Running format check..." -ForegroundColor Cyan
-            npm run format:check
+            npm run format:check | Out-Null
         }
         
         if ($LASTEXITCODE -ne 0) {

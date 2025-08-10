@@ -3,17 +3,23 @@
  * Represents defensive systems that can intercept incoming threats
  */
 
-// Import Entity class for Node.js environments (testing)
+// Universal Module Definition (UMD) for Entity
 let Entity;
-if (typeof require !== 'undefined') {
+if (
+  typeof require !== 'undefined' &&
+  typeof module !== 'undefined' &&
+  module.exports
+) {
+  // Node.js environment (CommonJS)
   try {
     Entity = require('./entities.js').Entity;
-  } catch {
-    // Fallback for browser environment where Entity is global
-    Entity = window.Entity;
+  } catch (e) {
+    // This catch block is primarily for defensive coding.
+    // In the test environment, this require should always succeed.
+    console.error('Failed to load Entity in Node.js:', e);
   }
 } else {
-  // Browser environment - Entity is already global
+  // Browser environment
   Entity = window.Entity;
 }
 

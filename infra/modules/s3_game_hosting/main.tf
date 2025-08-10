@@ -201,9 +201,9 @@ resource "aws_cloudfront_distribution" "game_hosting" {
     origin_id                = "S3-Bucket-Root" // Simplified static ID
   }
 
-  enabled         = true
-  is_ipv6_enabled = true
-  comment         = "Cloud Defenders Game CDN"
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "Cloud Defenders Game CDN"
   default_root_object = "index.html" // Serve bootstrap loader when accessing root URL
   # Previous comment was incorrect - we now have a permanent index.html at bucket root
 

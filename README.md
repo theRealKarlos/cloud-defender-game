@@ -309,28 +309,15 @@ Before deploying infrastructure, ensure you have:
 
 1. **AWS CLI configured with SSO** (recommended) or access keys
 2. **Terraform installed** (v1.12 or later)
-3. **S3 bucket with Object Lock enabled** for Terraform state storage
+3. **An S3 bucket for Terraform state** (versioning recommended)
 
-**Important: S3 Backend Configuration Requirements**
+**Important: S3 Backend Configuration (Locking)**
 
-The Terraform backend uses S3 with the `use_lockfile = true` setting, which requires:
+- The S3 backend uses a lock file for state locking. Enable it with `use_lockfile = true` in `backend.tf`.
+- **S3 Versioning** is recommended for state recovery (undelete/rollback state), but is not required for locking.
+- **DynamoDB-based locking is deprecated** for the S3 backend.
 
-- **S3 Versioning**: Must be enabled on the bucket to support Object Lock
-- **S3 Object Lock**: Must be enabled to provide state locking functionality
-
-**Why These Are Required:**
-
-- **State Locking**: Prevents multiple Terraform operations from running simultaneously, which could corrupt the state file
-- **Versioning**: Required by AWS to enable Object Lock features
-- **Object Lock**: Provides the actual locking mechanism that prevents concurrent modifications to the state file
-
-**Important Note:** While Terraform may work locally without these settings (due to sequential execution and shorter operation times), it will **fail in GitHub Actions runners** with `412 PreconditionFailed` errors. This is because:
-
-- **Local Development**: Operations are sequential and typically complete quickly, reducing lock contention
-- **CI/CD Environment**: Multiple concurrent runs, longer operation times, and ephemeral runners create higher lock contention
-- **GitHub Actions**: Uses temporary credentials and different authentication patterns that are more sensitive to missing Object Lock configuration
-
-Without these settings, you'll encounter `412 PreconditionFailed` errors when Terraform tries to acquire a state lock in CI/CD environments.
+This configuration prevents concurrent state modifications and aligns with current Terraform guidance.
 
 #### Dynamic Backend Configuration
 
@@ -385,7 +372,7 @@ terraform apply -var="aws_profile=your-profile-name" -var="environment=developme
 The GitHub Actions pipeline automatically handles authentication using OIDC:
 
 - **Authentication**: Uses AWS OIDC with temporary credentials
-- **State Locking**: S3 Object Lock prevents concurrent modifications
+- **State Locking**: S3 backend lock file (`use_lockfile = true`) prevents concurrent modifications
 - **Environment Variables**: Automatically configured by the `configure-aws-credentials` action
 
 The pipeline will automatically:
@@ -441,7 +428,7 @@ This lab includes a pragmatic baseline to improve security with low complexity:
   - Note: This is coarse-grained (not per-IP). For production, prefer AWS WAFv2 for IP-aware rate limiting and managed rules
 
 - **CloudFront response headers policy**
-  - Adds standard security headers: `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, and `X-XSS-Protection` (legacy browsers)
+  - Adds standard security headers: `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, and `Permissions-Policy` (X-XSS-Protection removed as deprecated)
   - **Dual security approach** with path-specific policies:
     - **Main game (`index.html` and default paths)**: Strict CSP with `script-src 'self'` (no inline scripts allowed)
     - **Development/diagnostics pages** (`api-diagnostics.html`, `debug.html`, `icon-test.html`): Relaxed CSP with `script-src 'self' 'unsafe-inline'` to allow inline scripts required for these tools

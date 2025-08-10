@@ -1,4 +1,6 @@
-# CloudFront Dual-Origin Solution for Config.json Access
+# [Deprecated] CloudFront Dual-Origin Solution for Config.json Access
+
+> Status: Deprecated in favour of the Manifest Pointer architecture with a single static origin and path-based cache behaviours. See `docs/MANIFEST_POINTER_ARCHITECTURE.md` and `docs/MANIFEST_POINTER_IMPLEMENTATION.md`.
 
 ## Problem Statement
 
@@ -7,6 +9,7 @@ The Cloud Defenders Game was experiencing persistent `403 Forbidden` errors when
 1. **Single Origin Limitation**: The original CloudFront configuration used a single S3 origin with a dynamic `origin_path` that pointed to versioned deployment folders (e.g., `/v20250109-195355-50caffbf/`).
 
 2. **Architectural Mismatch**: The application requires two different file serving patterns:
+
    - `config.json` must always be accessible from the S3 bucket root for consistent configuration access
    - Application assets (HTML, CSS, JS) must be served from versioned deployment folders
 
@@ -46,6 +49,7 @@ origin {
 #### 2. Cache Behaviour Configuration
 
 **Config.json Cache Behaviour**:
+
 ```terraform
 ordered_cache_behavior {
   path_pattern     = "config.json"
@@ -57,6 +61,7 @@ ordered_cache_behavior {
 ```
 
 **Default Cache Behaviour**:
+
 ```terraform
 default_cache_behavior {
   target_origin_id = "S3-Versioned" # Serve from versioned assets
@@ -86,21 +91,25 @@ updated_config=$(echo "$distribution_config" | jq --arg path "/$versionFolder" '
 ## Benefits of This Solution
 
 ### 1. **Reliability**
+
 - `config.json` is always accessible from the root URL
 - No more 403 errors due to versioned deployment paths
 - Consistent configuration access regardless of deployment state
 
 ### 2. **Performance**
+
 - Config.json has zero caching (TTL=0) for immediate updates
 - Application assets maintain appropriate caching for optimal performance
 - Separate cache behaviours allow fine-tuned control
 
 ### 3. **Maintainability**
+
 - Clear separation of concerns between configuration and application assets
 - CI/CD pipeline is aware of the dual-origin structure
 - Terraform configuration is self-documenting with extensive comments
 
 ### 4. **Security**
+
 - Both origins use the same Origin Access Control (OAC) for S3 access
 - Security headers are consistently applied across all origins
 - No public access to S3 bucket - all access through CloudFront
@@ -108,6 +117,7 @@ updated_config=$(echo "$distribution_config" | jq --arg path "/$versionFolder" '
 ## Deployment Process
 
 ### 1. **Infrastructure Deployment**
+
 ```bash
 cd infra
 terraform plan
@@ -115,13 +125,16 @@ terraform apply
 ```
 
 ### 2. **Frontend Deployment**
+
 The deployment process now:
+
 1. Uploads versioned assets to S3 subfolder
 2. Uploads `config.json` to S3 bucket root
 3. Updates CloudFront `S3-Versioned` origin path
 4. Preserves `S3-Root` origin for config.json access
 
 ### 3. **Verification**
+
 - `config.json` should be accessible at `https://[cloudfront-domain]/config.json`
 - Application assets should load from versioned paths
 - No more 403 errors in browser console
@@ -148,11 +161,13 @@ S3 Bucket: cloud-defenders-game-prod-game-hosting
 ### Common Issues
 
 1. **403 Error Still Occurs**
+
    - Verify `config.json` exists in S3 bucket root
    - Check CloudFront cache invalidation includes `/config.json`
    - Ensure S3 bucket policy allows CloudFront OAC access
 
 2. **Assets Not Loading**
+
    - Verify `S3-Versioned` origin path is correctly set
    - Check that versioned folder exists in S3
    - Ensure CloudFront distribution is fully deployed
@@ -177,11 +192,4 @@ curl -I https://[CLOUDFRONT_DOMAIN]/config.json
 
 ## Conclusion
 
-The dual-origin architecture provides a robust, scalable solution that addresses the fundamental architectural mismatch between versioned deployments and consistent configuration access. This solution ensures that:
-
-- Configuration files remain accessible at predictable URLs
-- Application assets are properly versioned and cached
-- The CI/CD pipeline can safely update deployment paths
-- CloudFront serves the correct content from the appropriate S3 locations
-
-This approach follows AWS best practices and provides a foundation for future enhancements while maintaining backward compatibility.
+This approach has been superseded. The project now uses a single-origin, static CloudFront configuration and a manifest-pointer bootstrap, eliminating origin updates during deploys while keeping `config.json` and `manifest.json` at the bucket root with no-cache behaviours.

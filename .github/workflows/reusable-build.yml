@@ -125,21 +125,20 @@ jobs:
 
           # Create artefact based on component type
           if [ "${{ inputs.component }}" = "frontend" ]; then
-            # Frontend: Package source files since there is no actual build
+            # Frontend: Package source files for the new Manifest Pointer architecture
             cd ${{ inputs.working-directory }}
             tar -czf "../dist/$artefact_name.tar.gz" \
               --exclude="node_modules" \
               --exclude="__tests__" \
+              --exclude="coverage" \
+              --exclude="*.test.js" \
               --exclude=".prettierrc" \
               --exclude="eslint.config.js" \
               --exclude="package.json" \
               --exclude="package-lock.json" \
-              index.html \
-              api-diagnostics.html \
-              debug.html \
-              icon-test.html \
-              js/ \
-              styles/
+              --exclude="test-manifest-pointer.html" \
+              --exclude="debug.html" \
+              .
             
             echo "artefact-name=$artefact_name.tar.gz" >> $GITHUB_OUTPUT
             echo "artefact-path=dist/$artefact_name.tar.gz" >> $GITHUB_OUTPUT

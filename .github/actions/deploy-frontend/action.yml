@@ -227,6 +227,29 @@ runs:
           fi
         fi
 
+    - name: Deploy diagnostics directory to bucket root
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry-run }}" = "true" ]; then
+          echo "DRY RUN: Would deploy diagnostics directory to s3://${{ inputs.s3-bucket }}/diagnostics/"
+        else
+          echo "Deploying diagnostics directory to bucket root..."
+          
+          # Check if diagnostics directory exists in source directory
+          if [ -d "${{ inputs.source-directory }}/diagnostics" ]; then
+            aws s3 cp "${{ inputs.source-directory }}/diagnostics" "s3://${{ inputs.s3-bucket }}/diagnostics" \
+              --recursive \
+              --region "${{ inputs.aws-region }}" \
+              --content-type "text/html" \
+              --cache-control "public, max-age=300" \
+              --metadata-directive REPLACE
+            
+            echo "✅ diagnostics directory deployed successfully to bucket root"
+          else
+            echo "⚠️  diagnostics directory not found in ${{ inputs.source-directory }}, skipping"
+          fi
+        fi
+
     - name: Set S3 bucket website configuration
       shell: bash
       run: |
@@ -248,11 +271,11 @@ runs:
         else
           echo "Invalidating CloudFront cache for distribution: ${{ inputs.cloudfront-distribution-id }}"
           
-          # Create targeted invalidation for HTML files and config.json
+          # Create targeted invalidation for HTML files, config files, and diagnostics
           # This is more efficient than invalidating everything
           invalidation_id=$(aws cloudfront create-invalidation \
             --distribution-id "${{ inputs.cloudfront-distribution-id }}" \
-            --paths "/index.html" "/error.html" "/404.html" "/config.json" "/manifest.json" \
+            --paths "/index.html" "/error.html" "/404.html" "/config.json" "/manifest.json" "/diagnostics/*" \
             --query 'Invalidation.Id' \
             --output text)
           

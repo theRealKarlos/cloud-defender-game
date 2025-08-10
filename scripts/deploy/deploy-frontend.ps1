@@ -98,48 +98,129 @@ if (-not $Force) {
 
 
 
-# Upload files to S3
-Write-Host "📤 Uploading files to S3..." -ForegroundColor Blue
+# Create versioned folder for this deployment
+$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$versionFolder = "v$timestamp"
+Write-Host "Creating versioned folder: $versionFolder" -ForegroundColor Blue
+
+# Create temporary directory for versioned deployment
+$tempVersionDir = Join-Path $env:TEMP "cloud-defenders-$versionFolder"
+if (Test-Path $tempVersionDir) {
+    Remove-Item $tempVersionDir -Recurse -Force
+}
+New-Item -ItemType Directory -Path $tempVersionDir | Out-Null
+
+# Copy main game files to versioned directory (excluding bootstrap and special files)
+Write-Host "Preparing versioned deployment..." -ForegroundColor Blue
+$gameFiles = Get-ChildItem -Recurse -File | Where-Object { 
+    $_.Name -notmatch '\.(git|DS_Store)' -and 
+    $_.FullName -notmatch 'node_modules' -and 
+    $_.FullName -notmatch '__tests__' -and
+    $_.FullName -notmatch 'coverage' -and
+    $_.Name -notmatch 'package.*\.json' -and
+    $_.Name -ne 'eslint.config.js' -and
+    $_.Name -ne 'debug.html' -and
+    $_.Name -ne 'bootstrap-index.html' -and
+    $_.Name -ne 'config.json' -and
+    $_.Name -ne 'test-manifest-pointer.html'
+}
+
+foreach ($file in $gameFiles) {
+    $relativePath = $file.FullName.Replace($frontendDir, "").TrimStart("\")
+    $targetPath = Join-Path $tempVersionDir $relativePath
+    $targetDir = Split-Path $targetPath -Parent
+    
+    if (!(Test-Path $targetDir)) {
+        New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+    }
+    
+    Copy-Item $file.FullName $targetPath
+}
+
+# Upload versioned files to S3
+Write-Host "📤 Uploading versioned files to S3..." -ForegroundColor Blue
 $s3SyncArgs = @(
-    "s3", "sync", ".", "s3://$bucketName",
+    "s3", "sync", $tempVersionDir, "s3://$bucketName/$versionFolder",
     "--delete",
-    "--exclude", "*.git/*",
-    "--exclude", ".DS_Store",
-    "--exclude", "node_modules/*",
-    "--exclude", "package*.json",
-    "--exclude", "eslint.config.js",
-    "--exclude", "__tests__/*",
-    "--exclude", "debug.html",
-    "--exclude", "config.json",
     "--profile", $Profile
 )
 
 aws @s3SyncArgs
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "Failed to upload files to S3"
+    Write-Error "Failed to upload versioned files to S3"
     exit 1
 }
 
-# Set proper content types for web files
-Write-Host "Setting content types..." -ForegroundColor Blue
+# Deploy bootstrap loader to S3 root
+Write-Host "Deploying bootstrap loader to S3 root..." -ForegroundColor Blue
+aws s3 cp "frontend/bootstrap-index.html" "s3://$bucketName/index.html" `
+    --content-type "text/html" `
+    --cache-control "no-store, max-age=0" `
+    --metadata-directive REPLACE `
+    --profile $Profile
 
-# HTML files
-$htmlArgs = @("s3", "cp", "s3://$bucketName", "s3://$bucketName", "--recursive", "--exclude", "*", "--include", "*.html", "--content-type", "text/html", "--metadata-directive", "REPLACE", "--profile", $Profile)
-aws @htmlArgs
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Failed to upload bootstrap loader to S3 root"
+    exit 1
+}
+Write-Host "Bootstrap loader uploaded successfully" -ForegroundColor Green
 
-# CSS files
-$cssArgs = @("s3", "cp", "s3://$bucketName", "s3://$bucketName", "--recursive", "--exclude", "*", "--include", "*.css", "--content-type", "text/css", "--metadata-directive", "REPLACE", "--profile", $Profile)
-aws @cssArgs
+# Clean up temporary directory
+Remove-Item $tempVersionDir -Recurse -Force -ErrorAction SilentlyContinue
 
-# JavaScript files
-$jsArgs = @("s3", "cp", "s3://$bucketName", "s3://$bucketName", "--recursive", "--exclude", "*", "--include", "*.js", "--content-type", "application/javascript", "--metadata-directive", "REPLACE", "--profile", $Profile)
-aws @jsArgs
+# Deploy main game files to versioned folder
+Write-Host "Deploying main game files to versioned folder..." -ForegroundColor Blue
+$gameFiles = Get-ChildItem -Recurse -File | Where-Object { 
+    $_.Name -notmatch '\.(git|DS_Store)' -and 
+    $_.FullName -notmatch 'node_modules' -and 
+    $_.FullName -notmatch '__tests__' -and
+    $_.FullName -notmatch 'coverage' -and
+    $_.Name -notmatch 'package.*\.json' -and
+    $_.Name -ne 'eslint.config.js' -and
+    $_.Name -ne 'debug.html' -and
+    $_.Name -ne 'bootstrap-index.html' -and
+    $_.Name -ne 'config.json' -and
+    $_.Name -ne 'test-manifest-pointer.html'
+}
+
+foreach ($file in $gameFiles) {
+    $relativePath = $file.FullName.Replace($frontendDir, "").TrimStart("\")
+    $s3Path = "s3://$bucketName/$versionFolder/$relativePath"
+    
+    # Ensure proper content type based on file extension
+    $contentType = switch ([System.IO.Path]::GetExtension($file.Name).ToLower()) {
+        ".html" { "text/html" }
+        ".css" { "text/css" }
+        ".js" { "application/javascript" }
+        ".json" { "application/json" }
+        ".png" { "image/png" }
+        ".jpg" { "image/jpeg" }
+        ".jpeg" { "image/jpeg" }
+        ".gif" { "image/gif" }
+        ".svg" { "image/svg+xml" }
+        ".ico" { "image/x-icon" }
+        default { "application/octet-stream" }
+    }
+    
+    aws s3 cp $file.FullName $s3Path `
+        --content-type $contentType `
+        --cache-control "public, max-age=31536000" `
+        --metadata-directive REPLACE `
+        --profile $Profile
+        
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Failed to upload $relativePath to S3"
+        exit 1
+    }
+}
+Write-Host "Main game files deployed successfully to $versionFolder" -ForegroundColor Green
+
+# Content types are now handled during individual file uploads above
 
 # Deploy config.json to bucket root (not in versioned folder)
 Write-Host "Deploying config.json to bucket root..." -ForegroundColor Blue
-aws s3 cp "frontend/config.json" "s3://$bucketName/config.json" `
-    --region $awsRegion `
+aws s3 cp "config.json" "s3://$bucketName/config.json" `
     --content-type "application/json" `
     --cache-control "no-store, max-age=0" `
     --metadata-directive REPLACE `
@@ -151,14 +232,28 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "config.json uploaded successfully" -ForegroundColor Green
 
+# Deploy diagnostics directory to bucket root (not in versioned folder)
+Write-Host "Deploying diagnostics directory to bucket root..." -ForegroundColor Blue
+aws s3 cp "diagnostics" "s3://$bucketName/diagnostics" `
+    --recursive `
+    --content-type "text/html" `
+    --cache-control "public, max-age=300" `
+    --metadata-directive REPLACE `
+    --profile $Profile
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Failed to upload diagnostics directory to S3"
+    exit 1
+}
+Write-Host "Diagnostics directory uploaded successfully" -ForegroundColor Green
+
 # Create and deploy manifest.json
 Write-Host "Creating manifest.json for version: $versionFolder" -ForegroundColor Blue
-$manifestContent = @{"version" = $versionFolder} | ConvertTo-Json -Compress
+$manifestContent = @{"version" = $versionFolder } | ConvertTo-Json -Compress
 Set-Content -Path "manifest.json" -Value $manifestContent
 
 Write-Host "Deploying manifest.json to bucket root with no-cache headers..." -ForegroundColor Blue
 aws s3 cp "manifest.json" "s3://$bucketName/manifest.json" `
-    --region $awsRegion `
     --content-type "application/json" `
     --cache-control "no-store, max-age=0" `
     --metadata-directive REPLACE `

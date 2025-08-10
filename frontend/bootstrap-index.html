@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cloud Defenders - Loading...</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Courier New', monospace;
+        background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
+        color: #00ff88;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        overflow: hidden;
+      }
+
+      .loading-container {
+        text-align: center;
+        z-index: 1000;
+      }
+
+      .loading-text {
+        font-size: 24px;
+        margin-bottom: 20px;
+        text-shadow: 0 0 10px #00ff88;
+        animation: pulse 2s infinite;
+      }
+
+      .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 3px solid #00ff88;
+        border-top: 3px solid transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+      }
+
+      .error-message {
+        color: #ff4444;
+        font-size: 18px;
+        margin-top: 20px;
+        display: none;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .retry-button {
+        background: #00ff88;
+        color: #0f1419;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 5px;
+        margin-top: 20px;
+        display: none;
+      }
+
+      .retry-button:hover {
+        background: #00cc6a;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loading-container">
+      <div class="loading-text">Cloud Defenders</div>
+      <div class="loading-spinner"></div>
+      <div class="error-message" id="errorMessage"></div>
+      <button class="retry-button" id="retryButton" onclick="loadGame()">
+        Retry
+      </button>
+    </div>
+
+    <script>
+      // ============================================================================
+      // CLOUD DEFENDERS MANIFEST POINTER ARCHITECTURE
+      // ============================================================================
+      //
+      // This bootstrap loader implements a Manifest Pointer pattern for zero-downtime
+      // deployments and instant rollbacks. Here's how it works:
+      //
+      // 1. ROOT FILES (deployed to S3 root):
+      //    - /index.html (this file) - Bootstrap loader
+      //    - /manifest.json - Points to current version
+      //    - /config.json - Game configuration
+      //    - /diagnostics/ - Health check tools
+      //
+      // 2. VERSIONED FILES (deployed to timestamped folders):
+      //    - /v20241201-143022/index.html - Main game
+      //    - /v20241201-143022/js/game.js - Game logic
+      //    - /v20241201-143022/styles/game.css - Game styles
+      //
+      // 3. DEPLOYMENT PROCESS:
+      //    - New version uploaded to timestamped folder
+      //    - manifest.json updated to point to new version
+      //    - Bootstrap loader fetches manifest and loads new version
+      //    - Old version remains available for instant rollback
+      //
+      // 4. BENEFITS:
+      //    - Zero downtime deployments
+      //    - Instant rollbacks by updating manifest.json
+      //    - No caching issues with game files
+      //    - Clean separation of concerns
+      // ============================================================================
+
+      let retryCount = 0;
+      const maxRetries = 3;
+
+      async function loadGame() {
+        try {
+          // Show loading state
+          document.getElementById('errorMessage').style.display = 'none';
+          document.getElementById('retryButton').style.display = 'none';
+
+          // Fetch the manifest to get the current version
+          const manifestResponse = await fetch('/manifest.json', {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache',
+            },
+          });
+
+          if (!manifestResponse.ok) {
+            throw new Error(
+              `Failed to fetch manifest: ${manifestResponse.status}`
+            );
+          }
+
+          const manifest = await manifestResponse.json();
+
+          if (!manifest.version) {
+            throw new Error('Invalid manifest format: missing version');
+          }
+
+          // Construct the versioned URL
+          const versionedUrl = `/${manifest.version}/index.html`;
+
+          // Load the actual game from the versioned path
+          const gameResponse = await fetch(versionedUrl, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache',
+            },
+          });
+
+          if (!gameResponse.ok) {
+            throw new Error(`Failed to load game: ${gameResponse.status}`);
+          }
+
+          const gameHtml = await gameResponse.text();
+
+          // Replace the entire document with the game content
+          document.open();
+          document.write(gameHtml);
+          document.close();
+        } catch (error) {
+          console.error('Bootstrap loader error:', error);
+          retryCount++;
+
+          const errorMessage = document.getElementById('errorMessage');
+          const retryButton = document.getElementById('retryButton');
+
+          if (retryCount >= maxRetries) {
+            errorMessage.textContent = `Failed to load game after ${maxRetries} attempts. Please refresh the page.`;
+            errorMessage.style.display = 'block';
+          } else {
+            errorMessage.textContent = `Loading failed: ${error.message}. Retrying... (${retryCount}/${maxRetries})`;
+            errorMessage.style.display = 'block';
+
+            // Auto-retry after a delay
+            setTimeout(() => {
+              loadGame();
+            }, 2000);
+          }
+
+          retryButton.style.display = 'block';
+        }
+      }
+
+      // Start loading when the page loads
+      document.addEventListener('DOMContentLoaded', loadGame);
+
+      // Also try to load immediately if DOM is already loaded
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadGame);
+      } else {
+        loadGame();
+      }
+
+      // Add global error handler for unhandled errors
+      window.addEventListener('error', (event) => {
+        console.error('Global error in bootstrap loader:', event.error);
+        const errorMessage = document.getElementById('errorMessage');
+        if (errorMessage) {
+          errorMessage.textContent = `Unexpected error: ${event.error.message}`;
+          errorMessage.style.display = 'block';
+        }
+      });
+
+      // Add unhandled promise rejection handler
+      window.addEventListener('unhandledrejection', (event) => {
+        console.error(
+          'Unhandled promise rejection in bootstrap loader:',
+          event.reason
+        );
+        const errorMessage = document.getElementById('errorMessage');
+        if (errorMessage) {
+          errorMessage.textContent = `Promise error: ${event.reason}`;
+          errorMessage.style.display = 'block';
+        }
+      });
+    </script>
+  </body>
+</html>

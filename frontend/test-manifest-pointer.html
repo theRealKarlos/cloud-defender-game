@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manifest Pointer Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .test-section {
+        background: white;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .success {
+        color: #28a745;
+      }
+      .error {
+        color: #dc3545;
+      }
+      .info {
+        color: #17a2b8;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      pre {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Manifest Pointer Architecture Test</h1>
+
+    <div class="test-section">
+      <h2>Test 1: Bootstrap Loader Simulation</h2>
+      <p>This simulates what the bootstrap loader will do in production:</p>
+      <button onclick="testBootstrapLoader()">Test Bootstrap Loader</button>
+      <div id="bootstrapResult"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 2: Manifest Structure</h2>
+      <p>Expected manifest.json structure:</p>
+      <pre id="manifestStructure"></pre>
+      <button onclick="generateTestManifest()">Generate Test Manifest</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 3: File Path Construction</h2>
+      <p>How versioned URLs will be constructed:</p>
+      <div id="pathExamples"></div>
+    </div>
+
+    <script>
+      // Test 1: Bootstrap Loader Simulation
+      async function testBootstrapLoader() {
+        const resultDiv = document.getElementById('bootstrapResult');
+        resultDiv.innerHTML =
+          '<p class="info">Testing bootstrap loader logic...</p>';
+
+        try {
+          // Simulate fetching manifest (this will fail locally, which is expected)
+          const manifestResponse = await fetch('/manifest.json');
+          if (!manifestResponse.ok) {
+            throw new Error(
+              `Manifest not found (expected locally): ${manifestResponse.status}`
+            );
+          }
+
+          const manifest = await manifestResponse.json();
+          resultDiv.innerHTML = `<p class="success">✅ Manifest loaded successfully: ${manifest.version}</p>`;
+        } catch (error) {
+          resultDiv.innerHTML = `<p class="error">❌ Expected error (local testing): ${error.message}</p>
+                                     <p class="info">This is normal when testing locally without a deployed manifest.</p>`;
+        }
+      }
+
+      // Test 2: Manifest Structure
+      function generateTestManifest() {
+        const timestamp = new Date()
+          .toISOString()
+          .replace(/[:.]/g, '-')
+          .slice(0, 19);
+        const versionFolder = `v${timestamp}`;
+        const manifest = { version: versionFolder };
+
+        document.getElementById('manifestStructure').textContent =
+          JSON.stringify(manifest, null, 2);
+      }
+
+      // Test 3: File Path Construction
+      function showPathExamples() {
+        const timestamp = new Date()
+          .toISOString()
+          .replace(/[:.]/g, '-')
+          .slice(0, 19);
+        const versionFolder = `v${timestamp}`;
+
+        const examples = [
+          `Root bootstrap: /index.html`,
+          `Manifest: /manifest.json`,
+          `Versioned game: /${versionFolder}/index.html`,
+          `Versioned CSS: /${versionFolder}/styles/game.css`,
+          `Versioned JS: /${versionFolder}/js/game.js`,
+          `Config (root): /config.json`,
+          `Diagnostics (root): /diagnostics/`,
+        ];
+
+        document.getElementById('pathExamples').innerHTML = examples
+          .map((ex) => `<p class="info">• ${ex}</p>`)
+          .join('');
+      }
+
+      // Initialize on page load
+      document.addEventListener('DOMContentLoaded', () => {
+        generateTestManifest();
+        showPathExamples();
+      });
+    </script>
+  </body>
+</html>

@@ -280,60 +280,19 @@ resource "aws_cloudfront_distribution" "game_hosting" {
   // =================================================================
   // ORDERED CACHE BEHAVIOURS FOR DIAGNOSTICS PAGES
   // =================================================================
-  // These behaviours have higher precedence (lower numbers) than the
-  // default behaviour and apply relaxed security headers to development
-  // and diagnostics pages that require inline scripts to function.
+  // This behaviour has higher precedence (lower number) than the
+  // default behaviour and applies relaxed security headers to all
+  // diagnostics pages that require inline scripts to function.
   // 
-  // All diagnostics pages are served from the bucket root origin.
+  // All diagnostics pages are now served from the diagnostics/ subdirectory
+  // and use a single consolidated cache behaviour rule.
   // =================================================================
 
-  // API diagnostics page - relaxed CSP for inline scripts
+  // Consolidated diagnostics pages - relaxed CSP for inline scripts
+  // This single rule handles api-diagnostics.html, debug.html, and icon-test.html
+  // All moved to the diagnostics/ subdirectory for cleaner organisation
   ordered_cache_behavior {
-    path_pattern     = "api-diagnostics.html"
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-Bucket-Root" // Serve from bucket root
-
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
-
-    viewer_protocol_policy     = "redirect-to-https"
-    min_ttl                    = 0
-    default_ttl                = 300 // Shorter cache for dev tools
-    max_ttl                    = 3600
-    compress                   = true
-    response_headers_policy_id = aws_cloudfront_response_headers_policy.diagnostics_headers.id
-  }
-
-  // Debug page - relaxed CSP for inline scripts
-  ordered_cache_behavior {
-    path_pattern     = "debug.html"
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-Bucket-Root" // Serve from bucket root
-
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
-
-    viewer_protocol_policy     = "redirect-to-https"
-    min_ttl                    = 0
-    default_ttl                = 300 // Shorter cache for dev tools
-    max_ttl                    = 3600
-    compress                   = true
-    response_headers_policy_id = aws_cloudfront_response_headers_policy.diagnostics_headers.id
-  }
-
-  // Icon test page - relaxed CSP for inline scripts
-  ordered_cache_behavior {
-    path_pattern     = "icon-test.html"
+    path_pattern     = "diagnostics/*.html"
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD"]
     target_origin_id = "S3-Bucket-Root" // Serve from bucket root

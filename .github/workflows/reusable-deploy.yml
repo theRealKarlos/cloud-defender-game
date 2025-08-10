@@ -690,11 +690,11 @@ jobs:
           echo "Contents of ./frontend/dist after extraction:"
           ls -la ./frontend/dist
 
-          - name: Update Frontend API Configuration
-            if: inputs.frontend-artefact != ''
-            run: bash scripts/utils/update-api-config.sh ./frontend/dist/config.json
-            env:
-              API_GATEWAY_URL: ${{ steps.terraform-outputs.outputs.api_gateway_url }}
+      - name: Update Frontend API Configuration
+        if: inputs.frontend-artefact != ''
+        run: bash scripts/utils/update-api-config.sh ./frontend/dist/config.json
+        env:
+          API_GATEWAY_URL: ${{ steps.terraform-outputs.outputs.api_gateway_url }}
 
       - name: Deploy frontend
         id: deploy-frontend

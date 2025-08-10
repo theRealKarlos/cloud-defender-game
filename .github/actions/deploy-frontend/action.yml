@@ -127,11 +127,15 @@ runs:
       run: |
         echo "Optimising build assets..."
 
-        # Compress JavaScript and CSS files
+        # Compress JavaScript and CSS files, replacing the originals with gzipped content
+        # This ensures we only store compressed assets, reducing storage and transfer costs
         find . -name "*.js" -o -name "*.css" | while read file; do
           if command -v gzip >/dev/null 2>&1; then
-            gzip -9 -c "$file" > "$file.gz"
-            echo "Compressed: $file"
+            # Create a temporary gzipped file
+            gzip -9 -c "$file" > "${file}.tmp.gz"
+            # Replace the original file with the gzipped content
+            mv "${file}.tmp.gz" "$file"
+            echo "Compressed and replaced: $file"
           fi
         done
 
@@ -169,22 +173,29 @@ runs:
             --dryrun
         else
           # Sync static assets with long cache to versioned path
+          # Exclude files that should be deployed to bucket root to avoid duplication
           aws s3 sync "${{ inputs.build-directory }}" "s3://${{ inputs.s3-bucket }}/$version_path" \
             --region "${{ inputs.aws-region }}" \
             --exclude "*.html" \
+            --exclude "bootstrap-index.html" \
+            --exclude "config.json" \
+            --exclude "diagnostics/*" \
             --cache-control "${{ inputs.cache-control }}" \
+            --content-encoding "gzip" \
             --metadata-directive REPLACE
           
           # Sync HTML files with short cache to versioned path
+          # Exclude bootstrap-index.html as it goes to bucket root
           aws s3 sync "${{ inputs.build-directory }}" "s3://${{ inputs.s3-bucket }}/$version_path" \
             --region "${{ inputs.aws-region }}" \
             --exclude "*" \
             --include "*.html" \
+            --exclude "bootstrap-index.html" \
             --cache-control "${{ inputs.index-cache-control }}" \
             --metadata-directive REPLACE
         fi
 
-                echo "result=success" >> $GITHUB_OUTPUT
+        echo "result=success" >> $GITHUB_OUTPUT
 
     - name: Create and deploy manifest.json
       shell: bash
@@ -213,9 +224,10 @@ runs:
         else
           echo "Deploying config.json to bucket root with no-cache headers..."
           
-          # Check if config.json exists in source directory
-          if [ -f "${{ inputs.source-directory }}/config.json" ]; then
-            aws s3 cp "${{ inputs.source-directory }}/config.json" "s3://${{ inputs.s3-bucket }}/config.json" \
+          # Check if config.json exists in build directory (not source directory)
+          # This ensures we deploy the processed version, not the source version
+          if [ -f "${{ inputs.build-directory }}/config.json" ]; then
+            aws s3 cp "${{ inputs.build-directory }}/config.json" "s3://${{ inputs.s3-bucket }}/config.json" \
               --region "${{ inputs.aws-region }}" \
               --content-type "application/json" \
               --cache-control "no-store, max-age=0" \
@@ -223,7 +235,7 @@ runs:
           
             echo "✅ config.json deployed successfully to bucket root"
           else
-            echo "⚠️  config.json not found in ${{ inputs.source-directory }}, skipping"
+            echo "⚠️  config.json not found in ${{ inputs.build-directory }}, skipping"
           fi
         fi
 
@@ -235,9 +247,10 @@ runs:
         else
           echo "Deploying diagnostics directory to bucket root..."
           
-          # Check if diagnostics directory exists in source directory
-          if [ -d "${{ inputs.source-directory }}/diagnostics" ]; then
-            aws s3 cp "${{ inputs.source-directory }}/diagnostics" "s3://${{ inputs.s3-bucket }}/diagnostics" \
+          # Check if diagnostics directory exists in build directory (not source directory)
+          # This ensures we deploy the processed version, not the source version
+          if [ -d "${{ inputs.build-directory }}/diagnostics" ]; then
+            aws s3 cp "${{ inputs.build-directory }}/diagnostics" "s3://${{ inputs.s3-bucket }}/diagnostics" \
               --recursive \
               --region "${{ inputs.aws-region }}" \
               --content-type "text/html" \
@@ -246,7 +259,7 @@ runs:
             
             echo "✅ diagnostics directory deployed successfully to bucket root"
           else
-            echo "⚠️  diagnostics directory not found in ${{ inputs.source-directory }}, skipping"
+            echo "⚠️  diagnostics directory not found in ${{ inputs.build-directory }}, skipping"
           fi
         fi
 

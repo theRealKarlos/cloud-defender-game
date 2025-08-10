@@ -11,82 +11,32 @@
       type="image/x-icon"
     />
 
-    <!-- Bootstrap Loader Script -->
-    <!-- This inline script acts as a bootstrap loader that dynamically loads all application assets -->
-    <!-- It fetches manifest.json and config.json, then dynamically injects scripts and stylesheets -->
-    <script>
-      // Self-executing async function to act as a bootstrap loader
-      (async () => {
-        try {
-          // 1. Fetch manifest and configuration files in parallel
-          // We use cache-busting parameters to ensure fresh content
-          const [manifestResponse, configResponse] = await Promise.all([
-            fetch('/manifest.json?v=' + Date.now()), // Cache-bust manifest
-            fetch('/config.json?v=' + Date.now()), // Cache-bust config
-          ]);
+    <!-- Application Stylesheet -->
+    <!-- Reference the correct stylesheet path: styles/game.css -->
+    <link rel="stylesheet" href="styles/game.css" />
 
-          if (!manifestResponse.ok)
-            throw new Error('Failed to load manifest.json');
-          if (!configResponse.ok) throw new Error('Failed to load config.json');
-
-          const manifest = await manifestResponse.json();
-          const config = await configResponse.json();
-
-          // Make configuration globally available for other scripts
-          window.APP_CONFIG = config;
-          const versionPath = manifest.version;
-
-          // 2. Define all application assets with the correct versioned path
-          // This ensures assets are loaded from the correct deployment version
-          const assets = {
-            styles: [`/${versionPath}/css/style.css`],
-            scripts: [
-              `/${versionPath}/js/main.js`,
-              `/${versionPath}/js/utils/helpers.js`,
-              `/${versionPath}/js/components/particle.js`,
-              `/${versionPath}/js/components/explosion.js`,
-              `/${versionPath}/js/game/player.js`,
-              `/${versionPath}/js/game/enemy.js`,
-              `/${versionPath}/js/game/projectile.js`,
-              `/${versionPath}/js/managers/enemy-manager.js`,
-              `/${versionPath}/js/managers/power-up-manager.js`,
-              `/${versionPath}/js/core/game-loop.js`,
-              `/${versionPath}/js/core/game-engine.js`,
-              `/${versionPath}/js/core/api-service.js`,
-              `/${versionPath}/js/managers/ui-manager.js`,
-              `/${versionPath}/js/game.js`,
-              `/${versionPath}/js/security/game-security.js`,
-              `/${versionPath}/js/utils/error-overlay.js`,
-            ],
-          };
-
-          // 3. Dynamically create and append stylesheet tags
-          // This loads the main application styles
-          assets.styles.forEach((href) => {
-            const link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.href = href;
-            document.head.appendChild(link);
-          });
-
-          // 4. Use a document fragment for efficient script injection
-          // This loads all application scripts in the correct order
-          const fragment = document.createDocumentFragment();
-          assets.scripts.forEach((src) => {
-            const script = document.createElement('script');
-            script.src = src;
-            script.defer = true; // Ensure scripts execute in order
-            fragment.appendChild(script);
-          });
-          document.body.appendChild(fragment);
-        } catch (error) {
-          console.error('Critical application bootstrap failed:', error);
-          // Display a user-friendly error message
-          document.body.innerHTML =
-            '<div style="color:white;text-align:center;padding-top:50px;font-family:Arial,sans-serif;"><h1>Error</h1><p>Could not load game files. Please try refreshing the page.</p></div>';
-        }
-      })();
-    </script>
+    <!-- Application Scripts -->
+    <!-- Load all game scripts in the correct order -->
+    <script src="js/main.js" defer></script>
+    <script src="js/config.js" defer></script>
+    <script src="js/aws-icons.js" defer></script>
+    <script src="js/entities.js" defer></script>
+    <script src="js/defense.js" defer></script>
+    <script src="js/missile.js" defer></script>
+    <script src="js/target.js" defer></script>
+    <script src="js/explosive-bomb.js" defer></script>
+    <script src="js/game-conditions.js" defer></script>
+    <script src="js/game-security.js" defer></script>
+    <script src="js/game-state.js" defer></script>
+    <script src="js/game-engine.js" defer></script>
+    <script src="js/game-loop.js" defer></script>
+    <script src="js/input-manager.js" defer></script>
+    <script src="js/event-handler.js" defer></script>
+    <script src="js/renderer.js" defer></script>
+    <script src="js/ui-manager.js" defer></script>
+    <script src="js/wave-manager.js" defer></script>
+    <script src="js/api-service.js" defer></script>
+    <script src="js/game.js" defer></script>
   </head>
   <body>
     <!-- The game canvas will be populated by ui-manager.js -->

@@ -171,9 +171,20 @@
 
           const gameHtml = await gameResponse.text();
 
+          // Inject a base tag to ensure all relative paths resolve from the versioned directory
+          // This is the industry-standard solution used by frameworks like Angular for sub-directory deployments
+          // Without this, relative paths like "styles/game.css" would resolve from the root (/) instead of the versioned path
+          const baseTag = `<base href="/${manifest.version}/">`;
+
+          // Insert the base tag at the beginning of the head section
+          const modifiedGameHtml = gameHtml.replace(
+            /<head>/i,
+            `<head>${baseTag}`
+          );
+
           // Replace the entire document with the game content
           document.open();
-          document.write(gameHtml);
+          document.write(modifiedGameHtml);
           document.close();
         } catch (error) {
           console.error('Bootstrap loader error:', error);

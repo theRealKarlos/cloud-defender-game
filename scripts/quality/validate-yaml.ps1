@@ -286,8 +286,9 @@ function Test-YamlFile {
     }
     
     # Determine overall result
-    $anyValid = $validationResults | Where-Object { $_.Result.Valid } | Measure-Object | Select-Object -ExpandProperty Count
-    $overallValid = $anyValid -gt 0
+    $allValid = $validationResults | Where-Object { $_.Result.Valid } | Measure-Object | Select-Object -ExpandProperty Count
+    $totalValidators = $validationResults.Count
+    $overallValid = $allValid -eq $totalValidators
     
     if ($Verbose) {
         foreach ($validation in $validationResults) {

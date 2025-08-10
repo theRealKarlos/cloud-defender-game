@@ -248,31 +248,31 @@ runs:
           else
             echo "⚠️  diagnostics directory not found in ${{ inputs.source-directory }}, skipping"
           fi
-                  fi
+        fi
 
-      - name: Deploy bootstrap loader to S3 root
-        shell: bash
-        run: |
-          if [ "${{ inputs.dry-run }}" = "true" ]; then
-            echo "DRY RUN: Would deploy bootstrap-index.html to s3://${{ inputs.s3-bucket }}/index.html"
+    - name: Deploy bootstrap loader to S3 root
+      shell: bash
+      run: |
+        if [ "${{ inputs.dry-run }}" = "true" ]; then
+          echo "DRY RUN: Would deploy bootstrap-index.html to s3://${{ inputs.s3-bucket }}/index.html"
+        else
+          echo "Deploying bootstrap-index.html to S3 root as index.html..."
+          
+          if [ -f "${{ inputs.build-directory }}/bootstrap-index.html" ]; then
+            aws s3 cp "${{ inputs.build-directory }}/bootstrap-index.html" "s3://${{ inputs.s3-bucket }}/index.html" \
+              --region "${{ inputs.aws-region }}" \
+              --content-type "text/html" \
+              --cache-control "no-store, max-age=0" \
+              --metadata-directive REPLACE
+          
+            echo "✅ bootstrap-index.html deployed successfully to S3 root as index.html"
           else
-            echo "Deploying bootstrap-index.html to S3 root as index.html..."
-            
-            if [ -f "${{ inputs.build-directory }}/bootstrap-index.html" ]; then
-              aws s3 cp "${{ inputs.build-directory }}/bootstrap-index.html" "s3://${{ inputs.s3-bucket }}/index.html" \
-                --region "${{ inputs.aws-region }}" \
-                --content-type "text/html" \
-                --cache-control "no-store, max-age=0" \
-                --metadata-directive REPLACE
-            
-              echo "✅ bootstrap-index.html deployed successfully to S3 root as index.html"
-            else
-              echo "::error::bootstrap-index.html not found in build directory: ${{ inputs.build-directory }}"
-              exit 1
-            fi
+            echo "::error::bootstrap-index.html not found in build directory: ${{ inputs.build-directory }}"
+            exit 1
           fi
+        fi
 
-      - name: Set S3 bucket website configuration
+    - name: Set S3 bucket website configuration
       shell: bash
       run: |
         if [ "${{ inputs.dry-run }}" != "true" ]; then

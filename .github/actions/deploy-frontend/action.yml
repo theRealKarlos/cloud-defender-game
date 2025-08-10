@@ -186,11 +186,13 @@ runs:
           
           # Sync HTML files with short cache to versioned path
           # Exclude bootstrap-index.html as it goes to bucket root
+          # Also exclude diagnostics to prevent duplication
           aws s3 sync "${{ inputs.build-directory }}" "s3://${{ inputs.s3-bucket }}/$version_path" \
             --region "${{ inputs.aws-region }}" \
             --exclude "*" \
             --include "*.html" \
             --exclude "bootstrap-index.html" \
+            --exclude "diagnostics/*" \
             --cache-control "${{ inputs.index-cache-control }}" \
             --metadata-directive REPLACE
         fi

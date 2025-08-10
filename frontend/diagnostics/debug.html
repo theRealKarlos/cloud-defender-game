@@ -5,22 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cloud Defenders - Debug</title>
     
-    <!-- Version-aware base tag injection -->
+    <!-- Dynamic script loading from versioned folder -->
     <script>
-      // Fetch version manifest and inject base tag to resolve script paths
+      // Dynamically load scripts from versioned folder to avoid path resolution issues
       (async function() {
         try {
           const manifestResponse = await fetch('/version-manifest.json', { cache: 'no-store' });
           if (manifestResponse.ok) {
             const manifest = await manifestResponse.json();
             if (manifest.version) {
-              const baseTag = document.createElement('base');
-              baseTag.href = `/${manifest.version}/`;
-              document.head.insertBefore(baseTag, document.head.firstChild);
+              const versionPath = '/' + manifest.version;
+              console.log('Loading scripts from versioned path:', versionPath);
+              
+              // Load required scripts with full versioned paths
+              const scripts = [
+                versionPath + '/js/config.js',
+                versionPath + '/js/api-service.js'
+              ];
+              
+              scripts.forEach(src => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.async = false;
+                document.head.appendChild(script);
+              });
             }
           }
         } catch (error) {
-          console.warn('Could not load version manifest, using default paths:', error);
+          console.error('Failed to load version manifest:', error);
+          // Fallback: try to load scripts from root (may fail)
+          console.warn('Falling back to root script loading');
+          const scripts = [
+            '/js/config.js',
+            '/js/api-service.js'
+          ];
+          
+          scripts.forEach(src => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = false;
+            document.head.appendChild(script);
+          });
         }
       })();
     </script>

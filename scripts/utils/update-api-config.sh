@@ -1,9 +1,10 @@
 #!/bin/bash
 
-# Update frontend/config.json baseUrl from environment variable or Terraform output
-# Usage: scripts/utils/update-api-config.sh [ENVIRONMENT]
-# ENVIRONMENT defaults to value in infra/variables.tf (dev) unless provided
-# 
+# Update frontend config.json baseUrl from environment variable or Terraform output
+# Usage: scripts/utils/update-api-config.sh [CONFIG_FILE_PATH] [ENVIRONMENT]
+# CONFIG_FILE_PATH: Path to the config.json file to update (defaults to frontend/config.json)
+# ENVIRONMENT: defaults to value in infra/variables.tf (dev) unless provided
+#
 # For CI/CD: Set API_GATEWAY_URL environment variable
 # For local: Script will attempt to get URL from terraform output
 
@@ -12,9 +13,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 INFRA_DIR="$PROJECT_ROOT/infra"
-FRONTEND_CONFIG="$PROJECT_ROOT/frontend/config.json"
 
-ENVIRONMENT="${1:-}" # optional positional arg
+# Accept config file path as first argument, default to frontend/config.json
+FRONTEND_CONFIG="${1:-$PROJECT_ROOT/frontend/config.json}"
+ENVIRONMENT="${2:-}" # optional positional arg (second argument now)
 
 echo "Generating API configuration in frontend/config.json..."
 

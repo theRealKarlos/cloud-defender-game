@@ -201,10 +201,11 @@ resource "aws_cloudfront_distribution" "game_hosting" {
     origin_id                = "S3-Bucket-Root" // Simplified static ID
   }
 
-  enabled             = true
-  is_ipv6_enabled     = true
-  comment             = "Cloud Defenders Game CDN"
-  default_root_object = "index.html"
+  enabled         = true
+  is_ipv6_enabled = true
+  comment         = "Cloud Defenders Game CDN"
+  # Removed default_root_object - not compatible with Manifest Pointer architecture
+  # where index.html is in versioned subfolders, not at bucket root
 
   // This ordered_cache_behavior ensures config.json is never cached
   // and is served directly from the S3 bucket root
@@ -375,9 +376,17 @@ resource "aws_cloudfront_distribution" "game_hosting" {
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers.id
   }
 
-  # Custom error page for SPA routing
+  # Custom error responses for SPA routing
+  # Handle 404 errors (file not found) - common for deep linking
   custom_error_response {
     error_code         = 404
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
+
+  # Handle 403 errors (access denied) - may occur with certain S3 requests
+  custom_error_response {
+    error_code         = 403
     response_code      = 200
     response_page_path = "/index.html"
   }

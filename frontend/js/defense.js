@@ -12,6 +12,9 @@ if (typeof require !== 'undefined') {
     // Fallback for browser environment where Entity is global
     Entity = window.Entity;
   }
+} else {
+  // Browser environment - Entity is already global
+  Entity = window.Entity;
 }
 
 // Defense class extending Entity

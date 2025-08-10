@@ -4,6 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cloud Defenders API Diagnostics</title>
+    
+    <!-- Version-aware base tag injection -->
+    <script>
+      // Fetch version manifest and inject base tag to resolve script paths
+      (async function() {
+        try {
+          const manifestResponse = await fetch('/version-manifest.json', { cache: 'no-store' });
+          if (manifestResponse.ok) {
+            const manifest = await manifestResponse.json();
+            if (manifest.version) {
+              const baseTag = document.createElement('base');
+              baseTag.href = `/${manifest.version}/`;
+              document.head.insertBefore(baseTag, document.head.firstChild);
+            }
+          }
+        } catch (error) {
+          console.warn('Could not load version manifest, using default paths:', error);
+        }
+      })();
+    </script>
+    
     <style>
       body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;

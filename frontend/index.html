@@ -39,7 +39,78 @@
     <script src="js/game.js" defer></script>
   </head>
   <body>
-    <!-- The game canvas will be populated by ui-manager.js -->
-    <canvas id="game-canvas"></canvas>
+    <div id="game-container">
+      <div class="game-header">
+        <h1>Cloud Defenders</h1>
+        <div class="game-stats">
+          <span id="score">Score: 0</span>
+          <span id="wave">Wave: 0</span>
+          <span id="lives">Lives: 0</span>
+        </div>
+      </div>
+      
+      <div class="game-main">
+        <canvas id="game-canvas"></canvas>
+        <div id="game-ui">
+          <div class="control-panel">
+            <h3>Game Controls</h3>
+            <button id="start-btn" class="game-btn">Start Game</button>
+            <button id="pause-btn" class="game-btn" disabled>Pause</button>
+            <button id="restart-btn" class="game-btn">Restart</button>
+          </div>
+          
+          <div class="control-panel">
+            <h3>Power-ups</h3>
+            <div id="active-powerups">
+              <p>No active power-ups</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for game over, victory, etc. -->
+    <div id="game-modal" class="modal hidden">
+      <div class="modal-content">
+        <span id="modal-close" class="close-button">&times;</span>
+        <h2 id="modal-title">Game Over</h2>
+        <p id="modal-message">You have been defeated!</p>
+        <p>Final Score: <span id="final-score">0</span></p>
+
+        <!-- Score Submission Form -->
+        <div id="score-submission" class="score-submission hidden">
+          <h3>Submit Your Score</h3>
+          <form id="score-form">
+            <div class="form-group">
+              <label for="player-name">Player Name:</label>
+              <input
+                type="text"
+                id="player-name"
+                placeholder="Enter your name"
+                maxlength="20"
+                required
+              />
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="game-btn primary">Submit</button>
+            </div>
+          </form>
+          <div id="submission-status" class="submission-status hidden"></div>
+          <button id="skip-submission-btn" class="game-btn secondary">
+            Skip & View Leaderboard
+          </button>
+        </div>
+
+        <!-- Leaderboard Display -->
+        <div id="leaderboard-display" class="leaderboard-display hidden">
+          <h3>Leaderboard</h3>
+          <div id="leaderboard-list"></div>
+        </div>
+
+        <div class="modal-actions">
+          <button id="modal-restart" class="game-btn">Play Again</button>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

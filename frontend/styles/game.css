@@ -55,7 +55,7 @@ body {
 
 .game-main {
     display: flex;
-    gap: 20px;
+    gap: 50px; /* Increase the gap between canvas and UI panels */
     align-items: flex-start;
 }
 
@@ -64,12 +64,15 @@ body {
     border-radius: 8px;
     background: #000;
     display: block;
+    width: 800px;  /* Set a proper width for the game canvas */
+    height: 600px; /* Set a proper height for the game canvas */
+    flex-shrink: 0; /* Prevent the canvas from shrinking */
 }
 
 #game-ui {
     flex: 1;
     min-width: 200px;
-    margin-left: 75px; /* Move panels to the right by about 25% of their typical width */
+    margin-left: 40px; /* Increase the left margin to move controls further right and prevent overlap */
 }
 
 .control-panel {

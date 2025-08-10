@@ -111,9 +111,9 @@ class ConfigLoader {
         });
       }
 
-      // Wait for all critical scripts to be loaded and parsed
-      // This prevents attempting to instantiate classes before they're available
-      await this.waitForScripts();
+      // Load all required scripts in the correct dependency order
+      // This ensures all components are available before initialisation begins
+      await this.loadScripts();
 
       // Initialise core services in the correct dependency order
       // API Service must be first as other components depend on it
@@ -161,34 +161,102 @@ class ConfigLoader {
   }
 
   /**
-   * Wait for critical scripts to be loaded
-   * Implements polling with timeout to ensure all required classes and functions
-   * are available before attempting to initialise components.
+   * Dynamically load all required scripts in the correct dependency order
+   * This ensures all components are available before initialisation begins.
    */
-  async waitForScripts() {
-    const maxWait = 10000; // 10 seconds maximum wait time
-    const checkInterval = 100; // Check every 100ms
-    let elapsed = 0;
+  async loadScripts() {
+    const scripts = [
+      'js/aws-icons.js',
+      'js/entities.js',
+      'js/target.js', 
+      'js/defense.js',
+      'js/missile.js',
+      'js/explosive-bomb.js',
+      'js/wave-manager.js',
+      'js/game-conditions.js',
+      'js/game-state.js',
+      'js/renderer.js',
+      'js/input-manager.js',
+      'js/game-loop.js',
+      'js/game-security.js',
+      'js/event-handler.js',
+      'js/game-engine.js',
+      'js/game.js',
+      'js/api-service.js',
+      'js/ui-manager.js'
+    ];
 
-    while (elapsed < maxWait) {
-      // Check if critical classes and functions are available
-      // These are the minimum requirements for application initialisation
-      if (
-        typeof ApiService !== 'undefined' &&
-        typeof UIManager !== 'undefined' &&
-        typeof initializeGame !== 'undefined'
-      ) {
-        console.log('All critical scripts loaded');
-        return;
+    console.log('Loading required scripts...');
+
+    for (const scriptSrc of scripts) {
+      try {
+        await this.loadScript(scriptSrc);
+        console.log(`✅ Loaded: ${scriptSrc}`);
+      } catch (error) {
+        console.error(`❌ Failed to load ${scriptSrc}:`, error);
+        throw new Error(`Script loading failed: ${scriptSrc}`);
       }
-
-      // Wait before checking again to avoid excessive CPU usage
-      await new Promise((resolve) => setTimeout(resolve, checkInterval));
-      elapsed += checkInterval;
     }
 
-    // Timeout reached - this indicates a serious loading issue
-    throw new Error('Timeout waiting for scripts to load');
+    console.log('All scripts loaded successfully');
+  }
+
+  /**
+   * Load a single script and return a promise that resolves when loaded
+   * @param {string} src - The script source path
+   * @returns {Promise} Promise that resolves when script is loaded
+   */
+  loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = false; // Ensure scripts load in order
+      
+      script.onload = () => {
+        // Additional verification for critical dependencies
+        if (src === 'js/entities.js') {
+          // Wait for Entity class to be available before proceeding
+          this.waitForDependency('Entity', resolve, reject);
+        } else if (src === 'js/defense.js') {
+          // Verify Defense class is available
+          this.waitForDependency('Defense', resolve, reject);
+        } else {
+          resolve();
+        }
+      };
+      script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+      
+      document.head.appendChild(script);
+    });
+  }
+
+  /**
+   * Wait for a specific dependency to be available in the global scope
+   * This prevents race conditions where scripts execute before their dependencies are ready
+   * @param {string} dependencyName - Name of the dependency to wait for
+   * @param {Function} resolve - Promise resolve function
+   * @param {Function} reject - Promise reject function
+   */
+  waitForDependency(dependencyName, resolve, reject) {
+    let attempts = 0;
+    const maxAttempts = 50; // Maximum 5 seconds (50 * 100ms)
+    
+    const checkDependency = () => {
+      attempts++;
+      
+      if (window[dependencyName]) {
+        console.log(`✅ Dependency ${dependencyName} is ready`);
+        resolve();
+      } else if (attempts >= maxAttempts) {
+        reject(new Error(`Timeout waiting for dependency: ${dependencyName}`));
+      } else {
+        // Retry after 100ms
+        setTimeout(checkDependency, 100);
+      }
+    };
+    
+    // Start checking immediately
+    checkDependency();
   }
 
   /**

@@ -3,15 +3,8 @@
  * Represents defensive systems that can intercept incoming threats
  */
 
-// Import Entity base class
-let Entity;
-if (typeof module !== 'undefined' && module.exports) {
-  // Node.js environment (testing)
-  Entity = require('./entities.js').Entity;
-} else {
-  // Browser environment - Entity is available globally
-  Entity = window.Entity;
-}
+// Entity base class is available globally from entities.js
+// No need to redeclare or import it
 
 // Defense class extending Entity
 class Defense extends Entity {
@@ -525,7 +518,39 @@ class Defense extends Entity {
   renderDefenseIcon(ctx) {
     ctx.save();
 
-    // Position text in center of defense
+    const centerX = this.x + this.width / 2;
+    const centerY = this.y + this.height / 2;
+
+    // Check if we have AWS icons available and if this defense type has an icon
+    if (window.AwsIcons && this.defenseIcon !== '💾' && this.defenseIcon !== '◉') {
+      try {
+        // Use AWS icon if available
+        const icon = window.AwsIcons.getIcon(this.defenseIcon);
+        if (icon) {
+          // Scale icon to fit defense size
+          const iconSize = Math.min(this.width, this.height) * 0.6;
+          icon.draw(ctx, centerX - iconSize/2, centerY - iconSize/2, iconSize, iconSize);
+        } else {
+          // Fallback to text if icon not found
+          this.renderTextIcon(ctx, centerX, centerY);
+        }
+      } catch (error) {
+        console.warn('Failed to render AWS icon, falling back to text:', error);
+        this.renderTextIcon(ctx, centerX, centerY);
+      }
+    } else {
+      // Use text rendering for special characters (backup, shield-node)
+      this.renderTextIcon(ctx, centerX, centerY);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Render defense icon as text (fallback method)
+   * Used for special characters or when AWS icons are unavailable
+   */
+  renderTextIcon(ctx, centerX, centerY) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = 'bold 10px Arial';
@@ -534,18 +559,8 @@ class Defense extends Entity {
     ctx.lineWidth = 1;
 
     // Draw icon with outline
-    ctx.strokeText(
-      this.defenseIcon,
-      this.x + this.width / 2,
-      this.y + this.height / 2
-    );
-    ctx.fillText(
-      this.defenseIcon,
-      this.x + this.width / 2,
-      this.y + this.height / 2
-    );
-
-    ctx.restore();
+    ctx.strokeText(this.defenseIcon, centerX, centerY);
+    ctx.fillText(this.defenseIcon, centerX, centerY);
   }
 
   renderStatusIndicators(ctx) {

@@ -5,21 +5,73 @@ on:
   push:
     branches: [master, development]
     paths-ignore:
+      # Documentation and non-code files
       - "*.md"
       - "docs/**"
+      - "**/*.md"
+      - "**/README.md"
+      - "**/CHANGELOG.md"
+      - "**/LICENSE"
+      - "**/LICENSE.txt"
+      - "**/LICENSE.md"
+      # Development and IDE files
       - ".vscode/**"
       - ".kiro/**"
+      - ".idea/**"
+      - "*.code-workspace"
+      # Build and distribution files
       - "dist/**"
+      - "build/**"
+      - "node_modules/**"
+      - "coverage/**"
+      # Scripts documentation (keep scripts themselves, ignore their READMEs)
       - "scripts/README.md"
+      - "**/README.md"
+      # Git and CI configuration (keep workflows, ignore templates)
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
+      # Other non-code files
+      - "*.txt"
+      - "*.log"
+      - ".gitignore"
+      - ".editorconfig"
+      - ".prettierignore"
+      - ".eslintignore"
   pull_request:
     branches: [master, development]
     paths-ignore:
+      # Documentation and non-code files
       - "*.md"
       - "docs/**"
+      - "**/*.md"
+      - "**/README.md"
+      - "**/CHANGELOG.md"
+      - "**/LICENSE"
+      - "**/LICENSE.txt"
+      - "**/LICENSE.md"
+      # Development and IDE files
       - ".vscode/**"
       - ".kiro/**"
+      - ".idea/**"
+      - "*.code-workspace"
+      # Build and distribution files
       - "dist/**"
+      - "build/**"
+      - "node_modules/**"
+      - "coverage/**"
+      # Scripts documentation (keep scripts themselves, ignore their READMEs)
       - "scripts/README.md"
+      - "**/README.md"
+      # Git and CI configuration (keep workflows, ignore templates)
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
+      # Other non-code files
+      - "*.txt"
+      - "*.log"
+      - ".gitignore"
+      - ".editorconfig"
+      - ".prettierignore"
+      - ".eslintignore"
   workflow_dispatch: # Allow manual triggering
 
 # Cancel previous runs on new push

@@ -23,11 +23,11 @@ function Invoke-Linting {
     try {
         if ($Fix) {
             Write-Host "  Running lint with auto-fix..." -ForegroundColor Cyan
-            npm run lint
+            npm run lint | Out-Null
         }
         else {
             Write-Host "  Running lint check..." -ForegroundColor Cyan
-            npm run lint:check
+            npm run lint:check | Out-Null
         }
         
         if ($LASTEXITCODE -ne 0) {

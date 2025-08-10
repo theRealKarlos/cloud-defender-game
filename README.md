@@ -39,13 +39,14 @@ In essence this project is an experiment in AI driven development.
 ```
 cloud-defenders-game/
 ├── frontend/                    # Frontend game code
-│   ├── index.html              # Main HTML5 Canvas game page
+│   ├── index.html              # Bootstrap loader - dynamically loads versioned assets
+│   ├── bootstrap-index.html    # Versioned entry point with base tag injection
 │   ├── config.json             # Runtime configuration (API URLs, features)
 │   ├── api-diagnostics.html    # API testing and diagnostics page
 │   ├── debug.html              # Debug interface for development
 │   ├── icon-test.html          # AWS icon testing interface
 │   ├── js/                     # Modular game engine
-│   │   ├── main.js             # Configuration loader and app initialiser
+│   │   ├── main.js             # Application initialiser and script loader
 │   │   ├── api-service.js      # API communication layer
 │   │   ├── aws-icons.js        # AWS service icon management
 │   │   ├── defense.js          # Tower defence mechanics
@@ -57,7 +58,7 @@ cloud-defenders-game/
 │   │   ├── game-loop.js        # Frame timing and game loop
 │   │   ├── game-security.js    # Security-themed game mechanics
 │   │   ├── game-state.js       # Game state management
-│   │   ├── game.js             # Application entry point
+│   │   ├── game.js             # Game initialisation and setup
 │   │   ├── input-manager.js    # Keyboard and mouse input
 │   │   ├── missile.js          # Missile weapon system
 │   │   ├── renderer.js         # Canvas rendering system
@@ -129,6 +130,42 @@ cloud-defenders-game/
 ├── .gitignore                  # Git ignore rules
 ├── SECURITY.md                 # Security policy
 └── README.md                   # Project documentation
+```
+
+## Frontend Architecture
+
+### Bootstrap Loader Pattern
+
+The frontend uses a modern **bootstrap loader** architecture that provides instant rollback capability and optimal caching:
+
+1. **Root Entry Point**: `index.html` serves as a lightweight bootstrap loader
+2. **Dynamic Asset Loading**: Assets are loaded from versioned folders (e.g., `/v20240115-14302145/`)
+3. **Instant Rollback**: CloudFront origin path can be changed to point to any previous version
+4. **Optimal Caching**: Static assets are cached aggressively, configuration is not cached
+
+### Application Initialisation
+
+The game uses a centralised asynchronous initialisation system managed by `main.js`:
+
+1. **Configuration Loading**: Fetches runtime configuration from `/config.json`
+2. **Dependency Resolution**: Dynamically loads all required JavaScript modules in the correct order
+3. **Race Condition Prevention**: Uses polling mechanisms to ensure dependencies are fully available
+4. **Graceful Fallbacks**: Provides fallback rendering for special characters and missing assets
+
+### Module Loading Strategy
+
+JavaScript modules are loaded sequentially with dependency verification:
+
+```javascript
+// Example from main.js
+const scripts = [
+  "js/aws-icons.js", // Icon library first
+  "js/entities.js", // Base Entity class
+  "js/target.js", // Depends on Entity
+  "js/defense.js", // Depends on Entity
+  "js/game-engine.js", // Depends on multiple modules
+  // ... other modules
+];
 ```
 
 ## API Endpoints
@@ -243,13 +280,18 @@ If you prefer manual installation:
 
 ### Frontend Development
 
+For local development and testing:
+
 ```bash
 cd frontend
 npm install
-npm run dev
+npm test
 ```
 
-The game will be available at `http://localhost:3000`
+**Note**: The game is designed to run in a static file environment. For full testing:
+
+1. Open `index.html` directly in a browser, or
+2. Serve the frontend folder with a local web server (e.g., `python -m http.server 8000`)
 
 ### Backend Development
 
@@ -428,7 +470,8 @@ The pipeline implements a robust rollback strategy for both frontend and backend
 
 #### Frontend Rollback (S3 + CloudFront)
 
-- **Versioned Deployments**: Each deployment creates a timestamped folder in S3 (e.g., `/v20231201-12345678/`)
+- **Bootstrap Loader Pattern**: Root `index.html` serves as a lightweight entry point
+- **Versioned Assets**: Each deployment creates a timestamped folder in S3 (e.g., `/v20240115-14302145/`)
 - **Origin Path Updates**: CloudFront origin path is updated to point to the new version folder
 - **Instant Rollback**: If deployment fails, origin path is reverted to the previous version
 - **Version Retention**: Automated cleanup preserves the 2 most recent versions for rollback capability
@@ -443,10 +486,10 @@ Use the rollback manager script for manual rollbacks:
 .\scripts\rollback-manager.ps1 -Component "backend" -Environment "production" -FunctionName "my-function" -PreviousVersion "5"
 
 # Rollback frontend to specific origin path
-.\scripts\rollback-manager.ps1 -Component "frontend" -Environment "production" -CloudFrontDistributionId "E123456789" -PreviousOriginPath "/v20231201-12345678"
+.\scripts\rollback-manager.ps1 -Component "frontend" -Environment "production" -CloudFrontDistributionId "E123456789" -PreviousOriginPath "/v20240115-14302145"
 
 # Rollback both components
-.\scripts\rollback-manager.ps1 -Component "both" -Environment "production" -FunctionName "my-function" -PreviousVersion "5" -CloudFrontDistributionId "E123456789" -PreviousOriginPath "/v20231201-12345678"
+.\scripts\rollback-manager.ps1 -Component "both" -Environment "production" -FunctionName "my-function" -PreviousVersion "5" -CloudFrontDistributionId "E123456789" -PreviousOriginPath "/v20240115-14302145"
 ```
 
 ### S3 Version Management
@@ -520,10 +563,10 @@ These actions are designed to be lightweight and expect pre-built artefacts rath
 
 ## Technology Stack
 
-- **Frontend**: HTML5 Canvas, Vanilla JavaScript
+- **Frontend**: HTML5 Canvas, Vanilla JavaScript with modular architecture
 - **Backend**: AWS Lambda (Node.js), API Gateway
 - **Database**: DynamoDB with on-demand billing
-- **Hosting**: S3 Static Website, CloudFront CDN
+- **Hosting**: S3 Static Website, CloudFront CDN with bootstrap loader pattern
 - **Infrastructure**: Terraform modules
 - **CI/CD**: GitHub Actions
 
@@ -531,9 +574,8 @@ These actions are designed to be lightweight and expect pre-built artefacts rath
 
 1. Clone the repository
 2. Set up the development environment (see above)
-3. Run the frontend locally: `cd frontend && npm run dev`
-4. Open `http://localhost:3000` in your browser
-5. Click "Start Game" to begin defending your cloud infrastructure!
+3. Run the frontend locally: Open `frontend/index.html` in your browser or serve with a local web server
+4. Click "Start Game" to begin defending your cloud infrastructure!
 
 ## Cost Estimation Setup
 

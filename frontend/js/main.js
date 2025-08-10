@@ -168,7 +168,7 @@ class ConfigLoader {
     const scripts = [
       'js/aws-icons.js',
       'js/entities.js',
-      'js/target.js', 
+      'js/target.js',
       'js/defense.js',
       'js/missile.js',
       'js/explosive-bomb.js',
@@ -183,7 +183,7 @@ class ConfigLoader {
       'js/game-engine.js',
       'js/game.js',
       'js/api-service.js',
-      'js/ui-manager.js'
+      'js/ui-manager.js',
     ];
 
     console.log('Loading required scripts...');
@@ -211,7 +211,7 @@ class ConfigLoader {
       const script = document.createElement('script');
       script.src = src;
       script.async = false; // Ensure scripts load in order
-      
+
       script.onload = () => {
         // Additional verification for critical dependencies
         if (src === 'js/entities.js') {
@@ -225,7 +225,7 @@ class ConfigLoader {
         }
       };
       script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
-      
+
       document.head.appendChild(script);
     });
   }
@@ -240,10 +240,10 @@ class ConfigLoader {
   waitForDependency(dependencyName, resolve, reject) {
     let attempts = 0;
     const maxAttempts = 50; // Maximum 5 seconds (50 * 100ms)
-    
+
     const checkDependency = () => {
       attempts++;
-      
+
       if (window[dependencyName]) {
         console.log(`✅ Dependency ${dependencyName} is ready`);
         resolve();
@@ -254,7 +254,7 @@ class ConfigLoader {
         setTimeout(checkDependency, 100);
       }
     };
-    
+
     // Start checking immediately
     checkDependency();
   }

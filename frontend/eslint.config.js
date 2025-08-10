@@ -55,7 +55,7 @@ module.exports = [
                 require: 'readonly',
                 global: 'readonly',
                 
-                // Game engine classes (loaded via script tags)
+                // Game engine classes (dynamically loaded via main.js initialisation)
                 Entity: 'readonly',
                 EntityManager: 'readonly',
                 SpatialGrid: 'readonly',

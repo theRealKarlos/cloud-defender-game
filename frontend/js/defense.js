@@ -3,8 +3,16 @@
  * Represents defensive systems that can intercept incoming threats
  */
 
-// Entity base class is available globally from entities.js
-// No need to redeclare or import it
+// Import Entity class for Node.js environments (testing)
+let Entity;
+if (typeof require !== 'undefined') {
+  try {
+    Entity = require('./entities.js').Entity;
+  } catch {
+    // Fallback for browser environment where Entity is global
+    Entity = window.Entity;
+  }
+}
 
 // Defense class extending Entity
 class Defense extends Entity {
@@ -522,14 +530,24 @@ class Defense extends Entity {
     const centerY = this.y + this.height / 2;
 
     // Check if we have AWS icons available and if this defense type has an icon
-    if (window.AwsIcons && this.defenseIcon !== '💾' && this.defenseIcon !== '◉') {
+    if (
+      window.AwsIcons &&
+      this.defenseIcon !== '💾' &&
+      this.defenseIcon !== '◉'
+    ) {
       try {
         // Use AWS icon if available
         const icon = window.AwsIcons.getIcon(this.defenseIcon);
         if (icon) {
           // Scale icon to fit defense size
           const iconSize = Math.min(this.width, this.height) * 0.6;
-          icon.draw(ctx, centerX - iconSize/2, centerY - iconSize/2, iconSize, iconSize);
+          icon.draw(
+            ctx,
+            centerX - iconSize / 2,
+            centerY - iconSize / 2,
+            iconSize,
+            iconSize
+          );
         } else {
           // Fallback to text if icon not found
           this.renderTextIcon(ctx, centerX, centerY);

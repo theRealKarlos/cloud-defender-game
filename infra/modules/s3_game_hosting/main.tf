@@ -204,8 +204,8 @@ resource "aws_cloudfront_distribution" "game_hosting" {
   enabled         = true
   is_ipv6_enabled = true
   comment         = "Cloud Defenders Game CDN"
-  # Removed default_root_object - not compatible with Manifest Pointer architecture
-  # where index.html is in versioned subfolders, not at bucket root
+  default_root_object = "index.html" // Serve bootstrap loader when accessing root URL
+  # Previous comment was incorrect - we now have a permanent index.html at bucket root
 
   // This ordered_cache_behavior ensures config.json is never cached
   // and is served directly from the S3 bucket root

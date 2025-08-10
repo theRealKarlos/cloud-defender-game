@@ -137,24 +137,9 @@ foreach ($file in $gameFiles) {
     Copy-Item $file.FullName $targetPath
 }
 
-# Upload versioned files to S3
-Write-Host "📤 Uploading versioned files to S3..." -ForegroundColor Blue
-$s3SyncArgs = @(
-    "s3", "sync", $tempVersionDir, "s3://$bucketName/$versionFolder",
-    "--delete",
-    "--profile", $Profile
-)
-
-aws @s3SyncArgs
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Failed to upload versioned files to S3"
-    exit 1
-}
-
 # Deploy bootstrap loader to S3 root
 Write-Host "Deploying bootstrap loader to S3 root..." -ForegroundColor Blue
-aws s3 cp "frontend/bootstrap-index.html" "s3://$bucketName/index.html" `
+aws s3 cp "bootstrap-index.html" "s3://$bucketName/index.html" `
     --content-type "text/html" `
     --cache-control "no-store, max-age=0" `
     --metadata-directive REPLACE `

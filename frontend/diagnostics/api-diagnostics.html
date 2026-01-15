@@ -304,22 +304,51 @@
         displayLog(entry) {
           const container = document.getElementById('log-container');
           const logLine = document.createElement('div');
-          logLine.innerHTML = `
-                    <span class="timestamp">[${entry.timestamp}]</span> 
-                    <span class="type">[${entry.type.toUpperCase()}]</span> 
-                    ${entry.message}
-                    ${entry.data ? '<br><pre>' + JSON.stringify(entry.data, null, 2) + '</pre>' : ''}
-                `;
+
+          const timestampSpan = document.createElement('span');
+          timestampSpan.className = 'timestamp';
+          timestampSpan.textContent = `[${entry.timestamp}]`;
+          logLine.appendChild(timestampSpan);
+
+          const typeSpan = document.createElement('span');
+          typeSpan.className = 'type';
+          typeSpan.textContent = `[${entry.type.toUpperCase()}]`;
+          logLine.appendChild(typeSpan);
+
+          const messageSpan = document.createElement('span');
+          messageSpan.textContent = ` ${entry.message}`;
+          logLine.appendChild(messageSpan);
+
+          if (entry.data) {
+            const br = document.createElement('br');
+            logLine.appendChild(br);
+
+            const pre = document.createElement('pre');
+            pre.textContent = JSON.stringify(entry.data, null, 2);
+            logLine.appendChild(pre);
+          }
+
           container.appendChild(logLine);
           container.scrollTop = container.scrollHeight;
         }
 
         showResult(elementId, message, type = 'info', data = null) {
           const element = document.getElementById(elementId);
-          element.innerHTML = `<div class="status ${type}">${message}</div>`;
-          if (data) {
-            element.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+          while (element.firstChild) {
+            element.removeChild(element.firstChild);
           }
+
+          const statusDiv = document.createElement('div');
+          statusDiv.className = `status ${type}`;
+          statusDiv.textContent = message;
+          element.appendChild(statusDiv);
+
+          if (data) {
+            const pre = document.createElement('pre');
+            pre.textContent = JSON.stringify(data, null, 2);
+            element.appendChild(pre);
+          }
+
           this.log(message, type, data);
         }
 

@@ -157,35 +157,14 @@
           // Construct the versioned URL
           const versionedUrl = `/${manifest.version}/index.html`;
 
-          // Load the actual game from the versioned path
-          const gameResponse = await fetch(versionedUrl, {
-            cache: 'no-store',
-            headers: {
-              'Cache-Control': 'no-cache',
-            },
-          });
+          // Navigate to the versioned game URL instead of injecting HTML with document.write
+          // Using location.replace avoids adding an extra history entry while safely loading the game
+          window.location.replace(versionedUrl);
+          return;
 
-          if (!gameResponse.ok) {
-            throw new Error(`Failed to load game: ${gameResponse.status}`);
-          }
-
-          const gameHtml = await gameResponse.text();
-
-          // Inject a base tag to ensure all relative paths resolve from the versioned directory
-          // This is the industry-standard solution used by frameworks like Angular for sub-directory deployments
-          // Without this, relative paths like "styles/game.css" would resolve from the root (/) instead of the versioned path
-          const baseTag = `<base href="/${manifest.version}/">`;
-
-          // Insert the base tag at the beginning of the head section
-          const modifiedGameHtml = gameHtml.replace(
-            /<head>/i,
-            `<head>${baseTag}`
-          );
-
-          // Replace the entire document with the game content
-          document.open();
-          document.write(modifiedGameHtml);
-          document.close();
+          // Note: The previous implementation fetched the HTML for versionedUrl, injected a <base> tag,
+          // and replaced the document with document.write(modifiedGameHtml). This has been replaced
+          // with a real navigation to avoid using eval-like DOM functions.
         } catch (error) {
           console.error('Bootstrap loader error:', error);
           retryCount++;

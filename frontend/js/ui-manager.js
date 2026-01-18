@@ -377,7 +377,13 @@ class UIManager {
     const status = document.getElementById('submission-status');
     if (!status) return;
 
-    status.innerHTML = `<div class="status-${type}">${message}</div>`;
+    // Safely render status message without interpreting it as HTML
+    status.textContent = '';
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `status-${type}`;
+    messageDiv.textContent = message;
+    status.appendChild(messageDiv);
+
     status.classList.remove('hidden');
   }
 

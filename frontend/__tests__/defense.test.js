@@ -11,7 +11,6 @@
 
 const { setupGlobalMocks, mockCanvas } = require('./test-utils');
 // Import Entity class first since Defense extends it
-const { Entity } = require('../js/entities.js');
 const { Defense, DefenseProjectile } = require('../js/defense.js');
 
 // Setup global mocks before tests

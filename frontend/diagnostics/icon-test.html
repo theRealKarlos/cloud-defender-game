@@ -47,24 +47,8 @@
             document.head.appendChild(script);
           });
         }
-      } catch (error) {
-        console.error('Failed to load version manifest:', error);
-        // Fallback: try to load scripts from root (may fail)
-        console.warn('Falling back to root script loading');
-        const scripts = [
-          '/js/config.js',
-          '/js/api-service.js'
-        ];
-        
-        scripts.forEach(src => {
-          const script = document.createElement('script');
-          script.src = src;
-          script.async = false;
-          document.head.appendChild(script);
-        });
-      }
-    })();
-  </script>
+      })();
+    </script>
     
     <style>
       body {

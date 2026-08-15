@@ -6,9 +6,9 @@ param(
     [ValidateNotNullOrEmpty()]
     [string]$Profile,
     
-    [Parameter(Mandatory = $false)]
-    [ValidateSet("dev", "staging", "prod")]
-    [string]$Environment = "dev",
+    [Parameter(Mandatory = $true)]
+    [ValidateSet("development", "staging", "production")]
+    [string]$Environment = "development",
     
     [Parameter(Mandatory = $false)]
     [string]$Region = "eu-west-2",
@@ -71,6 +71,17 @@ Set-Location $infraDir
 
 # Set AWS profile for Terraform
 $env:AWS_PROFILE = $Profile
+$env:AWS_SDK_LOAD_CONFIG = '1'
+
+# Initialise Terraform backend for the specified environment to ensure the correct
+# state file is used. We derive the backend key from the Environment parameter.
+Write-Host "Initialising Terraform backend..." -ForegroundColor Blue
+$stateKey = "cloud-defenders/envs/$Environment/terraform.tfstate"
+terraform init -input=false -reconfigure -backend-config="key=$stateKey"
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Terraform init failed"
+    exit 1
+}
 
 # Temporarily remove prevent_destroy from CloudWatch log group for cleanup
 Write-Host "Preparing for infrastructure destruction..." -ForegroundColor Blue
